@@ -16,6 +16,8 @@ import { CostStructurePage } from '@/features/cost-structures/CostStructurePage'
 import { AlertsPage } from '@/features/alerts/AlertsPage';
 import { MacroPage } from '@/features/macro/MacroPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
+import { ValidacionesPage } from '@/features/validaciones/ValidacionesPage';
+import { HistorialPage } from '@/features/validaciones/HistorialPage';
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -47,6 +49,8 @@ const costStructureRoute = createRoute({ getParentRoute: () => rootRoute, path: 
 const alertsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/alerts', beforeLoad: requireAuth, component: AlertsPage });
 const macroRoute = createRoute({ getParentRoute: () => rootRoute, path: '/macro', beforeLoad: requireAuth, component: MacroPage });
 const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireAuth, component: ProfilePage });
+const validacionesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/validaciones', beforeLoad: requireAuth, component: ValidacionesPage });
+const historialRoute = createRoute({ getParentRoute: () => rootRoute, path: '/historial', beforeLoad: requireAuth, component: HistorialPage });
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -60,6 +64,8 @@ const routeTree = rootRoute.addChildren([
   alertsRoute,
   macroRoute,
   profileRoute,
+  validacionesRoute,
+  historialRoute,
 ]);
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' });

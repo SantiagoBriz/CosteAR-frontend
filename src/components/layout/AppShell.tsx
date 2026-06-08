@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { LayoutDashboard, Building2, Bell, LineChart, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, Building2, Bell, LineChart, LogOut, User, ClipboardCheck, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
+import { usePendingCount } from '@/features/validaciones/validaciones-hooks';
 
 const NAV = [
   { to: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
   { to: '/companies', label: 'Clientes', icon: Building2 },
+  { to: '/validaciones', label: 'Validaciones', icon: ClipboardCheck, badge: true },
+  { to: '/historial', label: 'Historial', icon: History },
   { to: '/macro', label: 'Variables macro', icon: LineChart },
   { to: '/alerts', label: 'Alertas', icon: Bell },
 ] as const;
@@ -28,26 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="text-lg font-bold tracking-tight">CosteAR</span>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {NAV.map(({ to, label, icon: Icon }) => {
-            const active = location.pathname.startsWith(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-action text-white'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white',
-                )}
-              >
-                <Icon className="size-[18px]" />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
+        <NavItems currentPath={location.pathname} />
 
         <div className="border-t border-white/10 p-3">
           <Link
@@ -72,6 +56,39 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
       </main>
     </div>
+  );
+}
+
+function NavItems({ currentPath }: { currentPath: string }) {
+  const { data: pendingCount = 0 } = usePendingCount();
+
+  return (
+    <nav className="flex-1 space-y-1 px-3 py-4">
+      {NAV.map(({ to, label, icon: Icon, ...rest }) => {
+        const active = currentPath.startsWith(to);
+        const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
+        return (
+          <Link
+            key={to}
+            to={to}
+            className={cn(
+              'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
+              active
+                ? 'bg-action text-white'
+                : 'text-white/70 hover:bg-white/10 hover:text-white',
+            )}
+          >
+            <Icon className="size-[18px]" />
+            <span className="flex-1">{label}</span>
+            {showBadge && (
+              <span className="flex size-5 items-center justify-center rounded-full bg-action text-[11px] font-bold text-white">
+                {pendingCount > 99 ? '99+' : pendingCount}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

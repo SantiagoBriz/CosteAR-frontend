@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router';
-import { Building2, Bell, FileSpreadsheet, ArrowRight } from 'lucide-react';
+import { Building2, Bell, FileSpreadsheet, ArrowRight, ClipboardCheck } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { useCompanies } from '@/features/companies/company-hooks';
 import { useAlerts } from '@/features/alerts/alert-hooks';
+import { usePendingCount } from '@/features/validaciones/validaciones-hooks';
 import { useAuthStore } from '@/stores/auth-store';
 import { formatDate } from '@/lib/utils';
 
@@ -13,6 +14,7 @@ export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const { data: companies } = useCompanies();
   const { data: alerts } = useAlerts();
+  const { data: pendingCount = 0 } = usePendingCount();
 
   const totalStructures =
     companies?.reduce((acc, c) => acc + (c._count?.costStructures ?? 0), 0) ?? 0;
@@ -26,9 +28,10 @@ export function DashboardPage() {
       />
 
       {/* Métricas */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <Metric icon={Building2} label="Clientes activos" value={companies?.length ?? 0} to="/companies" />
         <Metric icon={FileSpreadsheet} label="Estructuras de costos" value={totalStructures} to="/companies" />
+        <Metric icon={ClipboardCheck} label="Validaciones pendientes" value={pendingCount} to="/validaciones" emphasize={pendingCount > 0} />
         <Metric icon={Bell} label="Alertas sin leer" value={unread} to="/alerts" emphasize={unread > 0} />
       </div>
 
