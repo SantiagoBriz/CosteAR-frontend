@@ -18,14 +18,19 @@ import { MacroPage } from '@/features/macro/MacroPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { ValidacionesPage } from '@/features/validaciones/ValidacionesPage';
 import { HistorialPage } from '@/features/validaciones/HistorialPage';
+import { EmpresaPortalPage } from '@/features/empresa-portal/EmpresaPortalPage';
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
 /** Guardia: redirige a /login si no hay sesión activa. */
 function requireAuth() {
-  const { accessToken, initializing } = useAuthStore.getState();
+  const { accessToken, initializing, user } = useAuthStore.getState();
   if (!accessToken && !initializing) {
     throw redirect({ to: '/login' });
+  }
+  // Los operadores de empresa solo tienen acceso al portal
+  if (user?.role === 'EMPRESA_OPERATOR') {
+    throw redirect({ to: '/portal' });
   }
 }
 
@@ -33,8 +38,10 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   beforeLoad: () => {
-    const { accessToken } = useAuthStore.getState();
-    throw redirect({ to: accessToken ? '/dashboard' : '/login' });
+    const { accessToken, user } = useAuthStore.getState();
+    if (!accessToken) throw redirect({ to: '/login' });
+    if (user?.role === 'EMPRESA_OPERATOR') throw redirect({ to: '/portal' });
+    throw redirect({ to: '/dashboard' });
   },
 });
 
@@ -51,6 +58,17 @@ const macroRoute = createRoute({ getParentRoute: () => rootRoute, path: '/macro'
 const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireAuth, component: ProfilePage });
 const validacionesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/validaciones', beforeLoad: requireAuth, component: ValidacionesPage });
 const historialRoute = createRoute({ getParentRoute: () => rootRoute, path: '/historial', beforeLoad: requireAuth, component: HistorialPage });
+// Portal de empresa — accesible solo con rol EMPRESA_OPERATOR
+const empresaPortalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/portal',
+  beforeLoad: () => {
+    const { accessToken, initializing } = useAuthStore.getState();
+    if (!accessToken && !initializing) throw redirect({ to: '/login' });
+    // No bloquear: el costista que llega acá sería raro pero se lo redirige al dash
+  },
+  component: EmpresaPortalPage,
+});
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -66,6 +84,7 @@ const routeTree = rootRoute.addChildren([
   profileRoute,
   validacionesRoute,
   historialRoute,
+  empresaPortalRoute,
 ]);
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' });

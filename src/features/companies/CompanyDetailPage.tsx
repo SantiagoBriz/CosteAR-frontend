@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
-import { Plus, FileSpreadsheet, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Plus, FileSpreadsheet, ChevronRight, ArrowLeft, Users, Copy, Trash2, Eye, EyeOff } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,9 @@ import { Input } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCompany, useCostStructures } from './company-hooks';
 import { useCreateCostStructure } from '@/features/cost-structures/cost-structure-hooks';
+import { useOperators, useGenerateOperatorAccess, useRevokeOperator, type GeneratedAccess } from '@/features/empresa-portal/empresa-portal-hooks';
 import { apiErrorMessage } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 const STATUS: Record<string, { label: string; status: 'ok' | 'warn' | 'idle' }> = {
   DRAFT: { label: 'Borrador', status: 'idle' },
@@ -40,6 +42,11 @@ export function CompanyDetailPage() {
       />
 
       {showForm && <NewStructureForm companyId={id} onDone={() => setShowForm(false)} />}
+
+      {/* Operadores de empresa */}
+      <div className="mb-6">
+        <OperatorsSection companyId={id} />
+      </div>
 
       <Card>
         <CardHeader title="Estructuras de costos" description="Por producto y período" />
@@ -78,6 +85,172 @@ export function CompanyDetailPage() {
     </AppShell>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Sección de operadores de empresa
+// ---------------------------------------------------------------------------
+
+function OperatorsSection({ companyId }: { companyId: string }) {
+  const { data: operators = [] } = useOperators(companyId);
+  const generate = useGenerateOperatorAccess(companyId);
+  const revoke = useRevokeOperator();
+  const [showForm, setShowForm] = useState(false);
+  const [operatorName, setOperatorName] = useState('');
+  const [generatedAccess, setGeneratedAccess] = useState<GeneratedAccess | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    if (!operatorName.trim()) return;
+    const result = await generate.mutateAsync(operatorName.trim());
+    setGeneratedAccess(result);
+    setOperatorName('');
+    setShowForm(false);
+  };
+
+  const copyText = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="Personal autorizado"
+        description="Usuarios de esta empresa que pueden cargar documentos al portal"
+        action={
+          <Button size="sm" variant="secondary" onClick={() => setShowForm((v) => !v)}>
+            <Plus className="size-4" /> Invitar operador
+          </Button>
+        }
+      />
+      <CardBody>
+        {/* Formulario de invitación */}
+        {showForm && (
+          <div className="mb-5 flex items-end gap-3 rounded-md bg-surface-alt p-4 animate-rise">
+            <div className="flex-1">
+              <Input
+                label="Nombre del operador"
+                placeholder="Ej: María García — Compras"
+                value={operatorName}
+                onChange={(e) => setOperatorName(e.target.value)}
+              />
+            </div>
+            <Button size="sm" onClick={handleGenerate} loading={generate.isPending} disabled={!operatorName.trim()}>
+              Generar acceso
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
+          </div>
+        )}
+
+        {/* Credenciales generadas — mostrar UNA SOLA VEZ */}
+        {generatedAccess && (
+          <div className="mb-5 rounded-md border border-action/30 bg-action/5 p-4 animate-rise">
+            <p className="mb-3 text-[13px] font-semibold text-ink">
+              Acceso generado — compartí estas credenciales con el operador. Solo se muestran una vez.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <CredField
+                label="CUIT / Usuario"
+                value={generatedAccess.cuit}
+                copied={copied === 'cuit'}
+                onCopy={() => copyText(generatedAccess.cuit, 'cuit')}
+              />
+              <div>
+                <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
+                  Contraseña temporal
+                </label>
+                <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+                  <span className="flex-1 font-mono text-sm text-ink">
+                    {showPassword ? generatedAccess.tempPassword : '••••••••••••'}
+                  </span>
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-ink-soft hover:text-ink">
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyText(generatedAccess.tempPassword, 'pass')}
+                    className={cn('text-ink-soft hover:text-ink', copied === 'pass' && 'text-green-600')}
+                  >
+                    <Copy className="size-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 text-[12px] text-ink-soft">
+              El operador iniciará sesión en <strong>costear-frontend.vercel.app</strong> con estas credenciales y verá solo la pantalla de carga de documentos.
+            </p>
+            <Button size="sm" variant="ghost" className="mt-2" onClick={() => setGeneratedAccess(null)}>
+              Entendido, cerrar
+            </Button>
+          </div>
+        )}
+
+        {/* Lista de operadores */}
+        {operators.length === 0 && !showForm ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <Users className="size-8 text-ink-soft/40" />
+            <p className="text-[13px] text-ink-soft">Todavía no hay personal autorizado para esta empresa.</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-line">
+            {operators.map((op) => (
+              <li key={op.id} className="flex items-center justify-between gap-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-surface-alt text-ink-soft">
+                    <Users className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-ink">{op.name}</p>
+                    <p className="text-[12px] text-ink-soft font-mono">{op.cuit}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={op.isActive ? 'ok' : 'idle'}>
+                    {op.isActive ? 'Activo' : 'Revocado'}
+                  </StatusBadge>
+                  {op.isActive && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-danger hover:bg-danger/10"
+                      onClick={() => revoke.mutate(op.id)}
+                      loading={revoke.isPending}
+                      title="Revocar acceso"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function CredField({ label, value, copied, onCopy }: { label: string; value: string; copied: boolean; onCopy: () => void }) {
+  return (
+    <div>
+      <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">{label}</label>
+      <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+        <span className="flex-1 font-mono text-sm text-ink">{value}</span>
+        <button
+          type="button"
+          onClick={onCopy}
+          className={cn('text-ink-soft hover:text-ink', copied && 'text-green-600')}
+        >
+          <Copy className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 
 function NewStructureForm({ companyId, onDone }: { companyId: string; onDone: () => void }) {
   const create = useCreateCostStructure(companyId);
