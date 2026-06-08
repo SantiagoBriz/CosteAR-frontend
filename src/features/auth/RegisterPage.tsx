@@ -79,7 +79,7 @@ export function RegisterPage() {
 
   // Validación mínima por paso para habilitar "Continuar".
   const canContinue = (): boolean => {
-    if (step === 0) return draft.name.length >= 2 && /\S+@\S+/.test(draft.email) && draft.password.length >= 10 && !emailTaken;
+    if (step === 0) return draft.name.length >= 2 && EMAIL_RE.test(draft.email) && passwordStrength(draft.password) === 4 && !emailTaken;
     if (step === 1) return /^\d{2}-?\d{8}-?\d$/.test(draft.cuit.replace(/\s/g, '')) && !!draft.professionalType;
     if (step === 2) return draft.hasClients !== null;
     return true;
@@ -204,24 +204,67 @@ function Stepper({ step }: { step: number }) {
 
 type SetFn = <K extends keyof Draft>(key: K, value: Draft[K]) => void;
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+const PASSWORD_RULES = [
+  { label: 'Mínimo 10 caracteres', test: (p: string) => p.length >= 10 },
+  { label: 'Una mayúscula', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'Una minúscula', test: (p: string) => /[a-z]/.test(p) },
+  { label: 'Un número', test: (p: string) => /\d/.test(p) },
+];
+
+function passwordStrength(p: string): number {
+  return PASSWORD_RULES.filter((r) => r.test(p)).length;
+}
+
 function StepAccount({ draft, set, emailTaken }: { draft: Draft; set: SetFn; emailTaken: boolean }) {
+  const emailInvalid = draft.email.length > 0 && !EMAIL_RE.test(draft.email);
+  const strength = passwordStrength(draft.password);
+  const strengthColors = ['bg-danger', 'bg-danger', 'bg-yellow-400', 'bg-yellow-400', 'bg-green-500'];
+  const strengthLabels = ['', 'Muy débil', 'Débil', 'Aceptable', 'Fuerte'];
+
   return (
     <>
       <h2 className="text-xl font-bold text-ink">Creá tu cuenta</h2>
       <Input label="Nombre y apellido" value={draft.name} onChange={(e) => set('name', e.target.value)} />
       <div>
         <Input label="Email" type="email" value={draft.email} onChange={(e) => set('email', e.target.value)} />
-        {emailTaken && (
+        {emailInvalid && !emailTaken && (
+          <p className="mt-1 text-[12px] text-danger">Ingresá un email válido (ej: nombre@dominio.com)</p>
+        )}
+        {emailTaken && !emailInvalid && (
           <p className="mt-1 text-[12px] text-danger">Ya existe una cuenta con ese email. <Link to="/login" className="underline">Iniciá sesión</Link></p>
         )}
       </div>
-      <Input
-        label="Contraseña"
-        type="password"
-        hint="Mínimo 10 caracteres, con mayúscula, minúscula y número"
-        value={draft.password}
-        onChange={(e) => set('password', e.target.value)}
-      />
+      <div>
+        <Input
+          label="Contraseña"
+          type="password"
+          value={draft.password}
+          onChange={(e) => set('password', e.target.value)}
+        />
+        {draft.password.length > 0 && (
+          <div className="mt-2 space-y-2">
+            <div className="flex gap-1">
+              {PASSWORD_RULES.map((_, i) => (
+                <div
+                  key={i}
+                  className={cn('h-1 flex-1 rounded-full transition-colors', i < strength ? strengthColors[strength] : 'bg-line')}
+                />
+              ))}
+            </div>
+            <p className="text-[11px] text-ink-soft">{strengthLabels[strength]}</p>
+            <div className="space-y-1">
+              {PASSWORD_RULES.map((rule) => (
+                <div key={rule.label} className={cn('flex items-center gap-1.5 text-[12px]', rule.test(draft.password) ? 'text-green-500' : 'text-ink-soft')}>
+                  <div className={cn('size-3 rounded-full border', rule.test(draft.password) ? 'bg-green-500 border-green-500' : 'border-line')} />
+                  {rule.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
