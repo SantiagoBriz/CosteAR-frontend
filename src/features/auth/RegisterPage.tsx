@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Check, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useRegister, type RegisterPayload, type ProfessionalType } from './auth-hooks';
-import { apiErrorMessage } from '@/lib/api';
+import { apiErrorMessage, api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const STEPS = ['Cuenta', 'Datos profesionales', 'Tu cartera', 'Preferencias'] as const;
@@ -57,13 +57,29 @@ export function RegisterPage() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [error, setError] = useState<string | null>(null);
+  const [emailTaken, setEmailTaken] = useState(false);
+  const emailCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => ({ ...d, [key]: value }));
+    if (key === 'email') {
+      setEmailTaken(false);
+      if (emailCheckRef.current) clearTimeout(emailCheckRef.current);
+      const val = value as string;
+      if (/\S+@\S+\.\S+/.test(val)) {
+        emailCheckRef.current = setTimeout(async () => {
+          try {
+            const res = await api.get<{ data: { available: boolean } }>(`/auth/check-email?email=${encodeURIComponent(val)}`);
+            setEmailTaken(!res.data.data.available);
+          } catch { /* ignorar errores de red */ }
+        }, 600);
+      }
+    }
+  };
 
   // Validación mínima por paso para habilitar "Continuar".
   const canContinue = (): boolean => {
-    if (step === 0) return draft.name.length >= 2 && /\S+@\S+/.test(draft.email) && draft.password.length >= 10;
+    if (step === 0) return draft.name.length >= 2 && /\S+@\S+/.test(draft.email) && draft.password.length >= 10 && !emailTaken;
     if (step === 1) return /^\d{2}-?\d{8}-?\d$/.test(draft.cuit.replace(/\s/g, '')) && !!draft.professionalType;
     if (step === 2) return draft.hasClients !== null;
     return true;
@@ -115,7 +131,7 @@ export function RegisterPage() {
         <Stepper step={step} />
 
         <div className="mt-7 space-y-5">
-          {step === 0 && <StepAccount draft={draft} set={set} />}
+          {step === 0 && <StepAccount draft={draft} set={set} emailTaken={emailTaken} />}
           {step === 1 && <StepProfessional draft={draft} set={set} />}
           {step === 2 && <StepClients draft={draft} set={set} />}
           {step === 3 && <StepPreferences draft={draft} set={set} />}
@@ -188,12 +204,17 @@ function Stepper({ step }: { step: number }) {
 
 type SetFn = <K extends keyof Draft>(key: K, value: Draft[K]) => void;
 
-function StepAccount({ draft, set }: { draft: Draft; set: SetFn }) {
+function StepAccount({ draft, set, emailTaken }: { draft: Draft; set: SetFn; emailTaken: boolean }) {
   return (
     <>
       <h2 className="text-xl font-bold text-ink">Creá tu cuenta</h2>
       <Input label="Nombre y apellido" value={draft.name} onChange={(e) => set('name', e.target.value)} />
-      <Input label="Email" type="email" value={draft.email} onChange={(e) => set('email', e.target.value)} />
+      <div>
+        <Input label="Email" type="email" value={draft.email} onChange={(e) => set('email', e.target.value)} />
+        {emailTaken && (
+          <p className="mt-1 text-[12px] text-danger">Ya existe una cuenta con ese email. <Link to="/login" className="underline">Iniciá sesión</Link></p>
+        )}
+      </div>
       <Input
         label="Contraseña"
         type="password"
