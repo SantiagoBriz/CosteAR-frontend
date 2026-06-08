@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+
+/*
+ * Sistema de diseño CosteAR — derivado 1:1 del documento "Identidad Visual v1.0".
+ * Minimalismo de precisión: mucho blanco, granate como firma, rojo solo en acción.
+ * Tipografía: Inter (UI) + JetBrains Mono (montos). Grilla de 8px.
+ */
+@theme {
+  /* Marca */
+  --color-granate: #6e1423;
+  --color-granate-deep: #50101a;
+  --color-action: #c2192a;
+  --color-action-soft: #e04050;
+  --color-granate-tenue: #f6ebec;
+
+  /* Neutros y superficies */
+  --color-surface: #ffffff;
+  --color-surface-alt: #faf7f7;
+  --color-ink: #16181d;
+  --color-ink-soft: #5b6066;
+  --color-line: #e4e2e3;
+  --color-line-strong: #cbc7c8;
+
+  /* Semáforo de estado */
+  --color-ok: #16a34a;
+  --color-warn: #d97706;
+  --color-idle: #9ca3af;
+  --color-danger: #b91c1c;
+
+  /* Tipografía */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  /* Radios (4 inputs, 6 botones, 8 tarjetas) */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+* {
+  border-color: var(--color-line);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-ink);
+  background: var(--color-surface-alt);
+}
+
+/* Números monetarios: tabular, alineados a la derecha — lectura sin error. */
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Scrollbar sobria coherente con la estética premium. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+  border: 2px solid var(--color-surface-alt);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-soft);
+}
+
+/* Foco accesible: anillo granate, nunca outline azul del navegador. */
+:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: fade-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
