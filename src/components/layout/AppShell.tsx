@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { LayoutDashboard, Building2, Bell, LineChart, LogOut, User, ClipboardCheck, History } from 'lucide-react';
+import { LayoutDashboard, Building2, Bell, LineChart, LogOut, User, ClipboardCheck, History, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
@@ -12,6 +12,7 @@ const NAV = [
   { to: '/validaciones', label: 'Validaciones', icon: ClipboardCheck, badge: true },
   { to: '/historial', label: 'Historial', icon: History },
   { to: '/macro', label: 'Variables macro', icon: LineChart },
+  { to: '/propagacion', label: 'Propagación', icon: Zap },
   { to: '/alerts', label: 'Alertas', icon: Bell },
 ] as const;
 

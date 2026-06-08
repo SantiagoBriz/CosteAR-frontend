@@ -19,6 +19,7 @@ import { ProfilePage } from '@/features/profile/ProfilePage';
 import { ValidacionesPage } from '@/features/validaciones/ValidacionesPage';
 import { HistorialPage } from '@/features/validaciones/HistorialPage';
 import { EmpresaPortalPage } from '@/features/empresa-portal/EmpresaPortalPage';
+import { PropagacionPage } from '@/features/propagacion/PropagacionPage';
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> });
 
@@ -58,6 +59,7 @@ const macroRoute = createRoute({ getParentRoute: () => rootRoute, path: '/macro'
 const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireAuth, component: ProfilePage });
 const validacionesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/validaciones', beforeLoad: requireAuth, component: ValidacionesPage });
 const historialRoute = createRoute({ getParentRoute: () => rootRoute, path: '/historial', beforeLoad: requireAuth, component: HistorialPage });
+const propagacionRoute = createRoute({ getParentRoute: () => rootRoute, path: '/propagacion', beforeLoad: requireAuth, component: PropagacionPage });
 // Portal de empresa — accesible solo con rol EMPRESA_OPERATOR
 const empresaPortalRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -84,6 +86,7 @@ const routeTree = rootRoute.addChildren([
   profileRoute,
   validacionesRoute,
   historialRoute,
+  propagacionRoute,
   empresaPortalRoute,
 ]);
 
