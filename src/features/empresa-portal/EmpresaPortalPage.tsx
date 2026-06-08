@@ -196,7 +196,7 @@ export function EmpresaPortalPage() {
               <h2 className="mb-3 text-sm font-semibold text-gray-700">Mis envíos recientes</h2>
               <div className="space-y-2">
                 {submissions.slice(0, 10).map((s) => {
-                  const st = STATUS_STYLE[s.status] ?? STATUS_STYLE.PENDING;
+                  const st = STATUS_STYLE[s.status] ?? STATUS_STYLE['PENDING']!;
                   return (
                     <div
                       key={s.id}
