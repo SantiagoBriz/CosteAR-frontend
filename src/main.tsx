@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import axios from 'axios';
 import { router } from './router';
+import { API_BASE } from './lib/api';
 import { useAuthStore, type AuthUser } from './stores/auth-store';
 import './index.css';
 
@@ -25,12 +26,12 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const refresh = await axios.post<{ data: { accessToken: string } }>(
-          '/api/v1/auth/refresh',
+          `${API_BASE}/api/v1/auth/refresh`,
           {},
           { withCredentials: true },
         );
         const token = refresh.data.data.accessToken;
-        const me = await axios.get<{ data: AuthUser }>('/api/v1/user/profile', {
+        const me = await axios.get<{ data: AuthUser }>(`${API_BASE}/api/v1/user/profile`, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         });

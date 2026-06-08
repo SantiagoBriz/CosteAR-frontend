@@ -6,8 +6,14 @@ import { useAuthStore } from '@/stores/auth-store';
  * (Zustand, no localStorage) para reducir superficie de XSS; el refresh token
  * viaja en una cookie httpOnly que el navegador adjunta sola.
  */
+/**
+ * Base del backend. En desarrollo queda vacía y Vite proxea /api → :3000.
+ * En producción se setea VITE_API_URL al dominio del backend desplegado.
+ */
+export const API_BASE = import.meta.env.VITE_API_URL ?? '';
+
 export const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: `${API_BASE}/api/v1`,
   withCredentials: true, // envía la cookie de refresh
 });
 
@@ -24,7 +30,7 @@ let refreshing: Promise<string | null> | null = null;
 async function refreshAccessToken(): Promise<string | null> {
   try {
     const res = await axios.post<{ data: { accessToken: string } }>(
-      '/api/v1/auth/refresh',
+      `${API_BASE}/api/v1/auth/refresh`,
       {},
       { withCredentials: true },
     );
