@@ -20,8 +20,12 @@ import { ValidacionesPage } from '@/features/validaciones/ValidacionesPage';
 import { HistorialPage } from '@/features/validaciones/HistorialPage';
 import { EmpresaPortalPage } from '@/features/empresa-portal/EmpresaPortalPage';
 import { PropagacionPage } from '@/features/propagacion/PropagacionPage';
+import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 
-const rootRoute = createRootRoute({ component: () => <Outlet /> });
+const rootRoute = createRootRoute({
+  component: () => <Outlet />,
+  notFoundComponent: NotFoundPage,
+});
 
 /** Guardia: redirige a /login si no hay sesión activa. */
 function requireAuth() {

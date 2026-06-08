@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Check, Calculator, Package, Users, Factory, FileDown } from 'lucide-react';
+import { ArrowLeft, Check, Calculator, Package, Users, Factory, Zap, History } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -14,11 +14,16 @@ import {
   useUpdateSales,
   useCalculate,
   useLatestCalculation,
-  useExportExcel,
+  useSimulate,
+  useCalculationHistory,
 } from './cost-structure-hooks';
 import { catedraExample } from './catedra-example';
 import { apiErrorMessage } from '@/lib/api';
+import { formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { CalculationResult } from '@/lib/types';
+
+type Tab = 'current' | 'simulator' | 'history';
 
 export function CostStructurePage() {
   const { id } = useParams({ from: '/cost-structures/$id' });
@@ -26,9 +31,9 @@ export function CostStructurePage() {
   const updateSection = useUpdateCostSection(id);
   const updateSales = useUpdateSales(id);
   const calculate = useCalculate(id);
-  const exportExcel = useExportExcel(id);
   const { data: latest } = useLatestCalculation(id);
   const [result, setResult] = useState<CalculationResult | null>(null);
+  const [tab, setTab] = useState<Tab>('current');
   const [error, setError] = useState<string | null>(null);
 
   const loadExample = async (
@@ -48,6 +53,7 @@ export function CostStructurePage() {
     try {
       const data = await calculate.mutateAsync();
       setResult(data.result);
+      setTab('current');
     } catch (e) {
       setError(apiErrorMessage(e));
     }
@@ -69,18 +75,9 @@ export function CostStructurePage() {
         title={structure?.productName ?? 'Estructura de costos'}
         description={structure ? `Período ${structure.period}` : undefined}
         action={
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => exportExcel.mutate()}
-              loading={exportExcel.isPending}
-            >
-              <FileDown className="size-4" /> Exportar a Excel
-            </Button>
-            <Button onClick={runCalculate} loading={calculate.isPending}>
-              <Calculator className="size-4" /> Calcular
-            </Button>
-          </div>
+          <Button onClick={runCalculate} loading={calculate.isPending}>
+            <Calculator className="size-4" /> Calcular
+          </Button>
         }
       />
 
@@ -125,12 +122,257 @@ export function CostStructurePage() {
           />
         </div>
 
-        {/* Resultado */}
-        <div>{shown ? <ResultPanel result={shown} /> : <EmptyResult />}</div>
+        {/* Panel derecho con tabs */}
+        <div>
+          {/* Tab bar */}
+          <div className="mb-4 flex gap-1 border-b border-line">
+            <TabBtn active={tab === 'current'} onClick={() => setTab('current')}>
+              <Calculator className="size-4" /> Resultado
+            </TabBtn>
+            <TabBtn active={tab === 'simulator'} onClick={() => setTab('simulator')}>
+              <Zap className="size-4" /> Simulador
+            </TabBtn>
+            <TabBtn active={tab === 'history'} onClick={() => setTab('history')}>
+              <History className="size-4" /> Historial
+            </TabBtn>
+          </div>
+
+          {tab === 'current' && (shown ? <ResultPanel result={shown} /> : <EmptyResult />)}
+          {tab === 'simulator' && <SimulatorPanel structureId={id} baseResult={shown} />}
+          {tab === 'history' && <HistoryPanel structureId={id} />}
+        </div>
       </div>
     </AppShell>
   );
 }
+
+function TabBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1.5 border-b-2 px-4 pb-2.5 text-[13px] font-medium transition-colors',
+        active
+          ? 'border-granate text-granate'
+          : 'border-transparent text-ink-soft hover:text-ink',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Simulator ──────────────────────────────────────────────────────────────
+
+function SimulatorPanel({
+  structureId,
+  baseResult,
+}: {
+  structureId: string;
+  baseResult: CalculationResult | null;
+}) {
+  const simulate = useSimulate(structureId);
+  const [simResult, setSimResult] = useState<CalculationResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const { register, handleSubmit, watch } = useForm<{
+    salesUnitPrice: string;
+    salesQuantity: string;
+    macroFactor: string;
+  }>({ defaultValues: { macroFactor: '1' } });
+
+  const onSubmit = handleSubmit(async (v) => {
+    setError(null);
+    try {
+      const overrides: Record<string, number> = {};
+      if (v.salesUnitPrice) overrides.salesUnitPrice = Number(v.salesUnitPrice);
+      if (v.salesQuantity) overrides.salesQuantity = Number(v.salesQuantity);
+      if (v.macroFactor && Number(v.macroFactor) !== 1) overrides.macroFactor = Number(v.macroFactor);
+      const r = await simulate.mutateAsync(overrides);
+      setSimResult(r);
+    } catch (e) {
+      setError(apiErrorMessage(e));
+    }
+  });
+
+  return (
+    <div className="space-y-4 animate-rise">
+      <Card>
+        <CardHeader
+          title="Simulador what-if"
+          description="Modificá el precio de venta, la cantidad o el factor macro y mirá el impacto sin guardar nada."
+        />
+        <CardBody>
+          <form onSubmit={onSubmit} className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Input
+                label="Precio unitario"
+                type="number"
+                step="0.01"
+                numeric
+                placeholder="Dejar vacío = sin cambio"
+                {...register('salesUnitPrice')}
+              />
+              <Input
+                label="Cantidad"
+                type="number"
+                step="1"
+                numeric
+                placeholder="Dejar vacío = sin cambio"
+                {...register('salesQuantity')}
+              />
+              <Input
+                label="Factor macro (ej: 1.15 = +15%)"
+                type="number"
+                step="0.01"
+                numeric
+                {...register('macroFactor')}
+              />
+            </div>
+            {error && <p className="text-[12px] text-danger">{error}</p>}
+            <Button type="submit" loading={simulate.isPending}>
+              <Zap className="size-4" /> Simular
+            </Button>
+          </form>
+        </CardBody>
+      </Card>
+
+      {simResult && baseResult && (
+        <BeforeAfterCard base={baseResult} simulated={simResult} />
+      )}
+      {simResult && !baseResult && <ResultPanel result={simResult} />}
+    </div>
+  );
+}
+
+function BeforeAfterCard({
+  base,
+  simulated,
+}: {
+  base: CalculationResult;
+  simulated: CalculationResult;
+}) {
+  const delta = simulated.grossMarginPct - base.grossMarginPct;
+  const rows = [
+    { label: 'Costo de producción', before: base.productionCost, after: simulated.productionCost },
+    { label: 'COGS', before: base.costOfGoodsSold, after: simulated.costOfGoodsSold },
+    { label: 'Margen bruto ($)', before: base.grossMargin, after: simulated.grossMargin },
+  ];
+
+  return (
+    <Card>
+      <CardHeader
+        title="Comparación antes / después"
+        description="Resultado base vs. escenario simulado"
+        action={
+          <span
+            className={cn(
+              'rounded-full px-3 py-1 text-[13px] font-semibold',
+              delta >= 0 ? 'bg-green-50 text-green-700' : 'bg-danger/10 text-danger',
+            )}
+          >
+            Margen: {base.grossMarginPct.toFixed(1)}% → {simulated.grossMarginPct.toFixed(1)}%
+            {' '}({delta > 0 ? '+' : ''}{delta.toFixed(1)} pts)
+          </span>
+        }
+      />
+      <CardBody className="p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
+              <th className="px-6 py-3 text-left font-medium">Concepto</th>
+              <th className="px-4 py-3 text-right font-medium">Base</th>
+              <th className="px-4 py-3 text-right font-medium">Simulado</th>
+              <th className="px-4 py-3 text-right font-medium">Δ</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {rows.map((r) => {
+              const d = r.after - r.before;
+              return (
+                <tr key={r.label}>
+                  <td className="px-6 py-2.5 text-ink-soft">{r.label}</td>
+                  <td className="px-4 py-2.5 text-right tabular"><Money value={r.before} /></td>
+                  <td className="px-4 py-2.5 text-right tabular font-medium"><Money value={r.after} /></td>
+                  <td className={cn('px-4 py-2.5 text-right tabular text-[12px]', d > 0 ? 'text-action' : d < 0 ? 'text-danger' : 'text-ink-soft')}>
+                    {d > 0 ? '+' : ''}<Money value={d} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </CardBody>
+    </Card>
+  );
+}
+
+// ─── History tab ─────────────────────────────────────────────────────────────
+
+function HistoryPanel({ structureId }: { structureId: string }) {
+  const { data: history, isLoading } = useCalculationHistory(structureId);
+
+  if (isLoading) return <p className="text-sm text-ink-soft">Cargando…</p>;
+  if (!history?.length) {
+    return (
+      <Card>
+        <CardBody className="py-12 text-center">
+          <p className="text-sm text-ink-soft">
+            Todavía no hay cálculos registrados. Presioná <strong>Calcular</strong> para crear el primero.
+          </p>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Historial de cálculos" description="Últimos 20 snapshots de costos y margen" />
+      <CardBody className="p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
+              <th className="px-6 py-3 text-left font-medium">Fecha</th>
+              <th className="px-4 py-3 text-right font-medium">Costo prod.</th>
+              <th className="px-4 py-3 text-right font-medium">COGS</th>
+              <th className="px-4 py-3 text-right font-medium">Margen</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {history.map((c, i) => (
+              <tr key={c.id} className={cn('hover:bg-surface-alt/50', i === 0 && 'bg-action/5')}>
+                <td className="px-6 py-2.5 text-ink">
+                  {formatDate(c.calculatedAt)}
+                  {i === 0 && (
+                    <span className="ml-2 rounded-full bg-action/10 px-2 py-0.5 text-[10px] font-semibold text-action">
+                      Último
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5 text-right tabular"><Money value={Number(c.productionCost)} /></td>
+                <td className="px-4 py-2.5 text-right tabular"><Money value={Number(c.costOfGoodsSold)} /></td>
+                <td className="px-4 py-2.5 text-right">
+                  <Percent value={Number(c.grossMarginPct)} colorize />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardBody>
+    </Card>
+  );
+}
+
+// ─── Section card ─────────────────────────────────────────────────────────────
 
 function SectionCard({
   icon: Icon,

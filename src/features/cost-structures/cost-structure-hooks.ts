@@ -86,6 +86,33 @@ export function useExportExcel(id: string) {
   });
 }
 
+export function useSimulate(id: string) {
+  return useMutation({
+    mutationFn: async (overrides: {
+      salesUnitPrice?: number;
+      salesQuantity?: number;
+      macroFactor?: number;
+    }) => {
+      const res = await api.post<{ data: { result: CalculationResult; simulated: boolean } }>(
+        `/cost-structures/${id}/simulate`,
+        overrides,
+      );
+      return res.data.data.result;
+    },
+  });
+}
+
+export function useCalculationHistory(id: string) {
+  return useQuery({
+    queryKey: ['cost-structures', id, 'calculations'],
+    queryFn: async () => {
+      const res = await api.get<{ data: CostCalculation[] }>(`/cost-structures/${id}/calculations`);
+      return res.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useLatestCalculation(id: string) {
   return useQuery({
     queryKey: ['cost-structures', id, 'calculations', 'latest'],
