@@ -17,10 +17,30 @@ export function useLogin() {
   });
 }
 
+export type ProfessionalType =
+  | 'CONTADOR_PUBLICO'
+  | 'LIC_ADMINISTRACION'
+  | 'CONSULTOR_INDEPENDIENTE'
+  | 'ANALISTA_INTERNO'
+  | 'OTRO';
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  name: string;
+  cuit: string;
+  dni?: string;
+  professionalType: ProfessionalType;
+  licenseNumber?: string;
+  province: string;
+  initialClients?: { name: string; industry?: string; cuit?: string }[];
+  marginThresholdPct: number;
+}
+
 export function useRegister() {
   const setAuth = useAuthStore((s) => s.setAuth);
   return useMutation({
-    mutationFn: async (input: { email: string; password: string; name: string }) => {
+    mutationFn: async (input: RegisterPayload) => {
       const res = await api.post<AuthResponse>('/auth/register', input);
       return res.data.data;
     },
