@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Check, Calculator, Package, Users, Factory } from 'lucide-react';
+import { ArrowLeft, Check, Calculator, Package, Users, Factory, FileDown } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +14,7 @@ import {
   useUpdateSales,
   useCalculate,
   useLatestCalculation,
+  useExportExcel,
 } from './cost-structure-hooks';
 import { catedraExample } from './catedra-example';
 import { apiErrorMessage } from '@/lib/api';
@@ -25,6 +26,7 @@ export function CostStructurePage() {
   const updateSection = useUpdateCostSection(id);
   const updateSales = useUpdateSales(id);
   const calculate = useCalculate(id);
+  const exportExcel = useExportExcel(id);
   const { data: latest } = useLatestCalculation(id);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,9 +69,18 @@ export function CostStructurePage() {
         title={structure?.productName ?? 'Estructura de costos'}
         description={structure ? `Período ${structure.period}` : undefined}
         action={
-          <Button onClick={runCalculate} loading={calculate.isPending}>
-            <Calculator className="size-4" /> Calcular
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => exportExcel.mutate()}
+              loading={exportExcel.isPending}
+            >
+              <FileDown className="size-4" /> Exportar a Excel
+            </Button>
+            <Button onClick={runCalculate} loading={calculate.isPending}>
+              <Calculator className="size-4" /> Calcular
+            </Button>
+          </div>
         }
       />
 

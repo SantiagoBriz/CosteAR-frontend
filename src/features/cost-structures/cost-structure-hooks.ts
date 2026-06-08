@@ -68,6 +68,24 @@ export function useCalculate(id: string) {
   });
 }
 
+export function useExportExcel(id: string) {
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.get(`/cost-structures/${id}/export`, { responseType: 'blob' });
+      // Disparar la descarga en el navegador.
+      const disposition = res.headers['content-disposition'] as string | undefined;
+      const match = disposition?.match(/filename="(.+)"/);
+      const filename = match?.[1] ?? `CosteAR-estructura-${id}.xlsx`;
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+}
+
 export function useLatestCalculation(id: string) {
   return useQuery({
     queryKey: ['cost-structures', id, 'calculations', 'latest'],
