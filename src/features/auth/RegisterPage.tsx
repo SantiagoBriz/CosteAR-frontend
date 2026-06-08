@@ -95,7 +95,12 @@ export function RegisterPage() {
       await register.mutateAsync(payload);
       await navigate({ to: '/dashboard' });
     } catch (e) {
-      setError(apiErrorMessage(e));
+      const msg = apiErrorMessage(e);
+      setError(msg);
+      // Si el email ya existe, volver al paso 0 para que el error sea visible
+      if ((e as { response?: { status?: number } })?.response?.status === 409) {
+        setStep(0);
+      }
     }
   };
 
