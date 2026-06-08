@@ -7,17 +7,22 @@ import { useLogin } from './auth-hooks';
 import { apiErrorMessage } from '@/lib/api';
 
 interface LoginForm {
-  email: string;
+  cuit: string;
   password: string;
   twoFactorCode?: string;
 }
+
+const CUIT_RE = /^\d{2}-?\d{8}-?\d$/;
 
 export function LoginPage() {
   const navigate = useNavigate();
   const login = useLogin();
   const [needs2fa, setNeeds2fa] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, formState } = useForm<LoginForm>();
+  const { register, handleSubmit, formState, watch } = useForm<LoginForm>();
+
+  const cuitValue = watch('cuit', '');
+  const cuitInvalid = cuitValue.length > 0 && !CUIT_RE.test(cuitValue.replace(/\s/g, ''));
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -65,13 +70,17 @@ export function LoginPage() {
             <p className="mt-1 text-sm text-ink-soft">Gestioná los costos de tu cartera</p>
           </div>
 
-          <Input
-            label="Email"
-            type="email"
-            autoComplete="email"
-            placeholder="tu@email.com"
-            {...register('email', { required: true })}
-          />
+          <div>
+            <Input
+              label="CUIT / CUIL"
+              autoComplete="username"
+              placeholder="20-12345678-9"
+              {...register('cuit', { required: true })}
+            />
+            {cuitInvalid && (
+              <p className="mt-1 text-[12px] text-danger">Formato: 20-12345678-9 (11 dígitos)</p>
+            )}
+          </div>
           <Input
             label="Contraseña"
             type="password"
@@ -93,7 +102,7 @@ export function LoginPage() {
             <div className="rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>
           )}
 
-          <Button type="submit" className="w-full" loading={formState.isSubmitting}>
+          <Button type="submit" className="w-full" loading={formState.isSubmitting} disabled={cuitInvalid}>
             Ingresar
           </Button>
 

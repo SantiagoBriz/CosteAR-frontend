@@ -9,7 +9,7 @@ interface AuthResponse {
 export function useLogin() {
   const setAuth = useAuthStore((s) => s.setAuth);
   return useMutation({
-    mutationFn: async (input: { email: string; password: string; twoFactorCode?: string }) => {
+    mutationFn: async (input: { cuit: string; password: string; twoFactorCode?: string }) => {
       const res = await api.post<AuthResponse>('/auth/login', input);
       return res.data.data;
     },

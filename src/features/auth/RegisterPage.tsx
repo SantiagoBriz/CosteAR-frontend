@@ -58,7 +58,11 @@ export function RegisterPage() {
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [emailTaken, setEmailTaken] = useState(false);
+  const [cuitTaken, setCuitTaken] = useState(false);
   const emailCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cuitCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const CUIT_RE_FULL = /^\d{2}-?\d{8}-?\d$/;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -75,12 +79,32 @@ export function RegisterPage() {
         }, 600);
       }
     }
+    if (key === 'cuit') {
+      setCuitTaken(false);
+      if (cuitCheckRef.current) clearTimeout(cuitCheckRef.current);
+      const val = value as string;
+      if (CUIT_RE_FULL.test(val.replace(/\s/g, ''))) {
+        cuitCheckRef.current = setTimeout(async () => {
+          try {
+            const res = await api.get<{ data: { available: boolean } }>(`/auth/check-cuit?cuit=${encodeURIComponent(val)}`);
+            setCuitTaken(!res.data.data.available);
+          } catch { /* ignorar errores de red */ }
+        }, 600);
+      }
+    }
   };
 
   // Validación mínima por paso para habilitar "Continuar".
   const canContinue = (): boolean => {
-    if (step === 0) return draft.name.length >= 2 && EMAIL_RE.test(draft.email) && passwordStrength(draft.password) === 4 && !emailTaken;
-    if (step === 1) return /^\d{2}-?\d{8}-?\d$/.test(draft.cuit.replace(/\s/g, '')) && !!draft.professionalType;
+    if (step === 0) return (
+      draft.name.length >= 2 &&
+      EMAIL_RE.test(draft.email) &&
+      CUIT_RE_FULL.test(draft.cuit.replace(/\s/g, '')) &&
+      passwordStrength(draft.password) === 4 &&
+      !emailTaken &&
+      !cuitTaken
+    );
+    if (step === 1) return !!draft.professionalType;
     if (step === 2) return draft.hasClients !== null;
     return true;
   };
@@ -131,7 +155,7 @@ export function RegisterPage() {
         <Stepper step={step} />
 
         <div className="mt-7 space-y-5">
-          {step === 0 && <StepAccount draft={draft} set={set} emailTaken={emailTaken} />}
+          {step === 0 && <StepAccount draft={draft} set={set} emailTaken={emailTaken} cuitTaken={cuitTaken} />}
           {step === 1 && <StepProfessional draft={draft} set={set} />}
           {step === 2 && <StepClients draft={draft} set={set} />}
           {step === 3 && <StepPreferences draft={draft} set={set} />}
@@ -217,8 +241,12 @@ function passwordStrength(p: string): number {
   return PASSWORD_RULES.filter((r) => r.test(p)).length;
 }
 
-function StepAccount({ draft, set, emailTaken }: { draft: Draft; set: SetFn; emailTaken: boolean }) {
+const CUIT_RE_DISPLAY = /^\d{2}-?\d{8}-?\d$/;
+
+function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set: SetFn; emailTaken: boolean; cuitTaken: boolean }) {
   const emailInvalid = draft.email.length > 0 && !EMAIL_RE.test(draft.email);
+  const cuitValue = draft.cuit.replace(/\s/g, '');
+  const cuitInvalid = cuitValue.length > 0 && !CUIT_RE_DISPLAY.test(cuitValue);
   const strength = passwordStrength(draft.password);
   const strengthColors = ['bg-danger', 'bg-danger', 'bg-yellow-400', 'bg-yellow-400', 'bg-green-500'];
   const strengthLabels = ['', 'Muy débil', 'Débil', 'Aceptable', 'Fuerte'];
@@ -234,6 +262,20 @@ function StepAccount({ draft, set, emailTaken }: { draft: Draft; set: SetFn; ema
         )}
         {emailTaken && !emailInvalid && (
           <p className="mt-1 text-[12px] text-danger">Ya existe una cuenta con ese email. <Link to="/login" className="underline">Iniciá sesión</Link></p>
+        )}
+      </div>
+      <div>
+        <Input
+          label="CUIT / CUIL"
+          placeholder="20-12345678-9"
+          value={draft.cuit}
+          onChange={(e) => set('cuit', e.target.value)}
+        />
+        {cuitInvalid && (
+          <p className="mt-1 text-[12px] text-danger">Formato: 20-12345678-9 (11 dígitos)</p>
+        )}
+        {cuitTaken && !cuitInvalid && (
+          <p className="mt-1 text-[12px] text-danger">Ese CUIT ya tiene una cuenta. <Link to="/login" className="underline">Iniciá sesión</Link></p>
         )}
       </div>
       <div>
@@ -273,20 +315,12 @@ function StepProfessional({ draft, set }: { draft: Draft; set: SetFn }) {
   return (
     <>
       <h2 className="text-xl font-bold text-ink">Tus datos profesionales</h2>
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="CUIT / CUIL"
-          placeholder="20-12345678-6"
-          value={draft.cuit}
-          onChange={(e) => set('cuit', e.target.value)}
-        />
-        <Input
-          label="DNI (opcional)"
-          placeholder="12345678"
-          value={draft.dni}
-          onChange={(e) => set('dni', e.target.value)}
-        />
-      </div>
+      <Input
+        label="DNI (opcional)"
+        placeholder="12345678"
+        value={draft.dni}
+        onChange={(e) => set('dni', e.target.value)}
+      />
       <div className="flex flex-col gap-1.5">
         <label className="text-[12px] font-medium uppercase tracking-wide text-ink-soft">
           Tipo de profesional
