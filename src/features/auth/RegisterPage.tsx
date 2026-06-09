@@ -62,10 +62,21 @@ export function RegisterPage() {
   const emailCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cuitCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const CUIT_RE_FULL = /^\d{2}-?\d{8}-?\d$/;
+  // Auto-formatea el input de CUIT a XX-XXXXXXXX-X mientras el usuario escribe.
+  const formatCuit = (raw: string): string => {
+    const digits = raw.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 10) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
+  };
+
+  const CUIT_COMPLETE = /^\d{2}-\d{8}-\d$/;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
-    setDraft((d) => ({ ...d, [key]: value }));
+    // Auto-formatear CUIT antes de guardarlo en el draft
+    const finalValue = key === 'cuit' ? formatCuit(value as string) as Draft[K] : value;
+    setDraft((d) => ({ ...d, [key]: finalValue }));
+
     if (key === 'email') {
       setEmailTaken(false);
       if (emailCheckRef.current) clearTimeout(emailCheckRef.current);
@@ -82,14 +93,15 @@ export function RegisterPage() {
     if (key === 'cuit') {
       setCuitTaken(false);
       if (cuitCheckRef.current) clearTimeout(cuitCheckRef.current);
-      const val = value as string;
-      if (CUIT_RE_FULL.test(val.replace(/\s/g, ''))) {
+      const formatted = formatCuit(value as string);
+      // Disparar el check AJAX solo cuando el CUIT está completo (11 dígitos)
+      if (CUIT_COMPLETE.test(formatted)) {
         cuitCheckRef.current = setTimeout(async () => {
           try {
-            const res = await api.get<{ data: { available: boolean } }>(`/auth/check-cuit?cuit=${encodeURIComponent(val)}`);
+            const res = await api.get<{ data: { available: boolean } }>(`/auth/check-cuit?cuit=${encodeURIComponent(formatted)}`);
             setCuitTaken(!res.data.data.available);
           } catch { /* ignorar errores de red */ }
-        }, 600);
+        }, 400);
       }
     }
   };
@@ -99,7 +111,7 @@ export function RegisterPage() {
     if (step === 0) return (
       draft.name.length >= 2 &&
       EMAIL_RE.test(draft.email) &&
-      CUIT_RE_FULL.test(draft.cuit.replace(/\s/g, '')) &&
+      CUIT_RE_COMPLETE.test(draft.cuit) &&
       passwordStrength(draft.password) === 4 &&
       !emailTaken &&
       !cuitTaken
@@ -241,12 +253,20 @@ function passwordStrength(p: string): number {
   return PASSWORD_RULES.filter((r) => r.test(p)).length;
 }
 
-const CUIT_RE_DISPLAY = /^\d{2}-?\d{8}-?\d$/;
+// CUIT completo: XX-XXXXXXXX-X (exactamente 11 dígitos con guiones auto-insertados)
+const CUIT_RE_COMPLETE = /^\d{2}-\d{8}-\d$/;
 
 function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set: SetFn; emailTaken: boolean; cuitTaken: boolean }) {
   const emailInvalid = draft.email.length > 0 && !EMAIL_RE.test(draft.email);
-  const cuitValue = draft.cuit.replace(/\s/g, '');
-  const cuitInvalid = cuitValue.length > 0 && !CUIT_RE_DISPLAY.test(cuitValue);
+
+  // Lógica de feedback del CUIT:
+  // - Mientras escribe: nada (los guiones se insertan solos)
+  // - Cuando hay dígitos pero no completo (< 11): "Formato incompleto"
+  // - Cuando tiene 11 dígitos (formato XX-XXXXXXXX-X): check AJAX automático
+  const cuitDigits = draft.cuit.replace(/\D/g, '');
+  const cuitTyping = cuitDigits.length > 0 && cuitDigits.length < 11;
+  const cuitComplete = CUIT_RE_COMPLETE.test(draft.cuit);
+
   const strength = passwordStrength(draft.password);
   const strengthColors = ['bg-danger', 'bg-danger', 'bg-yellow-400', 'bg-yellow-400', 'bg-green-500'];
   const strengthLabels = ['', 'Muy débil', 'Débil', 'Aceptable', 'Fuerte'];
@@ -269,13 +289,24 @@ function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set:
           label="CUIT / CUIL"
           placeholder="20-12345678-9"
           value={draft.cuit}
+          inputMode="numeric"
           onChange={(e) => set('cuit', e.target.value)}
         />
-        {cuitInvalid && (
-          <p className="mt-1 text-[12px] text-danger">Formato: 20-12345678-9 (11 dígitos)</p>
+        {cuitTyping && (
+          <p className="mt-1 text-[12px] text-yellow-600">
+            Formato: XX-XXXXXXXX-X — faltan {11 - cuitDigits.length} dígitos
+          </p>
         )}
-        {cuitTaken && !cuitInvalid && (
-          <p className="mt-1 text-[12px] text-danger">Ese CUIT ya tiene una cuenta. <Link to="/login" className="underline">Iniciá sesión</Link></p>
+        {cuitComplete && !cuitTaken && (
+          <p className="mt-1 flex items-center gap-1 text-[12px] text-green-600">
+            <Check className="size-3" /> CUIT válido
+          </p>
+        )}
+        {cuitTaken && cuitComplete && (
+          <p className="mt-1 text-[12px] text-danger">
+            Ese CUIT ya tiene una cuenta.{' '}
+            <Link to="/login" className="underline">Iniciá sesión</Link>
+          </p>
         )}
       </div>
       <div>

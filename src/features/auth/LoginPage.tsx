@@ -12,17 +12,27 @@ interface LoginForm {
   twoFactorCode?: string;
 }
 
-const CUIT_RE = /^\d{2}-?\d{8}-?\d$/;
+const CUIT_RE_COMPLETE = /^\d{2}-\d{8}-\d$/;
+
+/** Formatea dígitos de CUIT a XX-XXXXXXXX-X automáticamente mientras se escribe. */
+function formatCuit(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 10) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
   const login = useLogin();
   const [needs2fa, setNeeds2fa] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, formState, watch } = useForm<LoginForm>();
+  const { register, handleSubmit, formState, watch, setValue } = useForm<LoginForm>();
 
   const cuitValue = watch('cuit', '');
-  const cuitInvalid = cuitValue.length > 0 && !CUIT_RE.test(cuitValue.replace(/\s/g, ''));
+  const cuitDigits = cuitValue.replace(/\D/g, '');
+  const cuitTyping = cuitDigits.length > 0 && cuitDigits.length < 11;
+  const cuitComplete = CUIT_RE_COMPLETE.test(cuitValue);
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -75,10 +85,17 @@ export function LoginPage() {
               label="CUIT / CUIL"
               autoComplete="username"
               placeholder="20-12345678-9"
+              inputMode="numeric"
               {...register('cuit', { required: true })}
+              onChange={(e) => {
+                const formatted = formatCuit(e.target.value);
+                setValue('cuit', formatted, { shouldValidate: false });
+              }}
             />
-            {cuitInvalid && (
-              <p className="mt-1 text-[12px] text-danger">Formato: 20-12345678-9 (11 dígitos)</p>
+            {cuitTyping && (
+              <p className="mt-1 text-[12px] text-yellow-600">
+                Faltan {11 - cuitDigits.length} dígitos
+              </p>
             )}
           </div>
           <Input
@@ -102,7 +119,7 @@ export function LoginPage() {
             <div className="rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>
           )}
 
-          <Button type="submit" className="w-full" loading={formState.isSubmitting} disabled={cuitInvalid}>
+          <Button type="submit" className="w-full" loading={formState.isSubmitting} disabled={!cuitComplete}>
             Ingresar
           </Button>
 
