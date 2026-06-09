@@ -96,15 +96,19 @@ function OperatorsSection({ companyId }: { companyId: string }) {
   const revoke = useRevokeOperator();
   const [showForm, setShowForm] = useState(false);
   const [operatorName, setOperatorName] = useState('');
+  const [operatorEmail, setOperatorEmail] = useState('');
   const [generatedAccess, setGeneratedAccess] = useState<GeneratedAccess | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
+  const emailValid = /\S+@\S+\.\S+/.test(operatorEmail);
+
   const handleGenerate = async () => {
-    if (!operatorName.trim()) return;
-    const result = await generate.mutateAsync(operatorName.trim());
+    if (!operatorName.trim() || !emailValid) return;
+    const result = await generate.mutateAsync({ operatorName: operatorName.trim(), operatorEmail: operatorEmail.trim() });
     setGeneratedAccess(result);
     setOperatorName('');
+    setOperatorEmail('');
     setShowForm(false);
   };
 
@@ -128,19 +132,36 @@ function OperatorsSection({ companyId }: { companyId: string }) {
       <CardBody>
         {/* Formulario de invitación */}
         {showForm && (
-          <div className="mb-5 flex items-end gap-3 rounded-md bg-surface-alt p-4 animate-rise">
-            <div className="flex-1">
+          <div className="mb-5 rounded-md bg-surface-alt p-4 animate-rise space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               <Input
                 label="Nombre del operador"
                 placeholder="Ej: María García — Compras"
                 value={operatorName}
                 onChange={(e) => setOperatorName(e.target.value)}
               />
+              <div>
+                <Input
+                  label="Email del operador"
+                  type="email"
+                  placeholder="maria@empresa.com"
+                  value={operatorEmail}
+                  onChange={(e) => setOperatorEmail(e.target.value)}
+                />
+                {operatorEmail.length > 0 && !emailValid && (
+                  <p className="mt-1 text-[12px] text-danger">Email inválido</p>
+                )}
+              </div>
             </div>
-            <Button size="sm" onClick={handleGenerate} loading={generate.isPending} disabled={!operatorName.trim()}>
-              Generar acceso
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
+            <p className="text-[12px] text-ink-soft">
+              El operador recibirá un email con sus credenciales temporales y podrá cambiar su contraseña al ingresar.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleGenerate} loading={generate.isPending} disabled={!operatorName.trim() || !emailValid}>
+                Generar acceso y enviar invitación
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
+            </div>
           </div>
         )}
 
@@ -152,10 +173,10 @@ function OperatorsSection({ companyId }: { companyId: string }) {
             </p>
             <div className="grid grid-cols-2 gap-3">
               <CredField
-                label="CUIT / Usuario"
-                value={generatedAccess.cuit}
-                copied={copied === 'cuit'}
-                onCopy={() => copyText(generatedAccess.cuit, 'cuit')}
+                label="Email / Usuario"
+                value={generatedAccess.email}
+                copied={copied === 'email'}
+                onCopy={() => copyText(generatedAccess.email, 'email')}
               />
               <div>
                 <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
@@ -203,7 +224,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-ink">{op.name}</p>
-                    <p className="text-[12px] text-ink-soft font-mono">{op.cuit}</p>
+                    <p className="text-[12px] text-ink-soft">{op.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

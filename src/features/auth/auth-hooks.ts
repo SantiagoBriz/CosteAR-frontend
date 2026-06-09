@@ -9,11 +9,28 @@ interface AuthResponse {
 export function useLogin() {
   const setAuth = useAuthStore((s) => s.setAuth);
   return useMutation({
-    mutationFn: async (input: { cuit: string; password: string; twoFactorCode?: string }) => {
+    mutationFn: async (input: { identifier: string; password: string; twoFactorCode?: string }) => {
       const res = await api.post<AuthResponse>('/auth/login', input);
       return res.data.data;
     },
     onSuccess: (data) => setAuth(data.accessToken, data.user),
+  });
+}
+
+export function useSetFirstPassword() {
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const user = useAuthStore((s) => s.user);
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation({
+    mutationFn: async (newPassword: string) => {
+      await api.post('/auth/set-first-password', { newPassword });
+    },
+    onSuccess: () => {
+      // Limpiar flag mustChangePassword del store
+      if (user && token) {
+        setAuth(token, { ...user, mustChangePassword: false });
+      }
+    },
   });
 }
 

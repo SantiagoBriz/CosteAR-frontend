@@ -4,13 +4,13 @@ import { api } from '@/lib/api';
 export interface Operator {
   id: string;
   name: string;
-  cuit: string;
+  email: string;
   isActive: boolean;
   createdAt: string;
 }
 
 export interface GeneratedAccess {
-  cuit: string;
+  email: string;
   tempPassword: string;
   operatorId: string;
 }
@@ -29,10 +29,10 @@ export function useOperators(companyId: string) {
 export function useGenerateOperatorAccess(companyId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (operatorName: string) => {
+    mutationFn: async ({ operatorName, operatorEmail }: { operatorName: string; operatorEmail: string }) => {
       const res = await api.post<{ data: GeneratedAccess }>(
         `/empresa-portal/${companyId}/operators`,
-        { operatorName },
+        { operatorName, operatorEmail },
       );
       return res.data.data;
     },

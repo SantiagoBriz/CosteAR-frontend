@@ -7,12 +7,13 @@ import { useLogin } from './auth-hooks';
 import { apiErrorMessage } from '@/lib/api';
 
 interface LoginForm {
-  cuit: string;
+  identifier: string;
   password: string;
   twoFactorCode?: string;
 }
 
 const CUIT_RE_COMPLETE = /^\d{2}-\d{8}-\d$/;
+const EMAIL_RE = /\S+@\S+\.\S+/;
 
 /** Formatea dígitos de CUIT a XX-XXXXXXXX-X automáticamente mientras se escribe. */
 function formatCuit(raw: string): string {
@@ -29,16 +30,27 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState, watch, setValue } = useForm<LoginForm>();
 
-  const cuitValue = watch('cuit', '');
-  const cuitDigits = cuitValue.replace(/\D/g, '');
-  const cuitTyping = cuitDigits.length > 0 && cuitDigits.length < 11;
-  const cuitComplete = CUIT_RE_COMPLETE.test(cuitValue);
+  const identifierValue = watch('identifier', '');
+  const isEmail = identifierValue.includes('@');
+  const isCuit = !isEmail;
+
+  // Para CUIT: validar formato completo. Para email: validar formato email.
+  const cuitDigits = identifierValue.replace(/\D/g, '');
+  const cuitTyping = isCuit && cuitDigits.length > 0 && cuitDigits.length < 11;
+  const identifierValid = isEmail
+    ? EMAIL_RE.test(identifierValue)
+    : CUIT_RE_COMPLETE.test(identifierValue);
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     try {
-      await login.mutateAsync(values);
-      await navigate({ to: '/dashboard' });
+      const result = await login.mutateAsync(values);
+      // Si el operador debe cambiar su contraseña, redirigir
+      if (result?.mustChangePassword) {
+        await navigate({ to: '/change-password' });
+      } else {
+        await navigate({ to: '/dashboard' });
+      }
     } catch (e) {
       const msg = apiErrorMessage(e);
       if (msg.toLowerCase().includes('dos factores') || msg.includes('TWO_FACTOR')) {
@@ -82,14 +94,16 @@ export function LoginPage() {
 
           <div>
             <Input
-              label="CUIT / CUIL"
+              label="CUIT / Email"
               autoComplete="username"
-              placeholder="20-12345678-9"
-              inputMode="numeric"
-              {...register('cuit', { required: true })}
+              placeholder="20-12345678-9 o tu email"
+              inputMode={isEmail ? 'email' : 'numeric'}
+              {...register('identifier', { required: true })}
               onChange={(e) => {
-                const formatted = formatCuit(e.target.value);
-                setValue('cuit', formatted, { shouldValidate: false });
+                // Si hay @, es email → no formatear. Si no, auto-formatear como CUIT.
+                const val = e.target.value;
+                const formatted = val.includes('@') ? val : formatCuit(val);
+                setValue('identifier', formatted, { shouldValidate: false });
               }}
             />
             {cuitTyping && (
@@ -98,6 +112,7 @@ export function LoginPage() {
               </p>
             )}
           </div>
+
           <Input
             label="Contraseña"
             type="password"
@@ -119,7 +134,7 @@ export function LoginPage() {
             <div className="rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>
           )}
 
-          <Button type="submit" className="w-full" loading={formState.isSubmitting} disabled={!cuitComplete}>
+          <Button type="submit" className="w-full" loading={formState.isSubmitting} disabled={!identifierValid}>
             Ingresar
           </Button>
 

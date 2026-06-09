@@ -22,6 +22,7 @@ import { EmpresaPortalPage } from '@/features/empresa-portal/EmpresaPortalPage';
 import { PropagacionPage } from '@/features/propagacion/PropagacionPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { AutomatizacionPage } from '@/features/automatizacion/AutomatizacionPage';
+import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage';
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -33,6 +34,10 @@ function requireAuth() {
   const { accessToken, initializing, user } = useAuthStore.getState();
   if (!accessToken && !initializing) {
     throw redirect({ to: '/login' });
+  }
+  // Primer login: operador debe cambiar su contraseña
+  if (user?.mustChangePassword) {
+    throw redirect({ to: '/change-password' });
   }
   // Los operadores de empresa solo tienen acceso al portal
   if (user?.role === 'EMPRESA_OPERATOR') {
@@ -66,6 +71,17 @@ const validacionesRoute = createRoute({ getParentRoute: () => rootRoute, path: '
 const historialRoute = createRoute({ getParentRoute: () => rootRoute, path: '/historial', beforeLoad: requireAuth, component: HistorialPage });
 const propagacionRoute = createRoute({ getParentRoute: () => rootRoute, path: '/propagacion', beforeLoad: requireAuth, component: PropagacionPage });
 const automatizacionRoute = createRoute({ getParentRoute: () => rootRoute, path: '/automatizacion', beforeLoad: requireAuth, component: AutomatizacionPage });
+// Cambio de contraseña obligatorio en primer login (operadores invitados)
+const changePasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/change-password',
+  beforeLoad: () => {
+    const { accessToken, initializing } = useAuthStore.getState();
+    if (!accessToken && !initializing) throw redirect({ to: '/login' });
+  },
+  component: ChangePasswordPage,
+});
+
 // Portal de empresa — accesible solo con rol EMPRESA_OPERATOR
 const empresaPortalRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -94,6 +110,7 @@ const routeTree = rootRoute.addChildren([
   historialRoute,
   propagacionRoute,
   automatizacionRoute,
+  changePasswordRoute,
   empresaPortalRoute,
 ]);
 
