@@ -7,11 +7,12 @@ import type { DirectLaborConfig } from './cost-structure-types';
 
 interface Props {
   defaultValues?: DirectLaborConfig;
+  preloadValues?: DirectLaborConfig;
   onSave: (data: DirectLaborConfig) => Promise<void>;
   saving: boolean;
 }
 
-export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
+export function DirectLaborForm({ defaultValues, preloadValues, onSave, saving }: Props) {
   const { register, control, handleSubmit, reset } = useForm<DirectLaborConfig>({
     defaultValues: defaultValues ?? emptyDirectLabor(),
   });
@@ -19,6 +20,10 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
   useEffect(() => {
     if (defaultValues) reset(defaultValues);
   }, [defaultValues, reset]);
+
+  useEffect(() => {
+    if (preloadValues) reset(preloadValues);
+  }, [preloadValues, reset]);
 
   const { fields: remFields, append: appendRem, remove: removeRem } = useFieldArray({ control, name: 'itcs.uncertainRemunerative' });
   const { fields: nonRemFields, append: appendNonRem, remove: removeNonRem } = useFieldArray({ control, name: 'itcs.uncertainNonRemunerative' });

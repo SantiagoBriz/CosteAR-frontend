@@ -7,11 +7,12 @@ import type { RawMaterialConfig } from './cost-structure-types';
 
 interface Props {
   defaultValues?: RawMaterialConfig;
+  preloadValues?: RawMaterialConfig;
   onSave: (data: RawMaterialConfig) => Promise<void>;
   saving: boolean;
 }
 
-export function RawMaterialForm({ defaultValues, onSave, saving }: Props) {
+export function RawMaterialForm({ defaultValues, preloadValues, onSave, saving }: Props) {
   const { register, control, handleSubmit, reset } = useForm<RawMaterialConfig>({
     defaultValues: defaultValues ?? emptyRawMaterial(),
   });
@@ -19,6 +20,10 @@ export function RawMaterialForm({ defaultValues, onSave, saving }: Props) {
   useEffect(() => {
     if (defaultValues) reset(defaultValues);
   }, [defaultValues, reset]);
+
+  useEffect(() => {
+    if (preloadValues) reset(preloadValues);
+  }, [preloadValues, reset]);
 
   const { fields: movements, append, remove } = useFieldArray({ control, name: 'movements' });
 
