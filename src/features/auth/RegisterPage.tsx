@@ -112,6 +112,7 @@ export function RegisterPage() {
       draft.name.length >= 2 &&
       EMAIL_RE.test(draft.email) &&
       CUIT_RE_COMPLETE.test(draft.cuit) &&
+      validateCuit(draft.cuit) &&
       passwordStrength(draft.password) === 4 &&
       !emailTaken &&
       !cuitTaken
@@ -256,6 +257,18 @@ function passwordStrength(p: string): number {
 // CUIT completo: XX-XXXXXXXX-X (exactamente 11 dígitos con guiones auto-insertados)
 const CUIT_RE_COMPLETE = /^\d{2}-\d{8}-\d$/;
 
+// Valida el dígito verificador del CUIT/CUIL argentino
+function validateCuit(cuit: string): boolean {
+  const digits = cuit.replace(/\D/g, '');
+  if (digits.length !== 11) return false;
+  const weights = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const sum = weights.reduce((acc, w, i) => acc + w * Number(digits[i]), 0);
+  const remainder = sum % 11;
+  if (remainder === 1) return false; // ningún CUIT válido tiene este resultado
+  const expectedVerifier = remainder === 0 ? 0 : 11 - remainder;
+  return Number(digits[10]) === expectedVerifier;
+}
+
 function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set: SetFn; emailTaken: boolean; cuitTaken: boolean }) {
   const emailInvalid = draft.email.length > 0 && !EMAIL_RE.test(draft.email);
 
@@ -266,6 +279,7 @@ function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set:
   const cuitDigits = draft.cuit.replace(/\D/g, '');
   const cuitTyping = cuitDigits.length > 0 && cuitDigits.length < 11;
   const cuitComplete = CUIT_RE_COMPLETE.test(draft.cuit);
+  const cuitValid = cuitComplete && validateCuit(draft.cuit);
 
   const strength = passwordStrength(draft.password);
   const strengthColors = ['bg-danger', 'bg-danger', 'bg-yellow-400', 'bg-yellow-400', 'bg-green-500'];
@@ -297,12 +311,17 @@ function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set:
             Formato: XX-XXXXXXXX-X — faltan {11 - cuitDigits.length} dígitos
           </p>
         )}
-        {cuitComplete && !cuitTaken && (
-          <p className="mt-1 flex items-center gap-1 text-[12px] text-green-600">
-            <Check className="size-3" /> CUIT válido
+        {cuitComplete && !cuitValid && (
+          <p className="mt-1 text-[12px] text-danger">
+            CUIT/CUIL inválido — revisá los números ingresados
           </p>
         )}
-        {cuitTaken && cuitComplete && (
+        {cuitValid && !cuitTaken && (
+          <p className="mt-1 flex items-center gap-1 text-[12px] text-green-600">
+            <Check className="size-3" /> CUIT/CUIL válido
+          </p>
+        )}
+        {cuitTaken && cuitValid && (
           <p className="mt-1 text-[12px] text-danger">
             Ese CUIT ya tiene una cuenta.{' '}
             <Link to="/login" className="underline">Iniciá sesión</Link>
