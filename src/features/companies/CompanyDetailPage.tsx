@@ -95,7 +95,8 @@ function OperatorsSection({ companyId }: { companyId: string }) {
   const generate = useGenerateOperatorAccess(companyId);
   const revoke = useRevokeOperator();
   const [showForm, setShowForm] = useState(false);
-  const [operatorName, setOperatorName] = useState('');
+  const [operatorFullName, setOperatorFullName] = useState('');
+  const [operatorRole, setOperatorRole] = useState('');
   const [operatorEmail, setOperatorEmail] = useState('');
   const [generatedAccess, setGeneratedAccess] = useState<GeneratedAccess | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -104,10 +105,14 @@ function OperatorsSection({ companyId }: { companyId: string }) {
   const emailValid = /\S+@\S+\.\S+/.test(operatorEmail);
 
   const handleGenerate = async () => {
-    if (!operatorName.trim() || !emailValid) return;
-    const result = await generate.mutateAsync({ operatorName: operatorName.trim(), operatorEmail: operatorEmail.trim() });
+    if (!operatorFullName.trim() || !emailValid) return;
+    const displayName = operatorRole.trim()
+      ? `${operatorFullName.trim()} — ${operatorRole.trim()}`
+      : operatorFullName.trim();
+    const result = await generate.mutateAsync({ operatorName: displayName, operatorEmail: operatorEmail.trim() });
     setGeneratedAccess(result);
-    setOperatorName('');
+    setOperatorFullName('');
+    setOperatorRole('');
     setOperatorEmail('');
     setShowForm(false);
   };
@@ -135,29 +140,35 @@ function OperatorsSection({ companyId }: { companyId: string }) {
           <div className="mb-5 rounded-md bg-surface-alt p-4 animate-rise space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Nombre del operador"
-                placeholder="Ej: María García — Compras"
-                value={operatorName}
-                onChange={(e) => setOperatorName(e.target.value)}
+                label="Nombre completo"
+                placeholder="Ej: María García"
+                value={operatorFullName}
+                onChange={(e) => setOperatorFullName(e.target.value)}
               />
-              <div>
-                <Input
-                  label="Email del operador"
-                  type="email"
-                  placeholder="maria@empresa.com"
-                  value={operatorEmail}
-                  onChange={(e) => setOperatorEmail(e.target.value)}
-                />
-                {operatorEmail.length > 0 && !emailValid && (
-                  <p className="mt-1 text-[12px] text-danger">Email inválido</p>
-                )}
-              </div>
+              <Input
+                label="Cargo / área (opcional)"
+                placeholder="Ej: Compras, Administración…"
+                value={operatorRole}
+                onChange={(e) => setOperatorRole(e.target.value)}
+              />
+            </div>
+            <div>
+              <Input
+                label="Email"
+                type="email"
+                placeholder="maria@empresa.com"
+                value={operatorEmail}
+                onChange={(e) => setOperatorEmail(e.target.value)}
+              />
+              {operatorEmail.length > 0 && !emailValid && (
+                <p className="mt-1 text-[12px] text-danger">Email inválido</p>
+              )}
             </div>
             <p className="text-[12px] text-ink-soft">
               El operador recibirá un email con sus credenciales temporales y podrá cambiar su contraseña al ingresar.
             </p>
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleGenerate} loading={generate.isPending} disabled={!operatorName.trim() || !emailValid}>
+              <Button size="sm" onClick={handleGenerate} loading={generate.isPending} disabled={!operatorFullName.trim() || !emailValid}>
                 Generar acceso y enviar invitación
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
