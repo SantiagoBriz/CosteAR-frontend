@@ -21,7 +21,6 @@ import {
   useSimulate,
   useCalculationHistory,
 } from './cost-structure-hooks';
-import { catedraExample } from './catedra-example';
 import { RawMaterialForm } from './RawMaterialForm';
 import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
@@ -50,11 +49,6 @@ export function CostStructurePage() {
   const [result,    setResult]    = useState<CalculationResult | null>(null);
   const [error,     setError]     = useState<string | null>(null);
 
-  // Preload — se llenan al pulsar "Cargar ejemplo"; nunca tocan la DB
-  const [mpPreload,  setMpPreload]  = useState<RawMaterialConfig | undefined>();
-  const [modPreload, setModPreload] = useState<DirectLaborConfig | undefined>();
-  const [cipPreload, setCipPreload] = useState<IndirectCostConfig | undefined>();
-
   const configured = {
     mp:    !!structure?.rawMaterialConfig,
     mod:   !!structure?.directLaborConfig,
@@ -78,13 +72,6 @@ export function CostStructurePage() {
       };
       setActiveTab(next[section] ?? 'result');
     } catch (e) { setError(apiErrorMessage(e)); }
-  };
-
-  // Solo reset local — sin tocar la DB
-  const loadExample = (section: 'raw-material' | 'direct-labor' | 'indirect-costs') => {
-    if (section === 'raw-material')   setMpPreload(catedraExample.rawMaterial as unknown as RawMaterialConfig);
-    if (section === 'direct-labor')   setModPreload(catedraExample.directLabor as unknown as DirectLaborConfig);
-    if (section === 'indirect-costs') setCipPreload(catedraExample.indirectCosts as unknown as IndirectCostConfig);
   };
 
   const runCalculate = async () => {
@@ -142,19 +129,7 @@ export function CostStructurePage() {
       {/* Aviso de progreso */}
       {!allReady && (
         <div className="mb-4 rounded-md border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] text-ink">
-          Completá las 4 secciones para calcular.{' '}
-          <button
-            type="button"
-            className="font-semibold text-granate underline-offset-2 hover:underline"
-            onClick={() => {
-              loadExample('raw-material');
-              loadExample('direct-labor');
-              loadExample('indirect-costs');
-            }}
-          >
-            Cargar todos los ejemplos
-          </button>{' '}
-          para explorar el flujo con datos reales de la cátedra.
+          Completá las 4 secciones para habilitar el cálculo.
         </div>
       )}
 
@@ -196,11 +171,9 @@ export function CostStructurePage() {
           title="Materia Prima"
           description="Lote óptimo de Wilson · Política de stock · Ficha PPP (Precio Promedio Ponderado)"
           configured={configured.mp}
-          onLoadExample={() => loadExample('raw-material')}
         >
           <RawMaterialForm
             defaultValues={structure?.rawMaterialConfig as RawMaterialConfig | undefined}
-            preloadValues={mpPreload}
             onSave={(d) => saveSection('raw-material', d)}
             saving={updateSection.isPending}
           />
@@ -212,11 +185,9 @@ export function CostStructurePage() {
           title="Mano de Obra Directa"
           description="Días hábiles efectivos · ITCS (Índice Total de Cargas Sociales) · Tarifa horaria por departamento"
           configured={configured.mod}
-          onLoadExample={() => loadExample('direct-labor')}
         >
           <DirectLaborForm
             defaultValues={structure?.directLaborConfig as DirectLaborConfig | undefined}
-            preloadValues={modPreload}
             onSave={(d) => saveSection('direct-labor', d)}
             saving={updateSection.isPending}
           />
@@ -228,11 +199,9 @@ export function CostStructurePage() {
           title="Costos Indirectos de Producción"
           description="Centros de costo · Prorrateo primario y secundario · Cuotas por hora y variaciones"
           configured={configured.cip}
-          onLoadExample={() => loadExample('indirect-costs')}
         >
           <IndirectCostsForm
             defaultValues={structure?.indirectCostConfig as IndirectCostConfig | undefined}
-            preloadValues={cipPreload}
             onSave={(d) => saveSection('indirect-costs', d)}
             saving={updateSection.isPending}
           />
@@ -267,12 +236,11 @@ export function CostStructurePage() {
 // ── SectionShell ──────────────────────────────────────────────────────────────
 
 function SectionShell({
-  title, description, configured, onLoadExample, children,
+  title, description, configured, children,
 }: {
   title: string;
   description: string;
   configured: boolean;
-  onLoadExample: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -281,16 +249,11 @@ function SectionShell({
         title={title}
         description={description}
         action={
-          <div className="flex items-center gap-3">
-            {configured && (
-              <span className="flex items-center gap-1.5 text-[12px] font-medium text-ok">
-                <CheckCircle2 className="size-3.5" /> Guardado
-              </span>
-            )}
-            <Button variant="secondary" size="sm" onClick={onLoadExample}>
-              Cargar ejemplo
-            </Button>
-          </div>
+          configured ? (
+            <span className="flex items-center gap-1.5 text-[12px] font-medium text-ok">
+              <CheckCircle2 className="size-3.5" /> Guardado
+            </span>
+          ) : undefined
         }
       />
       <CardBody className="px-6 pb-6 pt-0">

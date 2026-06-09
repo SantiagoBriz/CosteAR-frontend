@@ -6,12 +6,11 @@ import type { IndirectCostConfig } from './cost-structure-types';
 
 interface Props {
   defaultValues?: IndirectCostConfig;
-  preloadValues?: IndirectCostConfig;
   onSave: (data: IndirectCostConfig) => Promise<void>;
   saving: boolean;
 }
 
-export function IndirectCostsForm({ defaultValues, preloadValues, onSave, saving }: Props) {
+export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   const { register, control, handleSubmit, reset } = useForm<IndirectCostConfig>({
     defaultValues: defaultValues ?? emptyIndirectCosts(),
   });
@@ -19,10 +18,6 @@ export function IndirectCostsForm({ defaultValues, preloadValues, onSave, saving
   useEffect(() => {
     if (defaultValues) reset(defaultValues);
   }, [defaultValues, reset]);
-
-  useEffect(() => {
-    if (preloadValues) reset(preloadValues);
-  }, [preloadValues, reset]);
 
   const { fields: centers, append: addCenter, remove: removeCenter } = useFieldArray({ control, name: 'centers' });
   const { fields: concepts, append: addConcept, remove: removeConcept } = useFieldArray({ control, name: 'concepts' });
