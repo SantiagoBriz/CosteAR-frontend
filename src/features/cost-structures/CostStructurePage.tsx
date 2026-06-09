@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Check, Calculator, Package, Users, Factory, Zap, History } from 'lucide-react';
+import {
+  ArrowLeft, Check, Calculator, Package, Users, Factory,
+  Zap, History, ChevronDown, ChevronUp, Pencil,
+} from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -18,16 +21,21 @@ import {
   useCalculationHistory,
 } from './cost-structure-hooks';
 import { catedraExample } from './catedra-example';
+import { RawMaterialForm } from './RawMaterialForm';
+import { DirectLaborForm } from './DirectLaborForm';
+import { IndirectCostsForm } from './IndirectCostsForm';
+import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { CalculationResult } from '@/lib/types';
 
 type Tab = 'current' | 'simulator' | 'history';
+type OpenSection = 'raw-material' | 'direct-labor' | 'indirect-costs' | null;
 
 export function CostStructurePage() {
   const { id } = useParams({ from: '/cost-structures/$id' });
-  const { data: structure } = useCostStructure(id);
+  const { data: structure, isLoading } = useCostStructure(id);
   const updateSection = useUpdateCostSection(id);
   const updateSales = useUpdateSales(id);
   const calculate = useCalculate(id);
@@ -35,14 +43,44 @@ export function CostStructurePage() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [tab, setTab] = useState<Tab>('current');
   const [error, setError] = useState<string | null>(null);
+  const [openSection, setOpenSection] = useState<OpenSection>(null);
 
-  const loadExample = async (
+  const saveSection = async (
     section: 'raw-material' | 'direct-labor' | 'indirect-costs',
     config: unknown,
   ) => {
     setError(null);
     try {
       await updateSection.mutateAsync({ section, config });
+      setOpenSection(null); // cerrar tras guardar
+    } catch (e) {
+      setError(apiErrorMessage(e));
+    }
+  };
+
+  const loadExample = async (section: 'raw-material' | 'direct-labor' | 'indirect-costs') => {
+    setError(null);
+    const config =
+      section === 'raw-material'
+        ? catedraExample.rawMaterial
+        : section === 'direct-labor'
+          ? catedraExample.directLabor
+          : catedraExample.indirectCosts;
+    try {
+      await updateSection.mutateAsync({ section, config });
+      // Abrir la sección para que el usuario vea los datos cargados
+      setOpenSection(section);
+    } catch (e) {
+      setError(apiErrorMessage(e));
+    }
+  };
+
+  const loadAllExamples = async () => {
+    setError(null);
+    try {
+      await updateSection.mutateAsync({ section: 'raw-material', config: catedraExample.rawMaterial });
+      await updateSection.mutateAsync({ section: 'direct-labor', config: catedraExample.directLabor });
+      await updateSection.mutateAsync({ section: 'indirect-costs', config: catedraExample.indirectCosts });
     } catch (e) {
       setError(apiErrorMessage(e));
     }
@@ -61,6 +99,21 @@ export function CostStructurePage() {
 
   const shown = result ?? (latest ? latestToResult(latest) : null);
 
+  const allConfigured =
+    !!structure?.rawMaterialConfig &&
+    !!structure?.directLaborConfig &&
+    !!structure?.indirectCostConfig;
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-sm text-ink-soft">Cargando…</p>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <Link
@@ -75,43 +128,88 @@ export function CostStructurePage() {
         title={structure?.productName ?? 'Estructura de costos'}
         description={structure ? `Período ${structure.period}` : undefined}
         action={
-          <Button onClick={runCalculate} loading={calculate.isPending}>
-            <Calculator className="size-4" /> Calcular
-          </Button>
+          <div className="flex items-center gap-2">
+            {!allConfigured && (
+              <Button variant="secondary" size="sm" onClick={loadAllExamples} loading={updateSection.isPending}>
+                Cargar ejemplo completo
+              </Button>
+            )}
+            <Button onClick={runCalculate} loading={calculate.isPending} disabled={!allConfigured}>
+              <Calculator className="size-4" /> Calcular
+            </Button>
+          </div>
         }
       />
+
+      {!allConfigured && (
+        <div className="mb-4 rounded-md border border-action/30 bg-action/5 px-4 py-3 text-[13px] text-ink">
+          <strong>Pasos para calcular:</strong> completá las 3 secciones de costos, cargá el precio y cantidad de venta, luego presioná <strong>Calcular</strong>.
+          {' '}¿Primera vez? Usá <strong>Cargar ejemplo completo</strong> para ver cómo funciona.
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-        {/* Configuración de los tres elementos */}
-        <div className="space-y-4">
-          <SectionCard
+      <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+        {/* Columna izquierda: configuración */}
+        <div className="space-y-3">
+          {/* Materia Prima */}
+          <SectionAccordion
             icon={Package}
             title="Materia Prima"
             subtitle="Wilson + ficha de stock PPP"
             configured={!!structure?.rawMaterialConfig}
-            onLoad={() => loadExample('raw-material', catedraExample.rawMaterial)}
-            loading={updateSection.isPending}
-          />
-          <SectionCard
+            open={openSection === 'raw-material'}
+            onToggle={() => setOpenSection(openSection === 'raw-material' ? null : 'raw-material')}
+            onLoadExample={() => loadExample('raw-material')}
+            loadingExample={updateSection.isPending}
+          >
+            <RawMaterialForm
+              defaultValues={structure?.rawMaterialConfig as RawMaterialConfig | undefined}
+              onSave={(data) => saveSection('raw-material', data)}
+              saving={updateSection.isPending}
+            />
+          </SectionAccordion>
+
+          {/* Mano de Obra Directa */}
+          <SectionAccordion
             icon={Users}
             title="Mano de Obra Directa"
             subtitle="ITCS + tarifa horaria"
             configured={!!structure?.directLaborConfig}
-            onLoad={() => loadExample('direct-labor', catedraExample.directLabor)}
-            loading={updateSection.isPending}
-          />
-          <SectionCard
+            open={openSection === 'direct-labor'}
+            onToggle={() => setOpenSection(openSection === 'direct-labor' ? null : 'direct-labor')}
+            onLoadExample={() => loadExample('direct-labor')}
+            loadingExample={updateSection.isPending}
+          >
+            <DirectLaborForm
+              defaultValues={structure?.directLaborConfig as DirectLaborConfig | undefined}
+              onSave={(data) => saveSection('direct-labor', data)}
+              saving={updateSection.isPending}
+            />
+          </SectionAccordion>
+
+          {/* Costos Indirectos */}
+          <SectionAccordion
             icon={Factory}
             title="Costos Indirectos"
             subtitle="Prorrateo + cuotas + variaciones"
             configured={!!structure?.indirectCostConfig}
-            onLoad={() => loadExample('indirect-costs', catedraExample.indirectCosts)}
-            loading={updateSection.isPending}
-          />
+            open={openSection === 'indirect-costs'}
+            onToggle={() => setOpenSection(openSection === 'indirect-costs' ? null : 'indirect-costs')}
+            onLoadExample={() => loadExample('indirect-costs')}
+            loadingExample={updateSection.isPending}
+          >
+            <IndirectCostsForm
+              defaultValues={structure?.indirectCostConfig as IndirectCostConfig | undefined}
+              onSave={(data) => saveSection('indirect-costs', data)}
+              saving={updateSection.isPending}
+            />
+          </SectionAccordion>
+
+          {/* Datos de venta */}
           <SalesCard
             defaultPrice={structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined}
             defaultQty={structure?.salesQuantity ? Number(structure.salesQuantity) : undefined}
@@ -122,9 +220,8 @@ export function CostStructurePage() {
           />
         </div>
 
-        {/* Panel derecho con tabs */}
+        {/* Panel derecho: resultado */}
         <div>
-          {/* Tab bar */}
           <div className="mb-4 flex gap-1 border-b border-line">
             <TabBtn active={tab === 'current'} onClick={() => setTab('current')}>
               <Calculator className="size-4" /> Resultado
@@ -137,7 +234,7 @@ export function CostStructurePage() {
             </TabBtn>
           </div>
 
-          {tab === 'current' && (shown ? <ResultPanel result={shown} /> : <EmptyResult />)}
+          {tab === 'current' && (shown ? <ResultPanel result={shown} /> : <EmptyResult allConfigured={allConfigured} />)}
           {tab === 'simulator' && <SimulatorPanel structureId={id} baseResult={shown} />}
           {tab === 'history' && <HistoryPanel structureId={id} />}
         </div>
@@ -146,49 +243,85 @@ export function CostStructurePage() {
   );
 }
 
-function TabBtn({
-  active,
-  onClick,
+// ─── Accordion de sección ────────────────────────────────────────────────────
+
+function SectionAccordion({
+  icon: Icon,
+  title,
+  subtitle,
+  configured,
+  open,
+  onToggle,
+  onLoadExample,
+  loadingExample,
   children,
 }: {
-  active: boolean;
-  onClick: () => void;
+  icon: typeof Package;
+  title: string;
+  subtitle: string;
+  configured: boolean;
+  open: boolean;
+  onToggle: () => void;
+  onLoadExample: () => void;
+  loadingExample: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-1.5 border-b-2 px-4 pb-2.5 text-[13px] font-medium transition-colors',
-        active
-          ? 'border-granate text-granate'
-          : 'border-transparent text-ink-soft hover:text-ink',
+    <Card>
+      {/* Header siempre visible */}
+      <CardBody className="flex items-center justify-between gap-3 py-3">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-granate-tenue text-granate">
+            <Icon className="size-5" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-ink">{title}</div>
+            <div className="text-[12px] text-ink-soft">{subtitle}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {configured ? (
+            <StatusBadge status="ok">
+              <Check className="size-3" /> Cargado
+            </StatusBadge>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onLoadExample(); }}
+              loading={loadingExample}
+            >
+              Cargar ejemplo
+            </Button>
+          )}
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex size-8 items-center justify-center rounded-md text-ink-soft transition-colors hover:bg-surface-alt hover:text-ink"
+            title={open ? 'Cerrar' : configured ? 'Editar' : 'Ingresar datos'}
+          >
+            {open ? <ChevronUp className="size-4" /> : configured ? <Pencil className="size-4" /> : <ChevronDown className="size-4" />}
+          </button>
+        </div>
+      </CardBody>
+
+      {/* Formulario expandible */}
+      {open && (
+        <div className="border-t border-line px-5 pb-5">
+          {children}
+        </div>
       )}
-    >
-      {children}
-    </button>
+    </Card>
   );
 }
 
-// ─── Simulator ──────────────────────────────────────────────────────────────
+// ─── Pestaña simulador ────────────────────────────────────────────────────────
 
-function SimulatorPanel({
-  structureId,
-  baseResult,
-}: {
-  structureId: string;
-  baseResult: CalculationResult | null;
-}) {
+function SimulatorPanel({ structureId, baseResult }: { structureId: string; baseResult: CalculationResult | null }) {
   const simulate = useSimulate(structureId);
   const [simResult, setSimResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const { register, handleSubmit, watch } = useForm<{
-    salesUnitPrice: string;
-    salesQuantity: string;
-    macroFactor: string;
-  }>({ defaultValues: { macroFactor: '1' } });
+  const { register, handleSubmit } = useForm<{ salesUnitPrice: string; salesQuantity: string; macroFactor: string }>({ defaultValues: { macroFactor: '1' } });
 
   const onSubmit = handleSubmit(async (v) => {
     setError(null);
@@ -207,36 +340,13 @@ function SimulatorPanel({
   return (
     <div className="space-y-4 animate-rise">
       <Card>
-        <CardHeader
-          title="Simulador what-if"
-          description="Modificá el precio de venta, la cantidad o el factor macro y mirá el impacto sin guardar nada."
-        />
+        <CardHeader title="Simulador what-if" description="Modificá el precio, la cantidad o el factor macro y mirá el impacto sin guardar nada." />
         <CardBody>
           <form onSubmit={onSubmit} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">
-              <Input
-                label="Precio unitario"
-                type="number"
-                step="0.01"
-                numeric
-                placeholder="Dejar vacío = sin cambio"
-                {...register('salesUnitPrice')}
-              />
-              <Input
-                label="Cantidad"
-                type="number"
-                step="1"
-                numeric
-                placeholder="Dejar vacío = sin cambio"
-                {...register('salesQuantity')}
-              />
-              <Input
-                label="Factor macro (ej: 1.15 = +15%)"
-                type="number"
-                step="0.01"
-                numeric
-                {...register('macroFactor')}
-              />
+              <Input label="Precio unitario" type="number" step="0.01" numeric placeholder="Vacío = sin cambio" {...register('salesUnitPrice')} />
+              <Input label="Cantidad" type="number" step="1" numeric placeholder="Vacío = sin cambio" {...register('salesQuantity')} />
+              <Input label="Factor macro (ej: 1.15 = +15%)" type="number" step="0.01" numeric {...register('macroFactor')} />
             </div>
             {error && <p className="text-[12px] text-danger">{error}</p>}
             <Button type="submit" loading={simulate.isPending}>
@@ -245,43 +355,27 @@ function SimulatorPanel({
           </form>
         </CardBody>
       </Card>
-
-      {simResult && baseResult && (
-        <BeforeAfterCard base={baseResult} simulated={simResult} />
-      )}
+      {simResult && baseResult && <BeforeAfterCard base={baseResult} simulated={simResult} />}
       {simResult && !baseResult && <ResultPanel result={simResult} />}
     </div>
   );
 }
 
-function BeforeAfterCard({
-  base,
-  simulated,
-}: {
-  base: CalculationResult;
-  simulated: CalculationResult;
-}) {
+function BeforeAfterCard({ base, simulated }: { base: CalculationResult; simulated: CalculationResult }) {
   const delta = simulated.grossMarginPct - base.grossMarginPct;
   const rows = [
     { label: 'Costo de producción', before: base.productionCost, after: simulated.productionCost },
     { label: 'COGS', before: base.costOfGoodsSold, after: simulated.costOfGoodsSold },
     { label: 'Margen bruto ($)', before: base.grossMargin, after: simulated.grossMargin },
   ];
-
   return (
     <Card>
       <CardHeader
         title="Comparación antes / después"
         description="Resultado base vs. escenario simulado"
         action={
-          <span
-            className={cn(
-              'rounded-full px-3 py-1 text-[13px] font-semibold',
-              delta >= 0 ? 'bg-green-50 text-green-700' : 'bg-danger/10 text-danger',
-            )}
-          >
-            Margen: {base.grossMarginPct.toFixed(1)}% → {simulated.grossMarginPct.toFixed(1)}%
-            {' '}({delta > 0 ? '+' : ''}{delta.toFixed(1)} pts)
+          <span className={cn('rounded-full px-3 py-1 text-[13px] font-semibold', delta >= 0 ? 'bg-green-50 text-green-700' : 'bg-danger/10 text-danger')}>
+            {base.grossMarginPct.toFixed(1)}% → {simulated.grossMarginPct.toFixed(1)}% ({delta > 0 ? '+' : ''}{delta.toFixed(1)} pts)
           </span>
         }
       />
@@ -316,11 +410,10 @@ function BeforeAfterCard({
   );
 }
 
-// ─── History tab ─────────────────────────────────────────────────────────────
+// ─── Historial ────────────────────────────────────────────────────────────────
 
 function HistoryPanel({ structureId }: { structureId: string }) {
   const { data: history, isLoading } = useCalculationHistory(structureId);
-
   if (isLoading) return <p className="text-sm text-ink-soft">Cargando…</p>;
   if (!history?.length) {
     return (
@@ -333,10 +426,9 @@ function HistoryPanel({ structureId }: { structureId: string }) {
       </Card>
     );
   }
-
   return (
     <Card>
-      <CardHeader title="Historial de cálculos" description="Últimos 20 snapshots de costos y margen" />
+      <CardHeader title="Historial de cálculos" description="Últimos 50 snapshots de costos y margen" />
       <CardBody className="p-0">
         <table className="w-full text-sm">
           <thead>
@@ -352,17 +444,11 @@ function HistoryPanel({ structureId }: { structureId: string }) {
               <tr key={c.id} className={cn('hover:bg-surface-alt/50', i === 0 && 'bg-action/5')}>
                 <td className="px-6 py-2.5 text-ink">
                   {formatDate(c.calculatedAt)}
-                  {i === 0 && (
-                    <span className="ml-2 rounded-full bg-action/10 px-2 py-0.5 text-[10px] font-semibold text-action">
-                      Último
-                    </span>
-                  )}
+                  {i === 0 && <span className="ml-2 rounded-full bg-action/10 px-2 py-0.5 text-[10px] font-semibold text-action">Último</span>}
                 </td>
                 <td className="px-4 py-2.5 text-right tabular"><Money value={Number(c.productionCost)} /></td>
                 <td className="px-4 py-2.5 text-right tabular"><Money value={Number(c.costOfGoodsSold)} /></td>
-                <td className="px-4 py-2.5 text-right">
-                  <Percent value={Number(c.grossMarginPct)} colorize />
-                </td>
+                <td className="px-4 py-2.5 text-right"><Percent value={Number(c.grossMarginPct)} colorize /></td>
               </tr>
             ))}
           </tbody>
@@ -372,48 +458,7 @@ function HistoryPanel({ structureId }: { structureId: string }) {
   );
 }
 
-// ─── Section card ─────────────────────────────────────────────────────────────
-
-function SectionCard({
-  icon: Icon,
-  title,
-  subtitle,
-  configured,
-  onLoad,
-  loading,
-}: {
-  icon: typeof Package;
-  title: string;
-  subtitle: string;
-  configured: boolean;
-  onLoad: () => void;
-  loading: boolean;
-}) {
-  return (
-    <Card>
-      <CardBody className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-md bg-granate-tenue text-granate">
-            <Icon className="size-5" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-ink">{title}</div>
-            <div className="text-[12px] text-ink-soft">{subtitle}</div>
-          </div>
-        </div>
-        {configured ? (
-          <StatusBadge status="ok">
-            <Check className="size-3" /> Cargado
-          </StatusBadge>
-        ) : (
-          <Button variant="secondary" size="sm" onClick={onLoad} loading={loading}>
-            Cargar ejemplo
-          </Button>
-        )}
-      </CardBody>
-    </Card>
-  );
-}
+// ─── Datos de venta ───────────────────────────────────────────────────────────
 
 function SalesCard({
   defaultPrice,
@@ -431,20 +476,19 @@ function SalesCard({
     <Card>
       <CardHeader title="Datos de venta" description="Para el cálculo del margen" />
       <CardBody>
-        <form
-          onSubmit={handleSubmit((v) => onSave(Number(v.unitPrice), Number(v.quantity)))}
-          className="space-y-3"
-        >
-          <Input label="Precio unitario" type="number" step="0.01" numeric defaultValue={defaultPrice} {...register('unitPrice', { required: true })} />
-          <Input label="Cantidad" type="number" step="1" numeric defaultValue={defaultQty} {...register('quantity', { required: true })} />
+        <form onSubmit={handleSubmit((v) => onSave(Number(v.unitPrice), Number(v.quantity)))} className="space-y-3">
+          <Input label="Precio unitario $" type="number" step="0.01" numeric defaultValue={defaultPrice} {...register('unitPrice', { required: true })} />
+          <Input label="Cantidad producida/vendida" type="number" step="1" numeric defaultValue={defaultQty} {...register('quantity', { required: true })} />
           <Button type="submit" size="sm" className="w-full" loading={saving}>
-            Guardar venta
+            Guardar datos de venta
           </Button>
         </form>
       </CardBody>
     </Card>
   );
 }
+
+// ─── Panel de resultado ───────────────────────────────────────────────────────
 
 function ResultPanel({ result }: { result: CalculationResult }) {
   const rows = [
@@ -455,7 +499,7 @@ function ResultPanel({ result }: { result: CalculationResult }) {
 
   return (
     <div className="space-y-4 animate-rise">
-      {/* Margen — el indicador estrella */}
+      {/* Margen */}
       <Card>
         <CardBody className="flex items-center justify-between">
           <div>
@@ -466,11 +510,7 @@ function ResultPanel({ result }: { result: CalculationResult }) {
             </div>
           </div>
           <StatusBadge status={marginStatus(result.grossMarginPct, 15)}>
-            {result.grossMarginPct < 0
-              ? 'Venta a pérdida'
-              : result.grossMarginPct < 15
-                ? 'Margen ajustado'
-                : 'Margen sano'}
+            {result.grossMarginPct < 0 ? 'Venta a pérdida' : result.grossMarginPct < 15 ? 'Margen ajustado' : 'Margen sano'}
           </StatusBadge>
         </CardBody>
       </Card>
@@ -484,22 +524,16 @@ function ResultPanel({ result }: { result: CalculationResult }) {
               {rows.map((r) => (
                 <tr key={r.label}>
                   <td className="px-6 py-2.5 text-ink-soft">{r.label}</td>
-                  <td className="px-6 py-2.5 text-right">
-                    <Money value={r.value} />
-                  </td>
+                  <td className="px-6 py-2.5 text-right"><Money value={r.value} /></td>
                 </tr>
               ))}
               <tr className="bg-surface-alt font-semibold">
                 <td className="px-6 py-2.5 text-ink">Costo de producción</td>
-                <td className="px-6 py-2.5 text-right">
-                  <Money value={result.productionCost} />
-                </td>
+                <td className="px-6 py-2.5 text-right"><Money value={result.productionCost} /></td>
               </tr>
               <tr className="bg-granate-tenue font-semibold">
                 <td className="px-6 py-3 text-granate">Costo de productos vendidos</td>
-                <td className="px-6 py-3 text-right">
-                  <Money value={result.costOfGoodsSold} className="text-granate" />
-                </td>
+                <td className="px-6 py-3 text-right"><Money value={result.costOfGoodsSold} className="text-granate" /></td>
               </tr>
             </tbody>
           </table>
@@ -507,52 +541,68 @@ function ResultPanel({ result }: { result: CalculationResult }) {
       </Card>
 
       {/* Detalle por departamento */}
-      <Card>
-        <CardHeader title="Análisis de variaciones (CIP)" />
-        <CardBody className="p-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-granate text-left text-[12px] uppercase tracking-wide text-white">
-                <th className="px-6 py-2.5 font-medium">Departamento</th>
-                <th className="px-6 py-2.5 text-right font-medium">Aplicado</th>
-                <th className="px-6 py-2.5 text-right font-medium">Var. Presup.</th>
-                <th className="px-6 py-2.5 text-right font-medium">Var. Volumen</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {Object.entries(result.detail.indirectCosts.perDepartment).map(([dept, d]) => (
-                <tr key={dept}>
-                  <td className="px-6 py-2.5 text-ink">{dept}</td>
-                  <td className="px-6 py-2.5 text-right">
-                    <Money value={d.appliedCip} />
-                  </td>
-                  <td className="px-6 py-2.5 text-right">
-                    <Money value={d.budgetVariance} />
-                  </td>
-                  <td className="px-6 py-2.5 text-right">
-                    <Money value={d.volumeVariance} />
-                  </td>
+      {Object.keys(result.detail.indirectCosts.perDepartment).length > 0 && (
+        <Card>
+          <CardHeader title="Análisis de variaciones (CIP)" />
+          <CardBody className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-granate text-left text-[12px] uppercase tracking-wide text-white">
+                  <th className="px-6 py-2.5 font-medium">Departamento</th>
+                  <th className="px-6 py-2.5 text-right font-medium">Aplicado</th>
+                  <th className="px-6 py-2.5 text-right font-medium">Var. Presup.</th>
+                  <th className="px-6 py-2.5 text-right font-medium">Var. Volumen</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardBody>
-      </Card>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {Object.entries(result.detail.indirectCosts.perDepartment).map(([dept, d]) => (
+                  <tr key={dept}>
+                    <td className="px-6 py-2.5 text-ink">{dept}</td>
+                    <td className="px-6 py-2.5 text-right"><Money value={d.appliedCip} /></td>
+                    <td className="px-6 py-2.5 text-right"><Money value={d.budgetVariance} /></td>
+                    <td className="px-6 py-2.5 text-right"><Money value={d.volumeVariance} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }
 
-function EmptyResult() {
+function EmptyResult({ allConfigured }: { allConfigured: boolean }) {
   return (
     <Card className="flex h-full items-center justify-center">
       <CardBody className="py-20 text-center">
         <Calculator className="mx-auto size-10 text-idle" />
-        <p className="mt-3 text-sm text-ink-soft">
-          Cargá los tres elementos del costo y presioná <strong>Calcular</strong> para ver el
-          estado de costos y el margen.
-        </p>
+        {allConfigured ? (
+          <p className="mt-3 text-sm text-ink-soft">
+            Todo cargado. Presioná <strong>Calcular</strong> para ver el estado de costos y el margen.
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-ink-soft">
+            Completá las tres secciones (MP, MOD, CIP) y los datos de venta, luego presioná <strong>Calcular</strong>.
+          </p>
+        )}
       </CardBody>
     </Card>
+  );
+}
+
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1.5 border-b-2 px-4 pb-2.5 text-[13px] font-medium transition-colors',
+        active ? 'border-granate text-granate' : 'border-transparent text-ink-soft hover:text-ink',
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
