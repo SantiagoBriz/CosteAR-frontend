@@ -299,7 +299,6 @@ function SummaryCard({ label, value, icon: Icon, color }: {
 
 function PropagationRow({ item }: { item: PreviewItem }) {
   const marginDown = item.marginDelta < -1;
-  const marginOk = item.marginDelta >= -1;
 
   return (
     <tr className="hover:bg-surface-alt/50">

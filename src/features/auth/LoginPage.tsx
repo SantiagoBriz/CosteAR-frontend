@@ -46,7 +46,7 @@ export function LoginPage() {
     try {
       const result = await login.mutateAsync(values);
       // Si el operador debe cambiar su contraseña, redirigir
-      if (result?.mustChangePassword) {
+      if (result?.user?.mustChangePassword) {
         await navigate({ to: '/change-password' });
       } else {
         await navigate({ to: '/dashboard' });

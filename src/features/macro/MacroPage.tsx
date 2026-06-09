@@ -94,7 +94,7 @@ export function MacroPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.map((m) => {
-            const cfg = SOURCE_CONFIG[m.source] ?? SOURCE_CONFIG.BCRA;
+            const cfg = (SOURCE_CONFIG[m.source] ?? SOURCE_CONFIG.BCRA)!;
             const Icon = cfg.icon;
             const friendlyLabel = INDICATOR_LABELS[m.indicatorCode] ?? m.indicatorCode;
             return (
