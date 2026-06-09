@@ -88,6 +88,7 @@ export function EmpresaPortalPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [aiMessages, setAiMessages] = useState<{ id: string; text: string; createdAt: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -176,7 +177,7 @@ export function EmpresaPortalPage() {
         sourceType = file.type.startsWith('image/') ? 'IMAGE' : 'PDF';
       }
 
-      await api.post('/empresa-portal/submit', {
+      const res = await api.post<{ data: { id: string; status: string; aiResponse: string | null } }>('/empresa-portal/submit', {
         rawContent: text,
         sourceType,
         connectionId: activeConnectionId ?? undefined,
@@ -189,6 +190,15 @@ export function EmpresaPortalPage() {
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       qc.invalidateQueries({ queryKey: ['my-submissions', activeConnectionId] });
+
+      // Mostrar respuesta del AI si la hay
+      const aiResponse = res.data.data.aiResponse;
+      if (aiResponse) {
+        setAiMessages((prev) => [
+          ...prev,
+          { id: `ai-${Date.now()}`, text: aiResponse, createdAt: new Date().toISOString() },
+        ]);
+      }
     } catch (e) {
       setSendError(apiErrorMessage(e));
     } finally {
@@ -216,7 +226,7 @@ export function EmpresaPortalPage() {
     }
   };
 
-  // Mensajes del chat a partir del historial
+  // Mensajes del chat: historial de DB + respuestas AI locales intercaladas
   const messages: ChatMessage[] = [...submissions].reverse().map(submissionToMessage);
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -317,6 +327,24 @@ export function EmpresaPortalPage() {
           {messages.map((msg) => (
             <ChatBubble key={msg.id} message={msg} />
           ))}
+
+          {/* Respuestas AI de la sesión actual */}
+          {aiMessages.map((ai) => (
+            <div key={ai.id} className="flex justify-start">
+              <div className="max-w-[70%]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="flex size-5 items-center justify-center rounded-full bg-indigo-100">
+                    <span className="text-[10px]">🤖</span>
+                  </div>
+                  <span className="text-[11px] text-gray-400">Análisis automático</span>
+                </div>
+                <div className="rounded-2xl rounded-tl-none bg-indigo-50 border border-indigo-100 px-4 py-2.5 text-[13px] text-indigo-900 leading-relaxed">
+                  {ai.text}
+                </div>
+              </div>
+            </div>
+          ))}
+
           <div ref={bottomRef} />
         </div>
 
