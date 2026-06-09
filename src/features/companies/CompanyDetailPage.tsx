@@ -101,20 +101,26 @@ function OperatorsSection({ companyId }: { companyId: string }) {
   const [generatedAccess, setGeneratedAccess] = useState<GeneratedAccess | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   const emailValid = /\S+@\S+\.\S+/.test(operatorEmail);
 
   const handleGenerate = async () => {
     if (!operatorFullName.trim() || !emailValid) return;
+    setGenerateError(null);
     const displayName = operatorRole.trim()
       ? `${operatorFullName.trim()} — ${operatorRole.trim()}`
       : operatorFullName.trim();
-    const result = await generate.mutateAsync({ operatorName: displayName, operatorEmail: operatorEmail.trim() });
-    setGeneratedAccess(result);
-    setOperatorFullName('');
-    setOperatorRole('');
-    setOperatorEmail('');
-    setShowForm(false);
+    try {
+      const result = await generate.mutateAsync({ operatorName: displayName, operatorEmail: operatorEmail.trim() });
+      setGeneratedAccess(result);
+      setOperatorFullName('');
+      setOperatorRole('');
+      setOperatorEmail('');
+      setShowForm(false);
+    } catch (e) {
+      setGenerateError(apiErrorMessage(e));
+    }
   };
 
   const copyText = (text: string, key: string) => {
@@ -167,6 +173,9 @@ function OperatorsSection({ companyId }: { companyId: string }) {
             <p className="text-[12px] text-ink-soft">
               El operador recibirá un email con sus credenciales temporales y podrá cambiar su contraseña al ingresar.
             </p>
+            {generateError && (
+              <p className="rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{generateError}</p>
+            )}
             <div className="flex gap-2">
               <Button size="sm" onClick={handleGenerate} loading={generate.isPending} disabled={!operatorFullName.trim() || !emailValid}>
                 Generar acceso y enviar invitación
