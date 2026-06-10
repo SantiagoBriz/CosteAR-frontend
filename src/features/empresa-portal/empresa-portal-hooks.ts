@@ -50,3 +50,15 @@ export function useRevokeOperator() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['operators'] }),
   });
 }
+
+export function useResetOperatorPassword() {
+  return useMutation({
+    mutationFn: async (operatorId: string) => {
+      const res = await api.post<{ data: { email: string; tempPassword: string } }>(
+        `/empresa-portal/operators/${operatorId}/reset-password`,
+        {},
+      );
+      return res.data.data;
+    },
+  });
+}

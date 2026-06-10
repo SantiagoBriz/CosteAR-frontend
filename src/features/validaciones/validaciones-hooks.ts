@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
+export interface ClassificationAudit {
+  documentType: string | null;
+  costSection: string | null;
+  confidence: number | null;
+  requiresReview: boolean;
+  definitiveSignal: string | null;
+  aiUsed: boolean;
+  explanation: string | null;
+}
+
 export interface DataEntry {
   id: string;
   rawContent: string;
@@ -13,6 +23,8 @@ export interface DataEntry {
   fileName: string | null;
   fileMimeType: string | null;
   fileData: string | null;
+  fileUrl: string | null;
+  classificationAudits?: ClassificationAudit[];
   connection: {
     company: { id: string; name: string; industry: string | null };
   };

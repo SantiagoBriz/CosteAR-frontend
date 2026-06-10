@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send, Paperclip, X, Building2, CheckCircle2,
-  FileText, Image, ChevronDown, Plus, AlertTriangle, Bot,
+  FileText, Image, ChevronDown, Plus, Bot,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { api, apiErrorMessage } from '@/lib/api';
@@ -49,6 +49,7 @@ interface Submission {
   createdAt: string;
   fileName: string | null;
   fileMimeType: string | null;
+  fileUrl: string | null;
   connectionId: string;
   connection: { company: { name: string } };
 }
@@ -59,6 +60,7 @@ interface ChatMessage {
   text: string;
   fileName?: string;
   fileMimeType?: string;
+  fileUrl?: string | null;
   status?: Submission['status'];
   reviewNote?: string | null;
   createdAt: string;
@@ -89,6 +91,7 @@ function submissionToMessage(s: Submission): ChatMessage {
     text: s.rawContent,
     fileName: s.fileName ?? undefined,
     fileMimeType: s.fileMimeType ?? undefined,
+    fileUrl: s.fileUrl ?? undefined,
     status: s.status,
     reviewNote: s.reviewNote ?? undefined,
     createdAt: s.createdAt,
@@ -427,7 +430,39 @@ export function EmpresaPortalPage() {
             return (
               <Fragment key={msg.id}>
                 <ChatBubble message={msg} />
-                {ai && <AIAnalysisBubble analysis={ai} />}
+                {ai && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-2xl rounded-tl-none border border-indigo-100 bg-indigo-50 px-4 py-3 space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Bot className="size-3.5 shrink-0 text-indigo-400" />
+                        <span className="text-[11px] text-indigo-400 font-medium uppercase tracking-wide">Análisis automático</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="rounded-full border border-indigo-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
+                          {{ factura_compra: 'Factura de compra', factura_venta: 'Factura de venta', remito: 'Remito', liquidacion_sueldos: 'Liquidación de sueldos', planilla_horas: 'Planilla de horas', nota_debito: 'Nota de débito', recibo: 'Recibo', otro: 'Otro documento' }[ai.documentType] ?? ai.documentType}
+                        </span>
+                        <span className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-medium', {
+                          legible:  'border-green-200 bg-green-50 text-green-700',
+                          parcial:  'border-yellow-200 bg-yellow-50 text-yellow-700',
+                          ilegible: 'border-red-200 bg-red-50 text-red-700',
+                        }[ai.quality])}>
+                          {{ legible: '✓ Legible', parcial: '⚠ Parcialmente legible', ilegible: '✕ Difícil de leer' }[ai.quality]}
+                        </span>
+                      </div>
+                      {ai.quality === 'ilegible' && (
+                        <p className="text-[12px] text-red-700">
+                          El documento no se pudo leer bien. Si podés, intentá sacar una foto más clara con buena luz.
+                        </p>
+                      )}
+                      {ai.quality === 'parcial' && ai.qualityNote && (
+                        <p className="text-[12px] text-yellow-700">{ai.qualityNote}</p>
+                      )}
+                      {ai.quality === 'legible' && (
+                        <p className="text-[12px] text-indigo-700">Tu costista lo recibió y está pendiente de revisión.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </Fragment>
             );
           })}
@@ -599,16 +634,33 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
   return (
     <div className="flex justify-end">
       <div className="max-w-[75%] space-y-1">
-        <div className="rounded-2xl rounded-tr-sm bg-[#6B1D1D] px-4 py-2.5 text-sm text-white">
-          {/* Archivo adjunto */}
-          {msg.fileName && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2">
-              {isImage ? <Image className="size-4 shrink-0" /> : <FileText className="size-4 shrink-0" />}
-              <span className="truncate text-[12px] font-medium">{msg.fileName}</span>
-              {isPdf && <span className="shrink-0 text-[10px] bg-white/20 rounded px-1.5 py-0.5">PDF</span>}
-            </div>
+        <div className="rounded-2xl rounded-tr-sm bg-[#6B1D1D] text-sm text-white overflow-hidden">
+          {/* Imagen desde Cloudinary */}
+          {isImage && msg.fileUrl && (
+            <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
+              <img
+                src={msg.fileUrl}
+                alt={msg.fileName ?? 'imagen'}
+                className="w-full max-h-48 object-cover"
+              />
+            </a>
           )}
-          {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
+          <div className="px-4 py-2.5">
+            {/* Archivo sin preview (PDF o imagen sin URL) */}
+            {msg.fileName && !(isImage && msg.fileUrl) && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2">
+                {isImage ? <Image className="size-4 shrink-0" /> : <FileText className="size-4 shrink-0" />}
+                <span className="truncate text-[12px] font-medium">{msg.fileName}</span>
+                {isPdf && msg.fileUrl && (
+                  <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[10px] bg-white/20 rounded px-1.5 py-0.5 hover:bg-white/30">
+                    Ver PDF
+                  </a>
+                )}
+                {isPdf && !msg.fileUrl && <span className="shrink-0 text-[10px] bg-white/20 rounded px-1.5 py-0.5">PDF</span>}
+              </div>
+            )}
+            {msg.text && !msg.fileName && <p className="whitespace-pre-wrap">{msg.text}</p>}
+          </div>
         </div>
 
         {/* Estado */}
@@ -626,167 +678,4 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
   );
 }
 
-// ── AI Analysis Bubble ────────────────────────────────────────────────────────
 
-const SECTION_LABELS: Record<string, string> = {
-  MATERIA_PRIMA:     'Materia Prima',
-  MANO_DE_OBRA:      'Mano de Obra',
-  COSTOS_INDIRECTOS: 'Costos Indirectos',
-  VENTAS:            'Ventas',
-  DESCONOCIDO:       'Sin clasificar',
-};
-
-const DOC_TYPE_LABELS: Record<string, string> = {
-  factura_compra:     'Factura de compra',
-  factura_venta:      'Factura de venta',
-  remito:             'Remito',
-  liquidacion_sueldos:'Liquidación de sueldos',
-  planilla_horas:     'Planilla de horas',
-  nota_debito:        'Nota de débito',
-  recibo:             'Recibo',
-  otro:               'Otro documento',
-};
-
-function fmt(n?: number | null) {
-  if (n == null) return null;
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n);
-}
-
-function AIAnalysisBubble({ analysis: a }: { analysis: DocumentAnalysis }) {
-  const qualityColor = {
-    legible:  'text-green-700 bg-green-50 border-green-200',
-    parcial:  'text-yellow-700 bg-yellow-50 border-yellow-200',
-    ilegible: 'text-red-700 bg-red-50 border-red-200',
-  }[a.quality];
-
-  const qualityLabel = {
-    legible:  '✓ Legible',
-    parcial:  '⚠ Parcialmente legible',
-    ilegible: '✕ Ilegible',
-  }[a.quality];
-
-  const d = a.extractedData;
-  const hasData = d && (d.supplier || d.totalAmount != null || d.date || d.invoiceNumber || (d.items && d.items.length > 0) || d.hoursWorked != null);
-
-  return (
-    <div className="flex justify-start">
-      <div className="max-w-[80%] w-full">
-        {/* Header */}
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <div className="flex size-5 items-center justify-center rounded-full bg-indigo-100">
-            <Bot className="size-3 text-indigo-600" />
-          </div>
-          <span className="text-[11px] text-gray-400">Análisis automático</span>
-        </div>
-
-        <div className="rounded-2xl rounded-tl-none border border-indigo-100 bg-indigo-50 overflow-hidden">
-          {/* Badges */}
-          <div className="flex flex-wrap gap-1.5 px-4 pt-3 pb-2">
-            <span className="rounded-full border bg-white px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
-              {DOC_TYPE_LABELS[a.documentType] ?? a.documentType}
-            </span>
-            <span className="rounded-full border bg-white px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
-              {SECTION_LABELS[a.costSection]}
-            </span>
-            <span className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-medium', qualityColor)}>
-              {qualityLabel}
-            </span>
-          </div>
-
-          {/* Advertencia calidad */}
-          {(a.quality === 'parcial' || a.quality === 'ilegible') && a.qualityNote && (
-            <div className="mx-4 mb-2 flex items-start gap-2 rounded-lg bg-yellow-50 border border-yellow-200 px-3 py-2">
-              <AlertTriangle className="size-3.5 mt-0.5 shrink-0 text-yellow-600" />
-              <p className="text-[12px] text-yellow-800">{a.qualityNote}</p>
-            </div>
-          )}
-
-          {/* Mensaje principal */}
-          <p className="px-4 pb-3 text-[13px] leading-relaxed text-indigo-900">{a.message}</p>
-
-          {/* Datos extraídos */}
-          {hasData && (
-            <div className="border-t border-indigo-100 bg-white/60 px-4 py-3 space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400 mb-2">Datos detectados</p>
-
-              {d.supplier && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Proveedor</span>
-                  <span className="font-medium text-gray-800">{d.supplier}</span>
-                </div>
-              )}
-              {d.invoiceNumber && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Comprobante</span>
-                  <span className="font-medium text-gray-800 font-mono">{d.invoiceNumber}</span>
-                </div>
-              )}
-              {d.date && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Fecha</span>
-                  <span className="font-medium text-gray-800">{d.date}</span>
-                </div>
-              )}
-              {d.netAmount != null && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Neto</span>
-                  <span className="font-medium text-gray-800">{fmt(d.netAmount)}</span>
-                </div>
-              )}
-              {d.taxAmount != null && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">IVA</span>
-                  <span className="font-medium text-gray-800">{fmt(d.taxAmount)}</span>
-                </div>
-              )}
-              {d.totalAmount != null && (
-                <div className="flex justify-between text-[13px] border-t border-gray-100 pt-1.5 mt-1">
-                  <span className="font-semibold text-gray-700">Total</span>
-                  <span className="font-bold text-gray-900">{fmt(d.totalAmount)} {d.currency ?? ''}</span>
-                </div>
-              )}
-              {d.hoursWorked != null && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Horas trabajadas</span>
-                  <span className="font-medium text-gray-800">{d.hoursWorked} hs</span>
-                </div>
-              )}
-              {d.department && (
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-500">Departamento</span>
-                  <span className="font-medium text-gray-800">{d.department}</span>
-                </div>
-              )}
-
-              {/* Items */}
-              {d.items && d.items.length > 0 && (
-                <div className="mt-2 rounded-lg border border-gray-100 overflow-hidden">
-                  <table className="w-full text-[12px]">
-                    <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] tracking-wide">
-                      <tr>
-                        <th className="px-3 py-1.5 text-left font-medium">Descripción</th>
-                        <th className="px-3 py-1.5 text-right font-medium">Cant.</th>
-                        <th className="px-3 py-1.5 text-right font-medium">P. unit.</th>
-                        <th className="px-3 py-1.5 text-right font-medium">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {d.items.map((item, i) => (
-                        <tr key={i}>
-                          <td className="px-3 py-1.5 text-gray-700">{item.description}</td>
-                          <td className="px-3 py-1.5 text-right text-gray-600">{item.quantity ?? '—'}</td>
-                          <td className="px-3 py-1.5 text-right text-gray-600">{fmt(item.unitCost) ?? '—'}</td>
-                          <td className="px-3 py-1.5 text-right font-medium text-gray-800">{fmt(item.total) ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}

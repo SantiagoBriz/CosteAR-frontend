@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
-import { Plus, FileSpreadsheet, ChevronRight, ArrowLeft, Users, Copy, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, FileSpreadsheet, ChevronRight, ArrowLeft, Users, Copy, Trash2, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useCompany, useCostStructures } from './company-hooks';
 import { useCreateCostStructure } from '@/features/cost-structures/cost-structure-hooks';
-import { useOperators, useGenerateOperatorAccess, useRevokeOperator, type GeneratedAccess } from '@/features/empresa-portal/empresa-portal-hooks';
+import { useOperators, useGenerateOperatorAccess, useRevokeOperator, useResetOperatorPassword, type GeneratedAccess } from '@/features/empresa-portal/empresa-portal-hooks';
 import { apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -94,6 +94,8 @@ function OperatorsSection({ companyId }: { companyId: string }) {
   const { data: operators = [] } = useOperators(companyId);
   const generate = useGenerateOperatorAccess(companyId);
   const revoke = useRevokeOperator();
+  const reset = useResetOperatorPassword();
+  const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [operatorFullName, setOperatorFullName] = useState('');
   const [operatorRole, setOperatorRole] = useState('');
@@ -127,6 +129,16 @@ function OperatorsSection({ companyId }: { companyId: string }) {
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleReset = async (operatorId: string) => {
+    try {
+      const result = await reset.mutateAsync(operatorId);
+      setResetResult(result);
+      setGeneratedAccess(null);
+    } catch {
+      // error silently — could add toast here
+    }
   };
 
   return (
@@ -249,6 +261,49 @@ function OperatorsSection({ companyId }: { companyId: string }) {
           </div>
         )}
 
+        {/* Credenciales reseteadas */}
+        {resetResult && (
+          <div className="mb-5 rounded-md border border-amber-400/40 bg-amber-50/60 p-4 animate-rise">
+            <p className="mb-3 text-[13px] font-semibold text-ink">
+              Acceso reseteado — compartí las nuevas credenciales con el operador. Solo se muestran una vez.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <CredField
+                label="Email / Usuario"
+                value={resetResult.email}
+                copied={copied === 'reset-email'}
+                onCopy={() => copyText(resetResult.email, 'reset-email')}
+              />
+              <div>
+                <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
+                  Nueva contraseña temporal
+                </label>
+                <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+                  <span className="flex-1 font-mono text-sm text-ink">
+                    {showPassword ? resetResult.tempPassword : '••••••••••••'}
+                  </span>
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-ink-soft hover:text-ink">
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyText(resetResult.tempPassword, 'reset-pass')}
+                    className={cn('text-ink-soft hover:text-ink', copied === 'reset-pass' && 'text-green-600')}
+                  >
+                    <Copy className="size-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 text-[12px] text-ink-soft">
+              El operador deberá cambiar su contraseña al ingresar por primera vez con estas credenciales.
+            </p>
+            <Button size="sm" variant="ghost" className="mt-2" onClick={() => setResetResult(null)}>
+              Entendido, cerrar
+            </Button>
+          </div>
+        )}
+
         {/* Lista de operadores */}
         {operators.length === 0 && !showForm ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -272,6 +327,16 @@ function OperatorsSection({ companyId }: { companyId: string }) {
                   <StatusBadge status={op.isActive ? 'ok' : 'idle'}>
                     {op.isActive ? 'Activo' : 'Revocado'}
                   </StatusBadge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-amber-600 hover:bg-amber-50"
+                    onClick={() => handleReset(op.id)}
+                    loading={reset.isPending}
+                    title="Resetear acceso"
+                  >
+                    <KeyRound className="size-4" />
+                  </Button>
                   {op.isActive && (
                     <Button
                       size="sm"

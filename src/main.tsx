@@ -5,7 +5,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import axios from 'axios';
 import { router } from './router';
 import { API_BASE } from './lib/api';
-import { useAuthStore, type AuthUser } from './stores/auth-store';
+import { useAuthStore, getStoredRefreshToken, type AuthUser } from './stores/auth-store';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -25,9 +25,12 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const refresh = await axios.post<{ data: { accessToken: string } }>(
+        const storedRt = getStoredRefreshToken();
+        if (!storedRt) { setInitialized(); return; }
+
+        const refresh = await axios.post<{ data: { accessToken: string; refreshToken: string } }>(
           `${API_BASE}/api/v1/auth/refresh`,
-          {},
+          { refreshToken: storedRt },
           { withCredentials: true },
         );
         const token = refresh.data.data.accessToken;
@@ -35,7 +38,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         });
-        setAuth(token, me.data.data);
+        setAuth(token, me.data.data, refresh.data.data.refreshToken);
       } catch {
         // Sin sesión válida: seguimos como anónimos.
       } finally {

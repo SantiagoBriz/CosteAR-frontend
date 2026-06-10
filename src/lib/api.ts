@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore, getStoredRefreshToken } from '@/stores/auth-store';
 
 /**
  * Cliente HTTP con refresh transparente. El access token vive en memoria
@@ -29,14 +29,16 @@ let refreshing: Promise<string | null> | null = null;
 
 async function refreshAccessToken(): Promise<string | null> {
   try {
-    const res = await axios.post<{ data: { accessToken: string } }>(
+    const storedRt = getStoredRefreshToken();
+    if (!storedRt) { useAuthStore.getState().clear(); return null; }
+    const res = await axios.post<{ data: { accessToken: string; refreshToken: string } }>(
       `${API_BASE}/api/v1/auth/refresh`,
-      {},
+      { refreshToken: storedRt },
       { withCredentials: true },
     );
-    const token = res.data.data.accessToken;
-    useAuthStore.getState().setAccessToken(token);
-    return token;
+    const { accessToken, refreshToken } = res.data.data;
+    useAuthStore.getState().setAuth(accessToken, useAuthStore.getState().user!, refreshToken);
+    return accessToken;
   } catch {
     useAuthStore.getState().clear();
     return null;

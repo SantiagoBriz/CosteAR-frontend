@@ -126,18 +126,25 @@ export function ValidacionesPage() {
               </span>
             </div>
 
-            {/* Preview del archivo si lo hay */}
-            {reviewing.entry.fileData && reviewing.entry.fileMimeType?.startsWith('image/') && (
+            {/* Preview del archivo */}
+            {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) && reviewing.entry.fileMimeType?.startsWith('image/') && (
               <img
-                src={`data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`}
+                src={reviewing.entry.fileUrl ?? `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`}
                 alt={reviewing.entry.fileName ?? 'documento'}
                 className="mb-4 w-full rounded-md object-contain max-h-64 border border-line bg-surface-alt"
               />
             )}
-            {reviewing.entry.fileData && reviewing.entry.fileMimeType === 'application/pdf' && (
+            {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) && reviewing.entry.fileMimeType === 'application/pdf' && (
               <div className="mb-4 flex items-center gap-2 rounded-md border border-line bg-surface-alt p-3">
                 <FileText className="size-5 text-ink-soft" />
-                <span className="text-[13px] text-ink">{reviewing.entry.fileName}</span>
+                <a
+                  href={reviewing.entry.fileUrl ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[13px] text-action hover:underline"
+                >
+                  {reviewing.entry.fileName}
+                </a>
               </div>
             )}
 
@@ -403,40 +410,48 @@ function EntryRow({
       {/* Vista expandida */}
       {expanded && (
         <div className="mt-4 space-y-3 animate-rise">
-          {/* Preview imagen */}
-          {entry.fileData && isImage && (
-            <img
-              src={`data:${entry.fileMimeType};base64,${entry.fileData}`}
-              alt={entry.fileName ?? 'documento'}
-              className="w-full rounded-md object-contain max-h-80 border border-line bg-surface-alt"
-            />
+          {/* Preview imagen — Cloudinary URL o base64 legacy */}
+          {isImage && (entry.fileUrl ?? entry.fileData) && (
+            <a href={entry.fileUrl ?? '#'} target="_blank" rel="noopener noreferrer">
+              <img
+                src={entry.fileUrl ?? `data:${entry.fileMimeType};base64,${entry.fileData}`}
+                alt={entry.fileName ?? 'documento'}
+                className="w-full rounded-md object-contain max-h-80 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
+              />
+            </a>
           )}
 
-          {/* PDF indicator */}
-          {entry.fileData && isPdf && (
+          {/* PDF — link a Cloudinary o indicador legacy */}
+          {isPdf && (entry.fileUrl ?? entry.fileData) && (
             <div className="flex items-center gap-3 rounded-md border border-line bg-surface-alt p-3">
-              <FileText className="size-6 text-ink-soft" />
-              <div>
-                <p className="text-[13px] font-medium text-ink">{entry.fileName}</p>
-                <p className="text-[11px] text-ink-soft">PDF adjunto</p>
+              <FileText className="size-6 text-ink-soft shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium text-ink truncate">{entry.fileName}</p>
+                {entry.fileUrl ? (
+                  <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-action hover:underline">
+                    Ver PDF →
+                  </a>
+                ) : (
+                  <p className="text-[11px] text-ink-soft">PDF adjunto</p>
+                )}
               </div>
             </div>
           )}
 
-          {/* Contenido completo */}
-          {entry.rawContent && (
+          {/* Contenido de texto */}
+          {entry.rawContent && !entry.rawContent.startsWith('[Archivo:') && (
             <div className="rounded-md border border-line bg-surface-alt p-3">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-soft/60">Contenido</p>
               <p className="text-[13px] text-ink whitespace-pre-wrap">{entry.rawContent}</p>
             </div>
           )}
 
-          {/* Análisis IA */}
+          {/* Análisis IA + Clasificación */}
           {aiAnalysis && (
-            <div className="rounded-md border border-indigo-100 bg-indigo-50/50 p-3 space-y-2">
+            <div className="rounded-md border border-indigo-100 bg-indigo-50/50 p-3 space-y-3">
               <div className="flex items-center gap-1.5">
                 <Bot className="size-3.5 text-indigo-500" />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">Análisis automático</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">Análisis del documento</span>
               </div>
 
               {aiAnalysis.qualityNote && (
@@ -474,8 +489,41 @@ function EntryRow({
                   </div>
                 );
               })()}
+
+              {/* Explicación del clasificador */}
+              {entry.classificationAudits?.[0] && (
+                <div className="rounded border border-indigo-200 bg-white p-3 space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">Por qué se clasificó así</p>
+                  {entry.classificationAudits[0].explanation && (
+                    <p className="text-[12px] text-ink-soft leading-relaxed">{entry.classificationAudits[0].explanation}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {entry.classificationAudits[0].confidence != null && (
+                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700">
+                        {Math.round(entry.classificationAudits[0].confidence ?? 0)}% confianza
+                      </span>
+                    )}
+                    {entry.classificationAudits[0].definitiveSignal && (
+                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700 font-mono">
+                        señal: {entry.classificationAudits[0].definitiveSignal}
+                      </span>
+                    )}
+                    {entry.classificationAudits[0].aiUsed && (
+                      <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 text-[11px] text-purple-700">
+                        IA utilizada
+                      </span>
+                    )}
+                    {entry.classificationAudits[0].requiresReview && (
+                      <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] text-amber-700">
+                        requiere revisión
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
+
 
           {/* Botones de acción al pie del expand */}
           <div className="flex gap-2 pt-1">

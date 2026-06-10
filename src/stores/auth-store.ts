@@ -8,27 +8,48 @@ export interface AuthUser {
   mustChangePassword?: boolean;
 }
 
+const RT_KEY = 'costear_rt';
+
 interface AuthState {
   accessToken: string | null;
   user: AuthUser | null;
   /** true hasta que se resuelve el intento de refresh inicial. */
   initializing: boolean;
-  setAuth: (token: string, user: AuthUser) => void;
+  setAuth: (token: string, user: AuthUser, refreshToken?: string) => void;
   setAccessToken: (token: string) => void;
   setInitialized: () => void;
   clear: () => void;
 }
 
+export function getStoredRefreshToken(): string | null {
+  try { return localStorage.getItem(RT_KEY); } catch { return null; }
+}
+
+function storeRefreshToken(rt: string) {
+  try { localStorage.setItem(RT_KEY, rt); } catch {}
+}
+
+function clearStoredRefreshToken() {
+  try { localStorage.removeItem(RT_KEY); } catch {}
+}
+
 /**
- * Estado de autenticación en memoria. El access token NO se persiste en
- * localStorage (mitiga XSS); se recupera vía refresh al cargar la app.
+ * Access token: en memoria (no persiste, se pierde en F5).
+ * Refresh token: en localStorage — se envía al backend en /auth/refresh
+ * para recuperar la sesión sin depender de cookies cross-origin.
  */
 export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   user: null,
   initializing: true,
-  setAuth: (accessToken, user) => set({ accessToken, user }),
+  setAuth: (accessToken, user, refreshToken) => {
+    if (refreshToken) storeRefreshToken(refreshToken);
+    set({ accessToken, user });
+  },
   setAccessToken: (accessToken) => set({ accessToken }),
   setInitialized: () => set({ initializing: false }),
-  clear: () => set({ accessToken: null, user: null }),
+  clear: () => {
+    clearStoredRefreshToken();
+    set({ accessToken: null, user: null });
+  },
 }));
