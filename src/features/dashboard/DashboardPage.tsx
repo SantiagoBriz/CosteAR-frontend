@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import { CostitaChat } from './CostitaChat';
 import {
   Building2, Bell, ArrowRight, ClipboardCheck,
   TrendingUp, TrendingDown, DollarSign, AlertTriangle,
@@ -488,6 +489,9 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Costista AI Chat (floating) ─────────────────────────────────── */}
+      <CostitaChat />
     </AppShell>
   );
 }
