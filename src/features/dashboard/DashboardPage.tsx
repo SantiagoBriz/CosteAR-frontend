@@ -1,8 +1,9 @@
 import { Link } from '@tanstack/react-router';
 import {
   Building2, Bell, ArrowRight, ClipboardCheck,
-  TrendingUp, TrendingDown, DollarSign, BarChart2, AlertTriangle,
-  CheckCircle2, Clock, Inbox, ChevronRight, Zap,
+  TrendingUp, TrendingDown, DollarSign, AlertTriangle,
+  CheckCircle2, Clock, FileText, ChevronRight, Activity,
+  Percent,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/AppShell';
@@ -15,10 +16,6 @@ import { api } from '@/lib/api';
 import { formatDate, cn } from '@/lib/utils';
 import type { MacroSnapshot } from '@/lib/types';
 
-// ── Font injection ─────────────────────────────────────────────────────────────
-const fontStyle = `@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');`;
-
-// ── Hooks ──────────────────────────────────────────────────────────────────────
 function useMacroLatest() {
   return useQuery({
     queryKey: ['macro', 'latest'],
@@ -30,24 +27,30 @@ function useMacroLatest() {
   });
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function greet(name?: string | null) {
-  const h = new Date().getHours();
-  const saludo = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
-  return { saludo, nombre: name?.split(' ')[0] ?? 'costista' };
-}
-
 function fmtARS(n: number) {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency', currency: 'ARS', maximumFractionDigits: 0,
   }).format(n);
 }
 
-function fmtPct(n: number) {
-  return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
+function greet(name?: string | null) {
+  const h = new Date().getHours();
+  if (h < 12) return `Buenos días, ${name?.split(' ')[0] ?? 'costista'}`;
+  if (h < 19) return `Buenas tardes, ${name?.split(' ')[0] ?? 'costista'}`;
+  return `Buenas noches, ${name?.split(' ')[0] ?? 'costista'}`;
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────────
+// Avatar color determinístico por nombre
+function avatarColor(name: string) {
+  const colors = [
+    ['#dbeafe','#1d4ed8'], ['#fce7f3','#be185d'], ['#d1fae5','#065f46'],
+    ['#ede9fe','#6d28d9'], ['#fff7ed','#c2410c'], ['#f0fdf4','#15803d'],
+    ['#fef3c7','#92400e'], ['#e0f2fe','#0369a1'],
+  ];
+  const i = name.charCodeAt(0) % colors.length;
+  return colors[i]!;
+}
+
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const { data: companies = [] } = useCompanies();
@@ -57,420 +60,431 @@ export function DashboardPage() {
   const { data: macro = [] } = useMacroLatest();
 
   const totalStructures = companies.reduce((acc, c) => acc + (c._count?.costStructures ?? 0), 0);
+  const companiesWithStructure = companies.filter((c) => (c._count?.costStructures ?? 0) > 0).length;
   const unread = alerts.filter((a) => !a.isRead).length;
   const dolarOficial = macro.find((m) => m.indicatorCode === 'USD_OFICIAL');
   const ipc = macro.find((m) => m.indicatorCode === 'IPC_NACIONAL');
-  const { saludo, nombre } = greet(user?.name);
 
   const today = new Date().toLocaleDateString('es-AR', {
-    weekday: 'long', day: 'numeric', month: 'long',
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
+
+  // Pending breakdown by company
+  const pendingByCompany = (pendingEntries?.items ?? []).reduce<
+    Map<string, { name: string; count: number; fileNames: string[] }>
+  >((map, entry) => {
+    const { id, name } = entry.connection.company;
+    if (!map.has(id)) map.set(id, { name, count: 0, fileNames: [] });
+    const g = map.get(id)!;
+    g.count++;
+    if (entry.fileName) g.fileNames.push(entry.fileName);
+    return map;
+  }, new Map());
 
   return (
     <AppShell>
-      <style>{fontStyle}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');`}</style>
 
-      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }} className="pb-8">
 
-        {/* ── Hero Header ──────────────────────────────────────────────────── */}
-        <div
-          className="relative mb-8 overflow-hidden rounded-2xl"
-          style={{
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-          }}
-        >
-          {/* Grid pattern overlay */}
-          <div
-            className="absolute inset-0 opacity-[0.04]"
-            style={{
-              backgroundImage: `
-                linear-gradient(rgba(255,255,255,1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)
-              `,
-              backgroundSize: '32px 32px',
-            }}
-          />
-          {/* Accent blob */}
-          <div
-            className="absolute -right-16 -top-16 size-64 rounded-full opacity-10"
-            style={{ background: 'radial-gradient(circle, #c0392b 0%, transparent 70%)' }}
-          />
-
-          <div className="relative px-8 py-7">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="mb-1 text-[13px] font-medium capitalize text-white/50">{today}</p>
-                <h1
-                  className="text-[32px] leading-tight text-white"
-                  style={{ fontFamily: "'Instrument Serif', serif" }}
-                >
-                  {saludo},{' '}
-                  <span className="italic" style={{ color: '#e8a598' }}>{nombre}</span>
-                </h1>
-              </div>
-
-              {/* Inline mini-stats */}
-              <div className="hidden items-center gap-6 sm:flex">
-                <MiniStat
-                  label="Clientes"
-                  value={companies.length}
-                  sub={`${totalStructures} estr.`}
-                />
-                <div className="h-8 w-px bg-white/10" />
-                <MiniStat
-                  label="Pendientes"
-                  value={pendingCount}
-                  alert={pendingCount > 0}
-                />
-                <div className="h-8 w-px bg-white/10" />
-                <MiniStat
-                  label="Alertas"
-                  value={unread}
-                  alert={unread > 0}
-                />
-                {dolarOficial && (
-                  <>
-                    <div className="h-8 w-px bg-white/10" />
-                    <MiniStat
-                      label="USD oficial"
-                      value={fmtARS(Number(dolarOficial.value))}
-                      isString
-                    />
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Urgent banner: pendientes ────────────────────────────────────── */}
-        {pendingCount > 0 && (
-          <Link to="/validaciones">
-            <div
-              className="mb-6 flex items-center justify-between rounded-xl px-5 py-3.5 transition-opacity hover:opacity-90"
-              style={{ background: 'linear-gradient(90deg, #c0392b 0%, #e74c3c 100%)' }}
+        {/* ── Header ─────────────────────────────────────────────────────────── */}
+        <div className="mb-8 flex flex-col gap-1 border-b border-gray-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[13px] font-medium capitalize text-gray-400">{today}</p>
+            <h1
+              className="mt-0.5 text-[30px] font-extrabold leading-tight text-gray-900"
+              style={{ fontFamily: "'Syne', sans-serif" }}
             >
-              <div className="flex items-center gap-3">
-                <div className="flex size-7 items-center justify-center rounded-full bg-white/20">
-                  <Zap className="size-3.5 text-white" />
+              {greet(user?.name)}
+            </h1>
+          </div>
+          {/* Macro strip */}
+          <div className="flex items-center gap-4">
+            {dolarOficial && (
+              <div className="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+                <DollarSign className="size-3.5 text-blue-500" />
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-400">USD oficial</p>
+                  <p className="text-[14px] font-bold tabular-nums text-blue-700">
+                    {fmtARS(Number(dolarOficial.value))}
+                  </p>
                 </div>
-                <p className="text-[13px] font-semibold text-white">
-                  {pendingCount} documento{pendingCount !== 1 ? 's' : ''} esperando tu validación
-                </p>
               </div>
-              <div className="flex items-center gap-1.5 text-[12px] font-medium text-white/80">
-                Revisar ahora <ChevronRight className="size-3.5" />
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* ── Main grid ────────────────────────────────────────────────────── */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-
-          {/* Left column */}
-          <div className="space-y-6">
-
-            {/* KPI strip */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <KPICard
-                icon={Building2}
-                label="Clientes activos"
-                value={companies.length}
-                sub={totalStructures > 0 ? `${totalStructures} estructuras` : 'Sin estructuras'}
-                to="/companies"
-                color="blue"
-              />
-              <KPICard
-                icon={ClipboardCheck}
-                label="Por validar"
-                value={pendingCount}
-                sub={pendingCount > 0 ? 'Requieren acción' : 'Al día'}
-                to="/validaciones"
-                color={pendingCount > 0 ? 'red' : 'green'}
-                urgent={pendingCount > 0}
-              />
-              <KPICard
-                icon={Bell}
-                label="Alertas"
-                value={unread}
-                sub={unread > 0 ? 'Sin leer' : 'Sin alertas'}
-                to="/alerts"
-                color={unread > 0 ? 'amber' : 'green'}
-                urgent={unread > 0}
-              />
-              <KPICard
-                icon={BarChart2}
-                label="Rubros activos"
-                value={new Set(companies.map((c) => c.industry).filter(Boolean)).size}
-                sub="Industrias distintas"
-                to="/companies"
-                color="purple"
-              />
-            </div>
-
-            {/* Portfolio table */}
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                  Cartera de clientes
-                </h2>
-                <Link to="/companies">
-                  <button className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-700 transition-colors">
-                    Ver todos <ArrowRight className="size-3" />
-                  </button>
-                </Link>
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-                {companies.length === 0 ? (
-                  <EmptyPortfolio />
-                ) : (
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50/50">
-                        <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                          Empresa
-                        </th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                          Rubro
-                        </th>
-                        <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                          Estructuras
-                        </th>
-                        <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                          Estado
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {companies.slice(0, 7).map((c, i) => {
-                        const structs = c._count?.costStructures ?? 0;
-                        return (
-                          <tr
-                            key={c.id}
-                            className="group hover:bg-gray-50/60 transition-colors"
-                          >
-                            <td className="px-5 py-3">
-                              <Link
-                                to="/companies/$id"
-                                params={{ id: c.id }}
-                                className="flex items-center gap-3"
-                              >
-                                <span
-                                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-white"
-                                  style={{ background: PALETTE[i % PALETTE.length] }}
-                                >
-                                  {c.name.slice(0, 1).toUpperCase()}
-                                </span>
-                                <span className="font-semibold text-gray-800 group-hover:text-gray-900">
-                                  {c.name}
-                                </span>
-                              </Link>
-                            </td>
-                            <td className="px-4 py-3 text-gray-500">
-                              {c.industry ?? <span className="italic text-gray-300">—</span>}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <span className={cn(
-                                'tabular-nums font-semibold',
-                                structs > 0 ? 'text-gray-800' : 'text-gray-300',
-                              )}>
-                                {structs}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              {structs > 0 ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                                  <CheckCircle2 className="size-3" /> Activo
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-400">
-                                  <Clock className="size-3" /> Pendiente
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-
-            {/* Pending breakdown (if any) */}
-            {pendingCount > 0 && pendingEntries?.items && (
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                    Documentos por revisar
-                  </h2>
-                  <Link to="/validaciones">
-                    <button className="flex items-center gap-1 text-[12px] font-medium text-red-500 hover:text-red-700 transition-colors">
-                      Revisar todo <ArrowRight className="size-3" />
-                    </button>
-                  </Link>
-                </div>
-                <div className="overflow-hidden rounded-xl border border-red-100 bg-white">
-                  {(() => {
-                    const byCompany = pendingEntries.items.reduce<
-                      Map<string, { name: string; count: number; items: typeof pendingEntries.items }>
-                    >((map, entry) => {
-                      const { id, name } = entry.connection.company;
-                      if (!map.has(id)) map.set(id, { name, count: 0, items: [] });
-                      const g = map.get(id)!;
-                      g.count++;
-                      g.items.push(entry);
-                      return map;
-                    }, new Map());
-
-                    return (
-                      <ul className="divide-y divide-red-50">
-                        {[...byCompany.entries()].map(([cid, { name, count, items }]) => (
-                          <li key={cid}>
-                            <Link
-                              to="/validaciones"
-                              className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-red-50/40 transition-colors"
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-100">
-                                  <Inbox className="size-3.5 text-red-600" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-[13px] font-semibold text-gray-800 truncate">{name}</p>
-                                  <p className="text-[11px] text-gray-400 truncate">
-                                    {items.slice(0, 2).map((e) => e.fileName ?? e.rawContent.slice(0, 25)).join(' · ')}
-                                    {count > 2 ? ` · +${count - 2} más` : ''}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-[12px] font-bold text-white">
-                                  {count}
-                                </span>
-                                <ChevronRight className="size-4 text-gray-300" />
-                              </div>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    );
-                  })()}
+            )}
+            {ipc && (
+              <div className={cn(
+                'flex items-center gap-2 rounded-xl border px-3 py-2',
+                Number(ipc.value) >= 5
+                  ? 'border-red-100 bg-red-50'
+                  : 'border-green-100 bg-green-50',
+              )}>
+                <Percent className={cn('size-3.5', Number(ipc.value) >= 5 ? 'text-red-500' : 'text-green-500')} />
+                <div>
+                  <p className={cn('text-[10px] font-semibold uppercase tracking-wide', Number(ipc.value) >= 5 ? 'text-red-400' : 'text-green-400')}>
+                    IPC mensual
+                  </p>
+                  <p className={cn('text-[14px] font-bold tabular-nums', Number(ipc.value) >= 5 ? 'text-red-700' : 'text-green-700')}>
+                    {Number(ipc.value) > 0 ? '+' : ''}{Number(ipc.value).toFixed(1)}%
+                  </p>
                 </div>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Right column */}
-          <div className="space-y-5">
+        {/* ── KPIs ────────────────────────────────────────────────────────────── */}
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            label="Clientes activos"
+            value={companies.length}
+            sub={`${companiesWithStructure} con estructura`}
+            icon={Building2}
+            to="/companies"
+            variant="neutral"
+          />
+          <StatCard
+            label="Por validar"
+            value={pendingCount}
+            sub={pendingCount > 0 ? 'Requieren acción' : 'Al día ✓'}
+            icon={ClipboardCheck}
+            to="/validaciones"
+            variant={pendingCount > 0 ? 'urgent' : 'ok'}
+          />
+          <StatCard
+            label="Alertas activas"
+            value={unread}
+            sub={unread > 0 ? 'Sin revisar' : 'Sin alertas ✓'}
+            icon={Bell}
+            to="/alerts"
+            variant={unread > 0 ? 'warn' : 'ok'}
+          />
+          <StatCard
+            label="Estructuras totales"
+            value={totalStructures}
+            sub={`En ${companies.length} empresa${companies.length !== 1 ? 's' : ''}`}
+            icon={Activity}
+            to="/companies"
+            variant="neutral"
+          />
+        </div>
 
-            {/* Macro panel */}
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                  Variables económicas
+        {/* ── Urgent: pending validations ──────────────────────────────────── */}
+        {pendingCount > 0 && (
+          <div className="mb-6 overflow-hidden rounded-2xl border border-red-200 bg-white">
+            <div className="flex items-center justify-between border-b border-red-100 bg-red-50 px-5 py-3">
+              <div className="flex items-center gap-2">
+                <span className="flex size-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white">
+                  {pendingCount}
+                </span>
+                <span className="text-[13px] font-semibold text-red-800">
+                  Documentos esperando validación
+                </span>
+              </div>
+              <Link to="/validaciones">
+                <button className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-red-700 transition-colors">
+                  Revisar todo <ChevronRight className="size-3.5" />
+                </button>
+              </Link>
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {[...pendingByCompany.entries()].map(([cid, { name, count, fileNames }]) => {
+                const [bg, text] = avatarColor(name);
+                return (
+                  <li key={cid}>
+                    <Link
+                      to="/validaciones"
+                      className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+                    >
+                      <span
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold"
+                        style={{ background: bg, color: text }}
+                      >
+                        {name[0]?.toUpperCase()}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold text-gray-800">{name}</p>
+                        <p className="truncate text-[11px] text-gray-400">
+                          {fileNames.slice(0, 2).join(' · ')}
+                          {count > 2 ? ` · +${count - 2} más` : ''}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-0.5 text-[12px] font-bold text-red-700">
+                        {count} doc{count !== 1 ? 's' : ''}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {/* ── Main 2-col grid ──────────────────────────────────────────────── */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+
+          {/* Left: portfolio ─────────────────────────────────────────────── */}
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
+              <div>
+                <h2 className="text-[14px] font-semibold text-gray-800"
+                  style={{ fontFamily: "'Syne', sans-serif" }}>
+                  Cartera de clientes
+                </h2>
+                <p className="text-[12px] text-gray-400">
+                  {companies.length} empresa{companies.length !== 1 ? 's' : ''} activa{companies.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <Link to="/companies">
+                <Button variant="ghost" size="sm">
+                  Ver todas <ArrowRight className="size-3.5" />
+                </Button>
+              </Link>
+            </div>
+
+            {companies.length === 0 ? (
+              <div className="flex flex-col items-center py-14 text-center">
+                <div className="mb-3 flex size-14 items-center justify-center rounded-2xl bg-gray-100">
+                  <Building2 className="size-7 text-gray-400" />
+                </div>
+                <p className="text-[14px] font-semibold text-gray-700">Sin clientes todavía</p>
+                <p className="mt-1 text-[12px] text-gray-400">Agregá tu primer cliente para empezar a costear</p>
+                <Link to="/companies" className="mt-4">
+                  <Button size="sm">Agregar cliente</Button>
+                </Link>
+              </div>
+            ) : (
+              <>
+                {/* Table header */}
+                <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-6 border-b border-gray-100 bg-gray-50 px-5 py-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Empresa</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Rubro</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Estr.</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Estado</span>
+                </div>
+                <ul className="divide-y divide-gray-50">
+                  {companies.map((c) => {
+                    const structs = c._count?.costStructures ?? 0;
+                    const [bg, text] = avatarColor(c.name);
+                    return (
+                      <li key={c.id}>
+                        <Link
+                          to="/companies/$id"
+                          params={{ id: c.id }}
+                          className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-6 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span
+                              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold"
+                              style={{ background: bg, color: text }}
+                            >
+                              {c.name[0]?.toUpperCase()}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-[13px] font-semibold text-gray-800">{c.name}</p>
+                              {pendingByCompany.has(c.id) && (
+                                <p className="text-[11px] font-medium text-red-500">
+                                  {pendingByCompany.get(c.id)!.count} pendiente{pendingByCompany.get(c.id)!.count !== 1 ? 's' : ''}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-[12px] text-gray-500 whitespace-nowrap">
+                            {c.industry ?? <span className="italic text-gray-300">—</span>}
+                          </span>
+                          <span className={cn(
+                            'text-center text-[13px] font-bold tabular-nums',
+                            structs > 0 ? 'text-gray-800' : 'text-gray-300',
+                          )}>
+                            {structs}
+                          </span>
+                          <div className="flex justify-end">
+                            {structs > 0 ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                <CheckCircle2 className="size-2.5" /> Activo
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
+                                <Clock className="size-2.5" /> Sin estructura
+                              </span>
+                            )}
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+          </div>
+
+          {/* Right: sidebar ─────────────────────────────────────────────── */}
+          <div className="flex flex-col gap-5">
+
+            {/* Variables macro */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
+                <h2 className="text-[14px] font-semibold text-gray-800"
+                  style={{ fontFamily: "'Syne', sans-serif" }}>
+                  Contexto macro
                 </h2>
                 <Link to="/macro">
-                  <button className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-700 transition-colors">
-                    Ver más <ArrowRight className="size-3" />
+                  <button className="text-[12px] font-medium text-gray-400 hover:text-gray-700 transition-colors">
+                    Ver todo →
                   </button>
                 </Link>
               </div>
-
-              <div className="space-y-3">
+              <div className="divide-y divide-gray-50">
                 {dolarOficial ? (
-                  <MacroTile
-                    label="Dólar oficial"
-                    value={fmtARS(Number(dolarOficial.value))}
-                    date={dolarOficial.effectiveDate}
-                    source="BCRA"
-                    icon={DollarSign}
-                    accentColor="#1a6ef7"
-                  />
+                  <div className="flex items-center justify-between px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 items-center justify-center rounded-xl bg-blue-50">
+                        <DollarSign className="size-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium text-gray-400">Dólar oficial</p>
+                        <p className="text-[18px] font-bold tabular-nums text-blue-700"
+                          style={{ fontFamily: "'Syne', sans-serif" }}>
+                          {fmtARS(Number(dolarOficial.value))}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="rounded-md bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                        BCRA
+                      </span>
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        {new Date(dolarOficial.effectiveDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                  </div>
                 ) : (
-                  <EmptyMacroTile label="Dólar oficial" to="/macro" />
+                  <div className="px-5 py-4">
+                    <p className="text-[12px] text-gray-400">Sin datos de dólar</p>
+                    <Link to="/macro" className="text-[11px] font-medium text-blue-500">Sincronizar →</Link>
+                  </div>
                 )}
 
                 {ipc ? (
-                  <MacroTile
-                    label="IPC mensual"
-                    value={fmtPct(Number(ipc.value))}
-                    date={ipc.effectiveDate}
-                    source="INDEC"
-                    icon={Number(ipc.value) >= 5 ? TrendingUp : TrendingDown}
-                    accentColor={Number(ipc.value) >= 5 ? '#e74c3c' : '#27ae60'}
-                    warning={Number(ipc.value) >= 5 ? 'Inflación elevada — revisá precios' : undefined}
-                  />
+                  <div className="flex items-center justify-between px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'flex size-9 items-center justify-center rounded-xl',
+                        Number(ipc.value) >= 5 ? 'bg-red-50' : 'bg-green-50',
+                      )}>
+                        {Number(ipc.value) >= 5
+                          ? <TrendingUp className="size-4 text-red-600" />
+                          : <TrendingDown className="size-4 text-green-600" />}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium text-gray-400">IPC mensual</p>
+                        <p className={cn(
+                          'text-[18px] font-bold tabular-nums',
+                          Number(ipc.value) >= 5 ? 'text-red-700' : 'text-green-700',
+                        )} style={{ fontFamily: "'Syne', sans-serif" }}>
+                          {Number(ipc.value) > 0 ? '+' : ''}{Number(ipc.value).toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={cn(
+                        'rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white',
+                        Number(ipc.value) >= 5 ? 'bg-red-600' : 'bg-green-600',
+                      )}>
+                        INDEC
+                      </span>
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        {new Date(ipc.effectiveDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                  </div>
                 ) : (
-                  <EmptyMacroTile label="IPC mensual" to="/macro" />
+                  <div className="px-5 py-4">
+                    <p className="text-[12px] text-gray-400">Sin datos de IPC</p>
+                    <Link to="/macro" className="text-[11px] font-medium text-blue-500">Sincronizar →</Link>
+                  </div>
+                )}
+
+                {ipc && Number(ipc.value) >= 5 && (
+                  <div className="flex items-center gap-2 bg-amber-50 px-5 py-2.5">
+                    <AlertTriangle className="size-3.5 shrink-0 text-amber-600" />
+                    <p className="text-[11px] font-medium text-amber-800">
+                      Inflación elevada — revisá precios de venta
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Alerts panel */}
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                  Alertas recientes
+            {/* Alerts */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
+                <h2 className="text-[14px] font-semibold text-gray-800"
+                  style={{ fontFamily: "'Syne', sans-serif" }}>
+                  Alertas
+                  {unread > 0 && (
+                    <span className="ml-2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      {unread}
+                    </span>
+                  )}
                 </h2>
                 {unread > 0 && (
                   <Link to="/alerts">
-                    <button className="flex items-center gap-1 text-[12px] font-medium text-amber-500 hover:text-amber-700 transition-colors">
-                      Ver todas <ArrowRight className="size-3" />
+                    <button className="text-[12px] font-medium text-gray-400 hover:text-gray-700 transition-colors">
+                      Ver todas →
                     </button>
                   </Link>
                 )}
               </div>
-
-              <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-                {unread === 0 ? (
-                  <div className="flex flex-col items-center py-8 text-center">
-                    <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-emerald-50">
-                      <CheckCircle2 className="size-5 text-emerald-500" />
-                    </div>
-                    <p className="text-[13px] font-semibold text-gray-700">Sin alertas pendientes</p>
-                    <p className="mt-0.5 text-[12px] text-gray-400">Todos los márgenes están en orden</p>
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-gray-50">
-                    {alerts.filter((a) => !a.isRead).slice(0, 4).map((a) => (
-                      <li key={a.id} className="flex items-start gap-3 px-4 py-3">
-                        <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-100">
-                          <AlertTriangle className="size-3 text-amber-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[12px] leading-snug text-gray-700">{a.message}</p>
-                          <p className="mt-0.5 text-[11px] text-gray-400">{formatDate(a.createdAt)}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              {unread === 0 ? (
+                <div className="flex items-center gap-3 px-5 py-4">
+                  <CheckCircle2 className="size-4 text-emerald-500" />
+                  <p className="text-[13px] text-gray-500">Sin alertas pendientes</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-50">
+                  {alerts.filter((a) => !a.isRead).slice(0, 3).map((a) => (
+                    <li key={a.id} className="flex items-start gap-3 px-5 py-3">
+                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
+                      <div>
+                        <p className="text-[12px] leading-snug text-gray-700">{a.message}</p>
+                        <p className="mt-0.5 text-[11px] text-gray-400">{formatDate(a.createdAt)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Quick actions */}
-            <div>
-              <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                Accesos rápidos
-              </h2>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <div className="border-b border-gray-100 px-5 py-3.5">
+                <h2 className="text-[14px] font-semibold text-gray-800"
+                  style={{ fontFamily: "'Syne', sans-serif" }}>
+                  Acciones rápidas
+                </h2>
+              </div>
+              <div className="p-3">
                 {[
-                  { label: 'Nuevo cliente', to: '/companies', icon: Building2 },
-                  { label: 'Validaciones', to: '/validaciones', icon: ClipboardCheck },
-                  { label: 'Variables macro', to: '/macro', icon: TrendingUp },
-                  { label: 'Alertas', to: '/alerts', icon: Bell },
-                ].map(({ label, to, icon: Icon }) => (
+                  { label: 'Nuevo cliente', sub: 'Agregar empresa a la cartera', to: '/companies', icon: Building2, color: 'text-blue-600 bg-blue-50' },
+                  { label: 'Ver validaciones', sub: `${pendingCount} doc${pendingCount !== 1 ? 's' : ''} pendiente${pendingCount !== 1 ? 's' : ''}`, to: '/validaciones', icon: FileText, color: pendingCount > 0 ? 'text-red-600 bg-red-50' : 'text-gray-500 bg-gray-100' },
+                  { label: 'Variables macro', sub: 'Sincronizar BCRA / INDEC', to: '/macro', icon: TrendingUp, color: 'text-green-600 bg-green-50' },
+                ].map(({ label, sub, to, icon: Icon, color }) => (
                   <Link key={to} to={to}>
-                    <button className="flex w-full items-center gap-2.5 rounded-xl border border-gray-100 bg-white px-4 py-3 text-[12px] font-semibold text-gray-600 transition-all hover:border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm">
-                      <Icon className="size-3.5 text-gray-400" />
-                      {label}
-                    </button>
+                    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-gray-50 transition-colors">
+                      <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', color)}>
+                        <Icon className="size-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-semibold text-gray-800">{label}</p>
+                        <p className="text-[11px] text-gray-400">{sub}</p>
+                      </div>
+                      <ChevronRight className="size-3.5 text-gray-300" />
+                    </div>
                   </Link>
                 ))}
               </div>
             </div>
+
           </div>
         </div>
       </div>
@@ -478,76 +492,39 @@ export function DashboardPage() {
   );
 }
 
-// ── Palette for company avatars ────────────────────────────────────────────────
-const PALETTE = [
-  '#1a6ef7', '#e74c3c', '#27ae60', '#8e44ad',
-  '#f39c12', '#16a085', '#2c3e50', '#c0392b',
-];
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function MiniStat({
-  label, value, sub, alert, isString,
+// ── Stat Card ──────────────────────────────────────────────────────────────────
+function StatCard({
+  label, value, sub, icon: Icon, to, variant,
 }: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  alert?: boolean;
-  isString?: boolean;
-}) {
-  return (
-    <div className="text-right">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-white/40">{label}</p>
-      <p className={cn(
-        'text-[22px] font-bold tabular-nums leading-none',
-        isString ? 'text-[16px] mt-0.5' : '',
-        alert ? 'text-red-400' : 'text-white',
-      )}
-        style={isString ? { fontFamily: "'Plus Jakarta Sans', sans-serif" } : { fontFamily: "'Instrument Serif', serif" }}
-      >
-        {value}
-      </p>
-      {sub && <p className="text-[10px] text-white/30">{sub}</p>}
-    </div>
-  );
-}
-
-function KPICard({
-  icon: Icon, label, value, sub, to, color, urgent,
-}: {
-  icon: typeof Building2;
   label: string;
   value: number;
   sub: string;
+  icon: typeof Building2;
   to: string;
-  color: 'blue' | 'red' | 'green' | 'amber' | 'purple';
-  urgent?: boolean;
+  variant: 'neutral' | 'urgent' | 'warn' | 'ok';
 }) {
-  const colors = {
-    blue:   { bg: 'bg-blue-50',   text: 'text-blue-700',   icon: 'bg-blue-100 text-blue-600',   bar: '#1a6ef7' },
-    red:    { bg: 'bg-red-50',    text: 'text-red-700',    icon: 'bg-red-100 text-red-600',     bar: '#e74c3c' },
-    green:  { bg: 'bg-emerald-50',text: 'text-emerald-700',icon: 'bg-emerald-100 text-emerald-600', bar: '#27ae60' },
-    amber:  { bg: 'bg-amber-50',  text: 'text-amber-700',  icon: 'bg-amber-100 text-amber-600', bar: '#f59e0b' },
-    purple: { bg: 'bg-purple-50', text: 'text-purple-700', icon: 'bg-purple-100 text-purple-600', bar: '#8e44ad' },
-  }[color];
+  const styles = {
+    neutral: { card: 'border-gray-200', num: 'text-gray-900', icon: 'bg-gray-100 text-gray-500', dot: '' },
+    urgent:  { card: 'border-red-200 bg-red-50/30', num: 'text-red-700', icon: 'bg-red-100 text-red-600', dot: 'bg-red-500' },
+    warn:    { card: 'border-amber-200 bg-amber-50/30', num: 'text-amber-700', icon: 'bg-amber-100 text-amber-600', dot: 'bg-amber-500' },
+    ok:      { card: 'border-emerald-100 bg-emerald-50/20', num: 'text-emerald-700', icon: 'bg-emerald-100 text-emerald-600', dot: '' },
+  }[variant];
 
   return (
     <Link to={to}>
       <div className={cn(
-        'relative overflow-hidden rounded-xl border border-gray-100 bg-white p-4 transition-all hover:shadow-md hover:-translate-y-0.5',
-        urgent && 'ring-1 ring-red-200',
+        'relative rounded-2xl border bg-white p-5 transition-all hover:shadow-md hover:-translate-y-0.5',
+        styles.card,
       )}>
-        {/* Left accent bar */}
-        <div
-          className="absolute left-0 top-0 h-full w-[3px] rounded-l-xl"
-          style={{ background: colors.bar }}
-        />
-        <div className={cn('mb-3 flex size-8 items-center justify-center rounded-lg', colors.icon)}>
+        {styles.dot && (
+          <span className={cn('absolute right-4 top-4 size-2 rounded-full', styles.dot)} />
+        )}
+        <div className={cn('mb-3 flex size-9 items-center justify-center rounded-xl', styles.icon)}>
           <Icon className="size-4" />
         </div>
         <p
-          className={cn('text-[28px] font-bold leading-none tabular-nums', colors.text)}
-          style={{ fontFamily: "'Instrument Serif', serif" }}
+          className={cn('text-[32px] font-extrabold leading-none tabular-nums', styles.num)}
+          style={{ fontFamily: "'Syne', sans-serif" }}
         >
           {value}
         </p>
@@ -555,84 +532,5 @@ function KPICard({
         <p className="mt-0.5 truncate text-[11px] text-gray-400">{sub}</p>
       </div>
     </Link>
-  );
-}
-
-function MacroTile({
-  label, value, date, source, icon: Icon, accentColor, warning,
-}: {
-  label: string;
-  value: string;
-  date: string;
-  source: string;
-  icon: typeof DollarSign;
-  accentColor: string;
-  warning?: string;
-}) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-      <div className="flex items-center justify-between px-4 py-3.5">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex size-8 items-center justify-center rounded-lg"
-            style={{ background: `${accentColor}18` }}
-          >
-            <Icon className="size-4" style={{ color: accentColor }} />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-gray-400">{label}</p>
-            <p
-              className="text-[20px] font-bold leading-none tabular-nums"
-              style={{ color: accentColor, fontFamily: "'Instrument Serif', serif" }}
-            >
-              {value}
-            </p>
-          </div>
-        </div>
-        <div className="text-right">
-          <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-            style={{ background: accentColor }}
-          >
-            {source}
-          </span>
-          <p className="mt-1 text-[11px] text-gray-400">
-            {new Date(date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-          </p>
-        </div>
-      </div>
-      {warning && (
-        <div className="flex items-center gap-2 border-t border-red-100 bg-red-50 px-4 py-2">
-          <AlertTriangle className="size-3 shrink-0 text-red-500" />
-          <p className="text-[11px] font-medium text-red-700">{warning}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function EmptyMacroTile({ label, to }: { label: string; to: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3.5">
-      <p className="text-[12px] font-semibold text-gray-400">{label}</p>
-      <Link to={to} className="mt-0.5 block text-[11px] font-medium text-blue-500 hover:text-blue-700">
-        Sincronizar datos →
-      </Link>
-    </div>
-  );
-}
-
-function EmptyPortfolio() {
-  return (
-    <div className="flex flex-col items-center py-12 text-center">
-      <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-gray-100">
-        <Building2 className="size-6 text-gray-400" />
-      </div>
-      <p className="text-[14px] font-semibold text-gray-700">Sin clientes cargados</p>
-      <p className="mt-1 text-[12px] text-gray-400">Agregá tu primer cliente para empezar</p>
-      <Link to="/companies" className="mt-4">
-        <Button size="sm">Agregar cliente</Button>
-      </Link>
-    </div>
   );
 }
