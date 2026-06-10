@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send, Paperclip, X, Building2, CheckCircle2,
@@ -93,6 +93,17 @@ function submissionToMessage(s: Submission): ChatMessage {
     reviewNote: s.reviewNote ?? undefined,
     createdAt: s.createdAt,
   };
+}
+
+function parseAIFromNote(reviewNote?: string | null): DocumentAnalysis | null {
+  if (!reviewNote) return null;
+  try {
+    const parsed: DocumentAnalysis = typeof reviewNote === 'string' ? JSON.parse(reviewNote) : reviewNote;
+    if (parsed && parsed.documentType) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Main component ───────────────────────────────────────────────────────────
@@ -337,9 +348,15 @@ export function EmpresaPortalPage() {
             </div>
           )}
 
-          {messages.map((msg) => (
-            <ChatBubble key={msg.id} message={msg} />
-          ))}
+          {messages.map((msg) => {
+            const ai = parseAIFromNote(msg.reviewNote);
+            return (
+              <Fragment key={msg.id}>
+                <ChatBubble message={msg} />
+                {ai && <AIAnalysisBubble analysis={ai} />}
+              </Fragment>
+            );
+          })}
 
           <div ref={bottomRef} />
         </div>
@@ -530,16 +547,6 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
           )}
         </div>
 
-        {/* Análisis AI (reviewNote guarda JSON desde la v2 del backend) */}
-        {msg.reviewNote && (() => {
-          try {
-            const analysis: DocumentAnalysis = JSON.parse(msg.reviewNote);
-            if (!analysis.documentType) return null; // JSON inválido/incompleto
-            return <AIAnalysisBubble analysis={analysis} />;
-          } catch {
-            return null; // formato viejo — ignorar
-          }
-        })()}
       </div>
     </div>
   );
