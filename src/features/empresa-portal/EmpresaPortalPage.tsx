@@ -549,18 +549,14 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
           )}
         </div>
 
-        {/* Nota del costista */}
+        {/* Análisis AI (reviewNote guarda JSON desde la v2 del backend) */}
         {msg.reviewNote && (() => {
           try {
             const analysis: DocumentAnalysis = JSON.parse(msg.reviewNote);
+            if (!analysis.documentType) return null; // JSON inválido/incompleto
             return <AIAnalysisBubble analysis={analysis} />;
           } catch {
-            return (
-              <div className="rounded-xl rounded-tl-sm bg-gray-100 px-3 py-2 text-[13px] text-gray-700">
-                <span className="font-medium text-gray-500 text-[11px] block mb-0.5">Análisis</span>
-                {msg.reviewNote}
-              </div>
-            );
+            return null; // formato viejo — ignorar
           }
         })()}
       </div>
