@@ -111,9 +111,17 @@ function severityColor(s: string) {
     : 'bg-gray-100 text-gray-600';
 }
 
+// ── Tipos de empresa (prop) ───────────────────────────────────────────────────
+
+interface Company {
+  id: string;
+  name: string;
+  industry?: string | null;
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export function CostitaChat() {
+export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -387,17 +395,34 @@ export function CostitaChat() {
                         {msg.content}
                       </div>
 
-                      {/* Tarjeta de acción propuesta */}
-                      {msg.aiResponse && msg.aiResponse.actionType !== 'INFO_ONLY' && (
-                        <ActionCard
-                          aiResponse={msg.aiResponse}
-                          msgId={msg.id}
-                          confirmed={msg.confirmed}
-                          onConfirm={handleConfirm}
-                          onReject={handleReject}
-                          isPending={confirmMutation.isPending && confirmMutation.variables?.msgId === msg.id}
-                        />
-                      )}
+                      {/* Selector de empresa (cuando la IA no pudo identificarla) */}
+                      {msg.aiResponse &&
+                        msg.aiResponse.actionType !== 'INFO_ONLY' &&
+                        msg.confirmed === undefined &&
+                        !interpretMutation.isPending &&
+                        needsCompanySelection(msg.aiResponse) &&
+                        companies.length > 0 && (
+                          <CompanyChips
+                            companies={companies}
+                            onSelect={(company) => {
+                              handleSend(`La empresa es ${company.name}`);
+                            }}
+                          />
+                        )}
+
+                      {/* Tarjeta de acción propuesta (solo cuando ya tiene empresa) */}
+                      {msg.aiResponse &&
+                        msg.aiResponse.actionType !== 'INFO_ONLY' &&
+                        !needsCompanySelection(msg.aiResponse) && (
+                          <ActionCard
+                            aiResponse={msg.aiResponse}
+                            msgId={msg.id}
+                            confirmed={msg.confirmed}
+                            onConfirm={handleConfirm}
+                            onReject={handleReject}
+                            isPending={confirmMutation.isPending && confirmMutation.variables?.msgId === msg.id}
+                          />
+                        )}
                     </div>
                   </div>
                 )}
@@ -457,6 +482,53 @@ export function CostitaChat() {
         </div>
       </div>
     </>
+  );
+}
+
+// ── Tarjeta de acción propuesta ────────────────────────────────────────────────
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** La IA propone una acción pero no identificó la empresa → hay que pedirla */
+function needsCompanySelection(aiResponse: AIResponse): boolean {
+  if (aiResponse.actionType === 'CREATE_ENTRY') {
+    return !aiResponse.proposedEntry?.companyId;
+  }
+  if (aiResponse.actionType === 'CREATE_ALERT') {
+    return !aiResponse.proposedAlert?.companyId;
+  }
+  return false;
+}
+
+// ── Chips de empresa ──────────────────────────────────────────────────────────
+
+function CompanyChips({
+  companies,
+  onSelect,
+}: {
+  companies: Company[];
+  onSelect: (company: Company) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        ¿Para qué empresa?
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {companies.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => onSelect(c)}
+            className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 active:scale-95"
+          >
+            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-gray-200 text-[9px] font-bold text-gray-600">
+              {c.name[0]?.toUpperCase()}
+            </span>
+            {c.name}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

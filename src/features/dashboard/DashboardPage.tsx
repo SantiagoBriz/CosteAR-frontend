@@ -491,7 +491,7 @@ export function DashboardPage() {
       </div>
 
       {/* ── Costista AI Chat (floating) ─────────────────────────────────── */}
-      <CostitaChat />
+      <CostitaChat companies={companies} />
     </AppShell>
   );
 }
