@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { CostitaChat } from './CostitaChat';
 import {
   Building2, Bell, ArrowRight, ClipboardCheck,
   TrendingUp, TrendingDown, DollarSign, AlertTriangle,
-  CheckCircle2, Clock, FileText, ChevronRight, Activity,
-  Percent,
+  CheckCircle2, FileText, ChevronRight, Activity,
+  Percent, Search, FileInput, Image, MessageSquare,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/AppShell';
@@ -16,6 +17,68 @@ import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api';
 import { formatDate, cn } from '@/lib/utils';
 import type { MacroSnapshot } from '@/lib/types';
+
+// Hook: últimos docs aprobados para "Documentos recientes"
+function useRecentDocs() {
+  return useQuery({
+    queryKey: ['automatizacion', 'feed'],
+    queryFn: async () => {
+      const res = await api.get<{ data: RecentDoc[]; total: number }>('/validaciones/feed');
+      return res.data.data
+        .filter((d) => d.status === 'APPROVED')
+        .slice(0, 5);
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+interface RecentDoc {
+  id: string;
+  status: string;
+  sourceType: 'TEXT' | 'PDF' | 'IMAGE' | 'WHATSAPP';
+  fileName: string | null;
+  rawContent: string;
+  createdAt: string;
+  connection: { company: { id: string; name: string } };
+  classificationAudits: Array<{ documentType: string; costSection: string }>;
+}
+
+const SOURCE_ICON: Record<string, typeof FileText> = {
+  TEXT: FileText, PDF: FileInput, IMAGE: Image, WHATSAPP: MessageSquare,
+};
+
+// Colores por sector/industria
+const INDUSTRY_COLORS: Record<string, [string, string]> = {
+  'Agropecuaria':     ['#d1fae5', '#065f46'],
+  'Manufactura':      ['#dbeafe', '#1d4ed8'],
+  'Transporte':       ['#ede9fe', '#6d28d9'],
+  'Construcción':     ['#fef3c7', '#92400e'],
+  'Comercio':         ['#fce7f3', '#be185d'],
+  'Servicios':        ['#e0f2fe', '#0369a1'],
+  'Logística':        ['#ede9fe', '#6d28d9'],
+  'Gastronomía':      ['#fff7ed', '#c2410c'],
+  'Salud':            ['#dcfce7', '#166534'],
+  'Tecnología':       ['#f0fdf4', '#15803d'],
+};
+
+function industryChip(industry: string | null | undefined): [string, string] {
+  if (!industry) return ['#f3f4f6', '#6b7280'];
+  // Buscar coincidencia parcial
+  for (const [key, colors] of Object.entries(INDUSTRY_COLORS)) {
+    if (industry.toLowerCase().includes(key.toLowerCase())) return colors;
+  }
+  // fallback determinístico
+  const palette: [string, string][] = Object.values(INDUSTRY_COLORS);
+  return palette[(industry.charCodeAt(0) ?? 0) % palette.length]!;
+}
+
+// Health indicator por empresa (proxy: cantidad de estructuras)
+function companyHealth(structCount: number): { label: string; color: string; dot: string } {
+  if (structCount === 0) return { label: 'Sin datos',  color: 'text-gray-400',   dot: 'bg-gray-300' };
+  if (structCount <= 1)  return { label: 'Inicial',    color: 'text-amber-600',  dot: 'bg-amber-400' };
+  if (structCount <= 3)  return { label: 'En progreso',color: 'text-blue-600',   dot: 'bg-blue-400' };
+  return                         { label: 'Activo',    color: 'text-emerald-600',dot: 'bg-emerald-500' };
+}
 
 function useMacroLatest() {
   return useQuery({
@@ -59,6 +122,15 @@ export function DashboardPage() {
   const { data: pendingCount = 0 } = usePendingCount();
   const { data: pendingEntries } = usePendingEntries(1);
   const { data: macro = [] } = useMacroLatest();
+  const { data: recentDocs = [] } = useRecentDocs();
+  const [search, setSearch] = useState('');
+
+  const filteredCompanies = search
+    ? companies.filter((c) =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        (c.industry ?? '').toLowerCase().includes(search.toLowerCase()),
+      )
+    : companies;
 
   const totalStructures = companies.reduce((acc, c) => acc + (c._count?.costStructures ?? 0), 0);
   const companiesWithStructure = companies.filter((c) => (c._count?.costStructures ?? 0) > 0).length;
@@ -225,21 +297,37 @@ export function DashboardPage() {
 
           {/* Left: portfolio ─────────────────────────────────────────────── */}
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
-              <div>
-                <h2 className="text-[14px] font-semibold text-gray-800"
-                  style={{ fontFamily: "'Syne', sans-serif" }}>
-                  Cartera de clientes
-                </h2>
-                <p className="text-[12px] text-gray-400">
-                  {companies.length} empresa{companies.length !== 1 ? 's' : ''} activa{companies.length !== 1 ? 's' : ''}
-                </p>
+            {/* Header con search */}
+            <div className="border-b border-gray-100 px-5 py-3.5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-gray-800"
+                    style={{ fontFamily: "'Syne', sans-serif" }}>
+                    Monitoreo de cartera
+                  </h2>
+                  <p className="text-[12px] text-gray-400">
+                    {companies.length} empresa{companies.length !== 1 ? 's' : ''}
+                    {search ? ` · ${filteredCompanies.length} resultado${filteredCompanies.length !== 1 ? 's' : ''}` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Search */}
+                  <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 focus-within:border-gray-400 focus-within:bg-white transition-all">
+                    <Search className="size-3.5 text-gray-400" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Buscar empresa..."
+                      className="w-32 bg-transparent text-[12px] text-gray-700 placeholder-gray-400 outline-none"
+                    />
+                  </div>
+                  <Link to="/companies">
+                    <Button variant="ghost" size="sm">
+                      Ver todas <ArrowRight className="size-3.5" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
-              <Link to="/companies">
-                <Button variant="ghost" size="sm">
-                  Ver todas <ArrowRight className="size-3.5" />
-                </Button>
-              </Link>
             </div>
 
             {companies.length === 0 ? (
@@ -256,64 +344,82 @@ export function DashboardPage() {
             ) : (
               <>
                 {/* Table header */}
-                <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-6 border-b border-gray-100 bg-gray-50 px-5 py-2">
+                <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 border-b border-gray-100 bg-gray-50 px-5 py-2">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Empresa</span>
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Rubro</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Sector</span>
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Estr.</span>
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Estado</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Salud</span>
                 </div>
-                <ul className="divide-y divide-gray-50">
-                  {companies.map((c) => {
-                    const structs = c._count?.costStructures ?? 0;
-                    const [bg, text] = avatarColor(c.name);
-                    return (
-                      <li key={c.id}>
-                        <Link
-                          to="/companies/$id"
-                          params={{ id: c.id }}
-                          className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-6 px-5 py-3.5 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span
-                              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold"
-                              style={{ background: bg, color: text }}
-                            >
-                              {c.name[0]?.toUpperCase()}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="truncate text-[13px] font-semibold text-gray-800">{c.name}</p>
-                              {pendingByCompany.has(c.id) && (
-                                <p className="text-[11px] font-medium text-red-500">
-                                  {pendingByCompany.get(c.id)!.count} pendiente{pendingByCompany.get(c.id)!.count !== 1 ? 's' : ''}
-                                </p>
-                              )}
+
+                {filteredCompanies.length === 0 && search ? (
+                  <div className="flex flex-col items-center py-10 text-center">
+                    <p className="text-[13px] text-gray-500">Sin resultados para <strong>"{search}"</strong></p>
+                    <button onClick={() => setSearch('')} className="mt-2 text-[12px] text-blue-500 hover:underline">
+                      Limpiar búsqueda
+                    </button>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-50">
+                    {filteredCompanies.map((c) => {
+                      const structs = c._count?.costStructures ?? 0;
+                      const [avBg, avText] = avatarColor(c.name);
+                      const [chipBg, chipText] = industryChip(c.industry);
+                      const health = companyHealth(structs);
+                      const pending = pendingByCompany.get(c.id);
+                      return (
+                        <li key={c.id}>
+                          <Link
+                            to="/companies/$id"
+                            params={{ id: c.id }}
+                            className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+                          >
+                            {/* Empresa */}
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span
+                                className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[12px] font-bold"
+                                style={{ background: avBg, color: avText }}
+                              >
+                                {c.name[0]?.toUpperCase()}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-[13px] font-semibold text-gray-800">{c.name}</p>
+                                {pending && (
+                                  <p className="text-[11px] font-medium text-red-500">
+                                    {pending.count} pendiente{pending.count !== 1 ? 's' : ''}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          <span className="text-[12px] text-gray-500 whitespace-nowrap">
-                            {c.industry ?? <span className="italic text-gray-300">—</span>}
-                          </span>
-                          <span className={cn(
-                            'text-center text-[13px] font-bold tabular-nums',
-                            structs > 0 ? 'text-gray-800' : 'text-gray-300',
-                          )}>
-                            {structs}
-                          </span>
-                          <div className="flex justify-end">
-                            {structs > 0 ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                                <CheckCircle2 className="size-2.5" /> Activo
+
+                            {/* Sector chip */}
+                            <span
+                              className="whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-semibold"
+                              style={{ background: chipBg, color: chipText }}
+                            >
+                              {c.industry ?? '—'}
+                            </span>
+
+                            {/* Estructuras */}
+                            <span className={cn(
+                              'text-center text-[13px] font-bold tabular-nums',
+                              structs > 0 ? 'text-gray-800' : 'text-gray-300',
+                            )}>
+                              {structs}
+                            </span>
+
+                            {/* Salud */}
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <span className={cn('size-2 rounded-full flex-shrink-0', health.dot)} />
+                              <span className={cn('text-[11px] font-semibold whitespace-nowrap', health.color)}>
+                                {health.label}
                               </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
-                                <Clock className="size-2.5" /> Sin estructura
-                              </span>
-                            )}
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
+                            </div>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </>
             )}
           </div>
@@ -455,6 +561,45 @@ export function DashboardPage() {
                 </ul>
               )}
             </div>
+
+            {/* Documentos recientes */}
+            {recentDocs.length > 0 && (
+              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
+                  <h2 className="text-[14px] font-semibold text-gray-800"
+                    style={{ fontFamily: "'Syne', sans-serif" }}>
+                    Documentos recientes
+                  </h2>
+                  <Link to="/automatizacion">
+                    <button className="text-[12px] font-medium text-gray-400 hover:text-gray-700 transition-colors">
+                      Ver todo →
+                    </button>
+                  </Link>
+                </div>
+                <ul className="divide-y divide-gray-50">
+                  {recentDocs.map((doc) => {
+                    const SrcIcon = SOURCE_ICON[doc.sourceType] ?? FileText;
+                    const audit = doc.classificationAudits[0];
+                    return (
+                      <li key={doc.id} className="flex items-start gap-3 px-5 py-3">
+                        <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                          <SrcIcon className="size-3.5 text-gray-500" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[12px] font-semibold text-gray-700">
+                            {doc.connection.company.name}
+                          </p>
+                          <p className="truncate text-[11px] text-gray-400">
+                            {audit?.documentType ?? 'Documento'} · {formatDate(doc.createdAt)}
+                          </p>
+                        </div>
+                        <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
 
             {/* Quick actions */}
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
