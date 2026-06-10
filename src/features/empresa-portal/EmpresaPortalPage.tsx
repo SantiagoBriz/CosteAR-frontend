@@ -2,12 +2,35 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send, Paperclip, X, Building2, CheckCircle2,
-  FileText, Image, ChevronDown, Plus,
+  FileText, Image, ChevronDown, Plus, AlertTriangle, Bot,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { api, apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/utils';
+
+// ── AI Analysis type (espeja DocumentAnalysis del backend) ───────────────────
+
+interface DocumentAnalysis {
+  documentType: string;
+  quality: 'legible' | 'parcial' | 'ilegible';
+  qualityNote?: string;
+  costSection: 'MATERIA_PRIMA' | 'MANO_DE_OBRA' | 'COSTOS_INDIRECTOS' | 'VENTAS' | 'DESCONOCIDO';
+  message: string;
+  extractedData: {
+    date?: string | null;
+    supplier?: string | null;
+    invoiceNumber?: string | null;
+    totalAmount?: number | null;
+    taxAmount?: number | null;
+    netAmount?: number | null;
+    currency?: string | null;
+    items?: { description: string; quantity?: number | null; unitCost?: number | null; total?: number | null }[];
+    department?: string | null;
+    hoursWorked?: number | null;
+    employeeCount?: number | null;
+  };
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,7 +111,7 @@ export function EmpresaPortalPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [aiMessages, setAiMessages] = useState<{ id: string; text: string; createdAt: string }[]>([]);
+  const [aiMessages, setAiMessages] = useState<{ id: string; analysis: DocumentAnalysis }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -191,13 +214,17 @@ export function EmpresaPortalPage() {
       if (fileInputRef.current) fileInputRef.current.value = '';
       qc.invalidateQueries({ queryKey: ['my-submissions', activeConnectionId] });
 
-      // Mostrar respuesta del AI si la hay
+      // Mostrar análisis AI si la hay
       const aiResponse = res.data.data.aiResponse;
       if (aiResponse) {
-        setAiMessages((prev) => [
-          ...prev,
-          { id: `ai-${Date.now()}`, text: aiResponse, createdAt: new Date().toISOString() },
-        ]);
+        try {
+          const analysis: DocumentAnalysis = typeof aiResponse === 'string'
+            ? JSON.parse(aiResponse)
+            : aiResponse;
+          setAiMessages((prev) => [...prev, { id: `ai-${Date.now()}`, analysis }]);
+        } catch {
+          // Si no es JSON válido, ignorar
+        }
       }
     } catch (e) {
       setSendError(apiErrorMessage(e));
@@ -330,19 +357,7 @@ export function EmpresaPortalPage() {
 
           {/* Respuestas AI de la sesión actual */}
           {aiMessages.map((ai) => (
-            <div key={ai.id} className="flex justify-start">
-              <div className="max-w-[70%]">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <div className="flex size-5 items-center justify-center rounded-full bg-indigo-100">
-                    <span className="text-[10px]">🤖</span>
-                  </div>
-                  <span className="text-[11px] text-gray-400">Análisis automático</span>
-                </div>
-                <div className="rounded-2xl rounded-tl-none bg-indigo-50 border border-indigo-100 px-4 py-2.5 text-[13px] text-indigo-900 leading-relaxed">
-                  {ai.text}
-                </div>
-              </div>
-            </div>
+            <AIAnalysisBubble key={ai.id} analysis={ai.analysis} />
           ))}
 
           <div ref={bottomRef} />
@@ -535,12 +550,184 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
         </div>
 
         {/* Nota del costista */}
-        {msg.reviewNote && (
-          <div className="rounded-xl rounded-tl-sm bg-gray-100 px-3 py-2 text-[13px] text-gray-700">
-            <span className="font-medium text-gray-500 text-[11px] block mb-0.5">Respuesta del costista</span>
-            {msg.reviewNote}
+        {msg.reviewNote && (() => {
+          try {
+            const analysis: DocumentAnalysis = JSON.parse(msg.reviewNote);
+            return <AIAnalysisBubble analysis={analysis} />;
+          } catch {
+            return (
+              <div className="rounded-xl rounded-tl-sm bg-gray-100 px-3 py-2 text-[13px] text-gray-700">
+                <span className="font-medium text-gray-500 text-[11px] block mb-0.5">Análisis</span>
+                {msg.reviewNote}
+              </div>
+            );
+          }
+        })()}
+      </div>
+    </div>
+  );
+}
+
+// ── AI Analysis Bubble ────────────────────────────────────────────────────────
+
+const SECTION_LABELS: Record<string, string> = {
+  MATERIA_PRIMA:     'Materia Prima',
+  MANO_DE_OBRA:      'Mano de Obra',
+  COSTOS_INDIRECTOS: 'Costos Indirectos',
+  VENTAS:            'Ventas',
+  DESCONOCIDO:       'Sin clasificar',
+};
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  factura_compra:     'Factura de compra',
+  factura_venta:      'Factura de venta',
+  remito:             'Remito',
+  liquidacion_sueldos:'Liquidación de sueldos',
+  planilla_horas:     'Planilla de horas',
+  nota_debito:        'Nota de débito',
+  recibo:             'Recibo',
+  otro:               'Otro documento',
+};
+
+function fmt(n?: number | null) {
+  if (n == null) return null;
+  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n);
+}
+
+function AIAnalysisBubble({ analysis: a }: { analysis: DocumentAnalysis }) {
+  const qualityColor = {
+    legible:  'text-green-700 bg-green-50 border-green-200',
+    parcial:  'text-yellow-700 bg-yellow-50 border-yellow-200',
+    ilegible: 'text-red-700 bg-red-50 border-red-200',
+  }[a.quality];
+
+  const qualityLabel = {
+    legible:  '✓ Legible',
+    parcial:  '⚠ Parcialmente legible',
+    ilegible: '✕ Ilegible',
+  }[a.quality];
+
+  const d = a.extractedData;
+  const hasData = d && (d.supplier || d.totalAmount != null || d.date || d.invoiceNumber || (d.items && d.items.length > 0) || d.hoursWorked != null);
+
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[80%] w-full">
+        {/* Header */}
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <div className="flex size-5 items-center justify-center rounded-full bg-indigo-100">
+            <Bot className="size-3 text-indigo-600" />
           </div>
-        )}
+          <span className="text-[11px] text-gray-400">Análisis automático</span>
+        </div>
+
+        <div className="rounded-2xl rounded-tl-none border border-indigo-100 bg-indigo-50 overflow-hidden">
+          {/* Badges */}
+          <div className="flex flex-wrap gap-1.5 px-4 pt-3 pb-2">
+            <span className="rounded-full border bg-white px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
+              {DOC_TYPE_LABELS[a.documentType] ?? a.documentType}
+            </span>
+            <span className="rounded-full border bg-white px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
+              {SECTION_LABELS[a.costSection]}
+            </span>
+            <span className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-medium', qualityColor)}>
+              {qualityLabel}
+            </span>
+          </div>
+
+          {/* Advertencia calidad */}
+          {(a.quality === 'parcial' || a.quality === 'ilegible') && a.qualityNote && (
+            <div className="mx-4 mb-2 flex items-start gap-2 rounded-lg bg-yellow-50 border border-yellow-200 px-3 py-2">
+              <AlertTriangle className="size-3.5 mt-0.5 shrink-0 text-yellow-600" />
+              <p className="text-[12px] text-yellow-800">{a.qualityNote}</p>
+            </div>
+          )}
+
+          {/* Mensaje principal */}
+          <p className="px-4 pb-3 text-[13px] leading-relaxed text-indigo-900">{a.message}</p>
+
+          {/* Datos extraídos */}
+          {hasData && (
+            <div className="border-t border-indigo-100 bg-white/60 px-4 py-3 space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400 mb-2">Datos detectados</p>
+
+              {d.supplier && (
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-gray-500">Proveedor</span>
+                  <span className="font-medium text-gray-800">{d.supplier}</span>
+                </div>
+              )}
+              {d.invoiceNumber && (
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-gray-500">Comprobante</span>
+                  <span className="font-medium text-gray-800 font-mono">{d.invoiceNumber}</span>
+                </div>
+              )}
+              {d.date && (
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-gray-500">Fecha</span>
+                  <span className="font-medium text-gray-800">{d.date}</span>
+                </div>
+              )}
+              {d.netAmount != null && (
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-gray-500">Neto</span>
+                  <span className="font-medium text-gray-800">{fmt(d.netAmount)}</span>
+                </div>
+              )}
+              {d.taxAmount != null && (
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-gray-500">IVA</span>
+                  <span className="font-medium text-gray-800">{fmt(d.taxAmount)}</span>
+                </div>
+              )}
+              {d.totalAmount != null && (
+                <div className="flex justify-between text-[13px] border-t border-gray-100 pt-1.5 mt-1">
+                  <span className="font-semibold text-gray-700">Total</span>
+                  <span className="font-bold text-gray-900">{fmt(d.totalAmount)} {d.currency ?? ''}</span>
+                </div>
+              )}
+              {d.hoursWorked != null && (
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-gray-500">Horas trabajadas</span>
+                  <span className="font-medium text-gray-800">{d.hoursWorked} hs</span>
+                </div>
+              )}
+              {d.department && (
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-gray-500">Departamento</span>
+                  <span className="font-medium text-gray-800">{d.department}</span>
+                </div>
+              )}
+
+              {/* Items */}
+              {d.items && d.items.length > 0 && (
+                <div className="mt-2 rounded-lg border border-gray-100 overflow-hidden">
+                  <table className="w-full text-[12px]">
+                    <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] tracking-wide">
+                      <tr>
+                        <th className="px-3 py-1.5 text-left font-medium">Descripción</th>
+                        <th className="px-3 py-1.5 text-right font-medium">Cant.</th>
+                        <th className="px-3 py-1.5 text-right font-medium">P. unit.</th>
+                        <th className="px-3 py-1.5 text-right font-medium">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {d.items.map((item, i) => (
+                        <tr key={i}>
+                          <td className="px-3 py-1.5 text-gray-700">{item.description}</td>
+                          <td className="px-3 py-1.5 text-right text-gray-600">{item.quantity ?? '—'}</td>
+                          <td className="px-3 py-1.5 text-right text-gray-600">{fmt(item.unitCost) ?? '—'}</td>
+                          <td className="px-3 py-1.5 text-right font-medium text-gray-800">{fmt(item.total) ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
