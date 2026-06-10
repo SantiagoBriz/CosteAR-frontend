@@ -111,7 +111,6 @@ export function EmpresaPortalPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [aiMessages, setAiMessages] = useState<{ id: string; analysis: DocumentAnalysis }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -200,7 +199,7 @@ export function EmpresaPortalPage() {
         sourceType = file.type.startsWith('image/') ? 'IMAGE' : 'PDF';
       }
 
-      const res = await api.post<{ data: { id: string; status: string; aiResponse: string | null } }>('/empresa-portal/submit', {
+      await api.post('/empresa-portal/submit', {
         rawContent: text,
         sourceType,
         connectionId: activeConnectionId ?? undefined,
@@ -213,19 +212,6 @@ export function EmpresaPortalPage() {
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       qc.invalidateQueries({ queryKey: ['my-submissions', activeConnectionId] });
-
-      // Mostrar análisis AI si la hay
-      const aiResponse = res.data.data.aiResponse;
-      if (aiResponse) {
-        try {
-          const analysis: DocumentAnalysis = typeof aiResponse === 'string'
-            ? JSON.parse(aiResponse)
-            : aiResponse;
-          setAiMessages((prev) => [...prev, { id: `ai-${Date.now()}`, analysis }]);
-        } catch {
-          // Si no es JSON válido, ignorar
-        }
-      }
     } catch (e) {
       setSendError(apiErrorMessage(e));
     } finally {
@@ -353,11 +339,6 @@ export function EmpresaPortalPage() {
 
           {messages.map((msg) => (
             <ChatBubble key={msg.id} message={msg} />
-          ))}
-
-          {/* Respuestas AI de la sesión actual */}
-          {aiMessages.map((ai) => (
-            <AIAnalysisBubble key={ai.id} analysis={ai.analysis} />
           ))}
 
           <div ref={bottomRef} />
