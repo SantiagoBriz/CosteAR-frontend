@@ -11,8 +11,9 @@ export interface Operator {
 
 export interface GeneratedAccess {
   email: string;
-  tempPassword: string;
-  operatorId: string;
+  tempPassword?: string;   // solo viene cuando isNewUser=true
+  inviteCode?: string;
+  isNewUser?: boolean;
 }
 
 export function useOperators(companyId: string) {

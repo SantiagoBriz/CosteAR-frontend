@@ -198,29 +198,50 @@ function OperatorsSection({ companyId }: { companyId: string }) {
                 copied={copied === 'email'}
                 onCopy={() => copyText(generatedAccess.email, 'email')}
               />
-              <div>
-                <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
-                  Contraseña temporal
-                </label>
-                <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
-                  <span className="flex-1 font-mono text-sm text-ink">
-                    {showPassword ? generatedAccess.tempPassword : '••••••••••••'}
-                  </span>
-                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-ink-soft hover:text-ink">
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => copyText(generatedAccess.tempPassword, 'pass')}
-                    className={cn('text-ink-soft hover:text-ink', copied === 'pass' && 'text-green-600')}
-                  >
-                    <Copy className="size-4" />
-                  </button>
+              {generatedAccess.tempPassword ? (
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
+                    Contraseña temporal
+                  </label>
+                  <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+                    <span className="flex-1 font-mono text-sm text-ink">
+                      {showPassword ? generatedAccess.tempPassword : '••••••••••••'}
+                    </span>
+                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-ink-soft hover:text-ink">
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyText(generatedAccess.tempPassword!, 'pass')}
+                      className={cn('text-ink-soft hover:text-ink', copied === 'pass' && 'text-green-600')}
+                    >
+                      <Copy className="size-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
+                    Código de invitación
+                  </label>
+                  <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+                    <span className="flex-1 font-mono text-sm text-ink">{generatedAccess.inviteCode ?? '—'}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyText(generatedAccess.inviteCode ?? '', 'pass')}
+                      className={cn('text-ink-soft hover:text-ink', copied === 'pass' && 'text-green-600')}
+                    >
+                      <Copy className="size-4" />
+                    </button>
+                  </div>
+                  <p className="mt-1 text-[11px] text-ink-soft">El operador ya tiene cuenta — que acepte este código desde su perfil.</p>
+                </div>
+              )}
             </div>
             <p className="mt-3 text-[12px] text-ink-soft">
-              El operador iniciará sesión en <strong>costear-frontend.vercel.app</strong> con estas credenciales y verá solo la pantalla de carga de documentos.
+              {generatedAccess.tempPassword
+                ? <>El operador iniciará sesión en <strong>costear-frontend.vercel.app</strong> con estas credenciales y verá solo la pantalla de carga de documentos.</>
+                : 'Se envió un email al operador con el código de invitación.'}
             </p>
             <Button size="sm" variant="ghost" className="mt-2" onClick={() => setGeneratedAccess(null)}>
               Entendido, cerrar
