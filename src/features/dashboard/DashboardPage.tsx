@@ -2,11 +2,10 @@ import { Link } from '@tanstack/react-router';
 import {
   Building2, Bell, ArrowRight, ClipboardCheck,
   TrendingUp, TrendingDown, DollarSign, BarChart2, AlertTriangle,
-  CheckCircle2, Clock, Inbox,
+  CheckCircle2, Clock, Inbox, ChevronRight, Zap,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { AppShell, PageHeader } from '@/components/layout/AppShell';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { useCompanies } from '@/features/companies/company-hooks';
 import { useAlerts } from '@/features/alerts/alert-hooks';
@@ -16,8 +15,10 @@ import { api } from '@/lib/api';
 import { formatDate, cn } from '@/lib/utils';
 import type { MacroSnapshot } from '@/lib/types';
 
-// ── Hooks locales ─────────────────────────────────────────────────────────────
+// ── Font injection ─────────────────────────────────────────────────────────────
+const fontStyle = `@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');`;
 
+// ── Hooks ──────────────────────────────────────────────────────────────────────
 function useMacroLatest() {
   return useQuery({
     queryKey: ['macro', 'latest'],
@@ -29,24 +30,24 @@ function useMacroLatest() {
   });
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function greet(name?: string | null) {
   const h = new Date().getHours();
   const saludo = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
-  return `${saludo}, ${name?.split(' ')[0] ?? 'costista'}`;
+  return { saludo, nombre: name?.split(' ')[0] ?? 'costista' };
 }
 
 function fmtARS(n: number) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency', currency: 'ARS', maximumFractionDigits: 0,
+  }).format(n);
 }
 
 function fmtPct(n: number) {
-  return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`;
+  return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
+// ── Page ───────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const { data: companies = [] } = useCompanies();
@@ -57,380 +58,580 @@ export function DashboardPage() {
 
   const totalStructures = companies.reduce((acc, c) => acc + (c._count?.costStructures ?? 0), 0);
   const unread = alerts.filter((a) => !a.isRead).length;
-
-  // Extraer datos macro relevantes (indicatorCode en lugar de variable)
   const dolarOficial = macro.find((m) => m.indicatorCode === 'USD_OFICIAL');
   const ipc = macro.find((m) => m.indicatorCode === 'IPC_NACIONAL');
+  const { saludo, nombre } = greet(user?.name);
 
-  // Sin lastMarginPct en Company todavía — dejamos atRisk en 0 por ahora
-  const atRisk: typeof companies = [];
+  const today = new Date().toLocaleDateString('es-AR', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
 
   return (
     <AppShell>
-      <PageHeader
-        title={greet(user?.name)}
-        description={new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-      />
+      <style>{fontStyle}</style>
 
-      {/* Fila 1: KPIs principales */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard
-          icon={Building2}
-          label="Clientes activos"
-          value={companies.length}
-          sub={totalStructures > 0 ? `${totalStructures} estructuras cargadas` : 'Sin estructuras aún'}
-          to="/companies"
-        />
-        <KPICard
-          icon={ClipboardCheck}
-          label="Validaciones pendientes"
-          value={pendingCount}
-          sub={pendingCount > 0 ? 'Documentos de operadores esperando' : 'Todo al día'}
-          to="/validaciones"
-          alert={pendingCount > 0}
-        />
-        <KPICard
-          icon={Bell}
-          label="Alertas activas"
-          value={unread}
-          sub={unread > 0 ? 'Márgenes bajo el umbral' : 'Sin alertas pendientes'}
-          to="/alerts"
-          alert={unread > 0}
-        />
-        <KPICard
-          icon={BarChart2}
-          label="Clientes en riesgo"
-          value={atRisk.length}
-          sub="Calculá estructuras para ver"
-          to="/companies"
-          alert={atRisk.length > 0}
-        />
-      </div>
+      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
-      {/* Fila 2: Macro + Estado de cartera */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.6fr]">
+        {/* ── Hero Header ──────────────────────────────────────────────────── */}
+        <div
+          className="relative mb-8 overflow-hidden rounded-2xl"
+          style={{
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          }}
+        >
+          {/* Grid pattern overlay */}
+          <div
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage: `
+                linear-gradient(rgba(255,255,255,1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)
+              `,
+              backgroundSize: '32px 32px',
+            }}
+          />
+          {/* Accent blob */}
+          <div
+            className="absolute -right-16 -top-16 size-64 rounded-full opacity-10"
+            style={{ background: 'radial-gradient(circle, #c0392b 0%, transparent 70%)' }}
+          />
 
-        {/* Panel macro */}
-        <div className="space-y-4">
-          <h2 className="text-[13px] font-semibold uppercase tracking-wider text-ink-soft">
-            Variables económicas
-          </h2>
+          <div className="relative px-8 py-7">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="mb-1 text-[13px] font-medium capitalize text-white/50">{today}</p>
+                <h1
+                  className="text-[32px] leading-tight text-white"
+                  style={{ fontFamily: "'Instrument Serif', serif" }}
+                >
+                  {saludo},{' '}
+                  <span className="italic" style={{ color: '#e8a598' }}>{nombre}</span>
+                </h1>
+              </div>
 
-          {dolarOficial ? (
-            <MacroCard
-              label="Dólar oficial"
-              value={fmtARS(Number(dolarOficial.value))}
-              date={dolarOficial.effectiveDate}
-              source="BCRA"
-              icon={DollarSign}
-              color="blue"
-            />
-          ) : (
-            <EmptyMacroCard label="Dólar oficial" hint="Sincronizá BCRA para ver el tipo de cambio" to="/macro" />
-          )}
-
-          {ipc ? (
-            <MacroCard
-              label="IPC mensual"
-              value={fmtPct(Number(ipc.value))}
-              date={ipc.effectiveDate}
-              source="INDEC"
-              icon={Number(ipc.value) >= 5 ? TrendingUp : TrendingDown}
-              color={Number(ipc.value) >= 5 ? 'red' : 'green'}
-              note={Number(ipc.value) >= 5 ? 'Inflación elevada — revisá tus precios de venta' : undefined}
-            />
-          ) : (
-            <EmptyMacroCard label="IPC mensual" hint="Sincronizá INDEC para ver inflación" to="/macro" />
-          )}
-
-          <Link
-            to="/macro"
-            className="flex items-center gap-1.5 text-[12px] text-granate hover:text-action"
-          >
-            Ver todas las variables <ArrowRight className="size-3.5" />
-          </Link>
+              {/* Inline mini-stats */}
+              <div className="hidden items-center gap-6 sm:flex">
+                <MiniStat
+                  label="Clientes"
+                  value={companies.length}
+                  sub={`${totalStructures} estr.`}
+                />
+                <div className="h-8 w-px bg-white/10" />
+                <MiniStat
+                  label="Pendientes"
+                  value={pendingCount}
+                  alert={pendingCount > 0}
+                />
+                <div className="h-8 w-px bg-white/10" />
+                <MiniStat
+                  label="Alertas"
+                  value={unread}
+                  alert={unread > 0}
+                />
+                {dolarOficial && (
+                  <>
+                    <div className="h-8 w-px bg-white/10" />
+                    <MiniStat
+                      label="USD oficial"
+                      value={fmtARS(Number(dolarOficial.value))}
+                      isString
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Estado de la cartera */}
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-[13px] font-semibold uppercase tracking-wider text-ink-soft">
-              Estado de la cartera
-            </h2>
-            <Link to="/companies">
-              <Button variant="ghost" size="sm">
-                Ver clientes <ArrowRight className="size-4" />
-              </Button>
-            </Link>
-          </div>
+        {/* ── Urgent banner: pendientes ────────────────────────────────────── */}
+        {pendingCount > 0 && (
+          <Link to="/validaciones">
+            <div
+              className="mb-6 flex items-center justify-between rounded-xl px-5 py-3.5 transition-opacity hover:opacity-90"
+              style={{ background: 'linear-gradient(90deg, #c0392b 0%, #e74c3c 100%)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex size-7 items-center justify-center rounded-full bg-white/20">
+                  <Zap className="size-3.5 text-white" />
+                </div>
+                <p className="text-[13px] font-semibold text-white">
+                  {pendingCount} documento{pendingCount !== 1 ? 's' : ''} esperando tu validación
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-[12px] font-medium text-white/80">
+                Revisar ahora <ChevronRight className="size-3.5" />
+              </div>
+            </div>
+          </Link>
+        )}
 
-          <Card>
-            <CardBody className="p-0">
-              {companies.length === 0 ? (
-                <div className="flex flex-col items-center py-12 text-center">
-                  <Building2 className="mb-3 size-8 text-idle" />
-                  <p className="text-sm font-medium text-ink">No tenés clientes cargados</p>
-                  <p className="mt-1 text-[13px] text-ink-soft">Agregá tu primer cliente para empezar a costear</p>
-                  <Link to="/companies" className="mt-4">
-                    <Button size="sm">Agregar cliente</Button>
+        {/* ── Main grid ────────────────────────────────────────────────────── */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+
+          {/* Left column */}
+          <div className="space-y-6">
+
+            {/* KPI strip */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <KPICard
+                icon={Building2}
+                label="Clientes activos"
+                value={companies.length}
+                sub={totalStructures > 0 ? `${totalStructures} estructuras` : 'Sin estructuras'}
+                to="/companies"
+                color="blue"
+              />
+              <KPICard
+                icon={ClipboardCheck}
+                label="Por validar"
+                value={pendingCount}
+                sub={pendingCount > 0 ? 'Requieren acción' : 'Al día'}
+                to="/validaciones"
+                color={pendingCount > 0 ? 'red' : 'green'}
+                urgent={pendingCount > 0}
+              />
+              <KPICard
+                icon={Bell}
+                label="Alertas"
+                value={unread}
+                sub={unread > 0 ? 'Sin leer' : 'Sin alertas'}
+                to="/alerts"
+                color={unread > 0 ? 'amber' : 'green'}
+                urgent={unread > 0}
+              />
+              <KPICard
+                icon={BarChart2}
+                label="Rubros activos"
+                value={new Set(companies.map((c) => c.industry).filter(Boolean)).size}
+                sub="Industrias distintas"
+                to="/companies"
+                color="purple"
+              />
+            </div>
+
+            {/* Portfolio table */}
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                  Cartera de clientes
+                </h2>
+                <Link to="/companies">
+                  <button className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-700 transition-colors">
+                    Ver todos <ArrowRight className="size-3" />
+                  </button>
+                </Link>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+                {companies.length === 0 ? (
+                  <EmptyPortfolio />
+                ) : (
+                  <table className="w-full text-[13px]">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50/50">
+                        <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                          Empresa
+                        </th>
+                        <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                          Rubro
+                        </th>
+                        <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                          Estructuras
+                        </th>
+                        <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                          Estado
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {companies.slice(0, 7).map((c, i) => {
+                        const structs = c._count?.costStructures ?? 0;
+                        return (
+                          <tr
+                            key={c.id}
+                            className="group hover:bg-gray-50/60 transition-colors"
+                          >
+                            <td className="px-5 py-3">
+                              <Link
+                                to="/companies/$id"
+                                params={{ id: c.id }}
+                                className="flex items-center gap-3"
+                              >
+                                <span
+                                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-white"
+                                  style={{ background: PALETTE[i % PALETTE.length] }}
+                                >
+                                  {c.name.slice(0, 1).toUpperCase()}
+                                </span>
+                                <span className="font-semibold text-gray-800 group-hover:text-gray-900">
+                                  {c.name}
+                                </span>
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 text-gray-500">
+                              {c.industry ?? <span className="italic text-gray-300">—</span>}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className={cn(
+                                'tabular-nums font-semibold',
+                                structs > 0 ? 'text-gray-800' : 'text-gray-300',
+                              )}>
+                                {structs}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {structs > 0 ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                  <CheckCircle2 className="size-3" /> Activo
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-400">
+                                  <Clock className="size-3" /> Pendiente
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+
+            {/* Pending breakdown (if any) */}
+            {pendingCount > 0 && pendingEntries?.items && (
+              <div>
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                    Documentos por revisar
+                  </h2>
+                  <Link to="/validaciones">
+                    <button className="flex items-center gap-1 text-[12px] font-medium text-red-500 hover:text-red-700 transition-colors">
+                      Revisar todo <ArrowRight className="size-3" />
+                    </button>
                   </Link>
                 </div>
-              ) : (
-                <ul className="divide-y divide-line">
-                  {companies.slice(0, 6).map((c) => {
-                    const margin: number | null = null;
-                    const threshold = 15;
-                    const status = margin == null ? 'none'
-                      : margin < 0 ? 'loss'
-                      : margin < threshold ? 'warn'
-                      : 'ok';
-
-                    return (
-                      <li key={c.id}>
-                        <Link
-                          to="/companies/$id"
-                          params={{ id: c.id }}
-                          className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-surface-alt/60 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={cn(
-                              'flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold',
-                              status === 'ok'   ? 'bg-green-100 text-green-700' :
-                              status === 'warn' ? 'bg-yellow-100 text-yellow-700' :
-                              status === 'loss' ? 'bg-red-100 text-red-700' :
-                              'bg-surface-alt text-ink-soft',
-                            )}>
-                              {c.name.slice(0, 1).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-[14px] font-medium text-ink">{c.name}</p>
-                              <p className="text-[12px] text-ink-soft">{c.industry ?? 'Sin rubro'}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            {margin != null ? (
-                              <div className="text-right">
-                                <p className={cn(
-                                  'text-[15px] font-bold tabular-nums',
-                                  status === 'ok' ? 'text-green-600' :
-                                  status === 'warn' ? 'text-yellow-600' : 'text-red-600',
-                                )}>
-                                  {(margin as number).toFixed(1)}%
-                                </p>
-                                <p className="text-[11px] text-ink-soft">margen</p>
-                              </div>
-                            ) : (
-                              <span className="text-[12px] text-ink-soft italic">Sin cálculo</span>
-                            )}
-                            {status === 'loss' && <AlertTriangle className="size-4 text-red-500" />}
-                            {status === 'ok'   && <CheckCircle2 className="size-4 text-green-500" />}
-                            {status === 'warn' && <Clock className="size-4 text-yellow-500" />}
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CardBody>
-          </Card>
-        </div>
-      </div>
-
-      {/* Fila 3: Validaciones pendientes + Alertas recientes */}
-      {(pendingCount > 0 || unread > 0) && (
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-
-          {pendingCount > 0 && (
-            <Card>
-              <CardHeader
-                title="Documentos por revisar"
-                description="Operadores esperando tu validación"
-                action={
-                  <Link to="/validaciones">
-                    <Button variant="ghost" size="sm">
-                      Revisar <ArrowRight className="size-4" />
-                    </Button>
-                  </Link>
-                }
-              />
-              <CardBody className="p-0">
-                {/* Breakdown por empresa */}
-                {pendingEntries?.items && (() => {
-                  const byCompany = pendingEntries.items.reduce<Map<string, { name: string; count: number; items: typeof pendingEntries.items }>>(
-                    (map, entry) => {
+                <div className="overflow-hidden rounded-xl border border-red-100 bg-white">
+                  {(() => {
+                    const byCompany = pendingEntries.items.reduce<
+                      Map<string, { name: string; count: number; items: typeof pendingEntries.items }>
+                    >((map, entry) => {
                       const { id, name } = entry.connection.company;
                       if (!map.has(id)) map.set(id, { name, count: 0, items: [] });
                       const g = map.get(id)!;
                       g.count++;
                       g.items.push(entry);
                       return map;
-                    },
-                    new Map(),
-                  );
-                  return (
-                    <ul className="divide-y divide-line">
-                      {[...byCompany.entries()].map(([cid, { name, count, items }]) => (
-                        <li key={cid}>
-                          <Link
-                            to="/validaciones"
-                            className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-surface-alt/60 transition-colors"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-action/10">
-                                <Inbox className="size-3.5 text-action" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-[13px] font-medium text-ink truncate">{name}</p>
-                                <p className="text-[11px] text-ink-soft">
-                                  {items.slice(0, 2).map((e) => e.fileName ?? e.rawContent.slice(0, 30)).join(' · ')}
-                                  {count > 2 ? ` · +${count - 2} más` : ''}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="shrink-0 rounded-full bg-action/10 px-2 py-0.5 text-[12px] font-semibold text-action">
-                              {count}
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  );
-                })()}
-                {/* Totalizador */}
-                <div className="flex items-center justify-between border-t border-line px-5 py-3">
-                  <span className="text-[13px] text-ink-soft">Total pendientes</span>
-                  <Link to="/validaciones">
-                    <Button size="sm" className="h-7 text-[12px]">
-                      Ver todo <ArrowRight className="size-3" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardBody>
-            </Card>
-          )}
+                    }, new Map());
 
-          {unread > 0 && (
-            <Card>
-              <CardHeader
-                title="Alertas recientes"
-                description="Márgenes que requieren atención"
-                action={
+                    return (
+                      <ul className="divide-y divide-red-50">
+                        {[...byCompany.entries()].map(([cid, { name, count, items }]) => (
+                          <li key={cid}>
+                            <Link
+                              to="/validaciones"
+                              className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-red-50/40 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-100">
+                                  <Inbox className="size-3.5 text-red-600" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-[13px] font-semibold text-gray-800 truncate">{name}</p>
+                                  <p className="text-[11px] text-gray-400 truncate">
+                                    {items.slice(0, 2).map((e) => e.fileName ?? e.rawContent.slice(0, 25)).join(' · ')}
+                                    {count > 2 ? ` · +${count - 2} más` : ''}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-[12px] font-bold text-white">
+                                  {count}
+                                </span>
+                                <ChevronRight className="size-4 text-gray-300" />
+                              </div>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right column */}
+          <div className="space-y-5">
+
+            {/* Macro panel */}
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                  Variables económicas
+                </h2>
+                <Link to="/macro">
+                  <button className="flex items-center gap-1 text-[12px] font-medium text-gray-400 hover:text-gray-700 transition-colors">
+                    Ver más <ArrowRight className="size-3" />
+                  </button>
+                </Link>
+              </div>
+
+              <div className="space-y-3">
+                {dolarOficial ? (
+                  <MacroTile
+                    label="Dólar oficial"
+                    value={fmtARS(Number(dolarOficial.value))}
+                    date={dolarOficial.effectiveDate}
+                    source="BCRA"
+                    icon={DollarSign}
+                    accentColor="#1a6ef7"
+                  />
+                ) : (
+                  <EmptyMacroTile label="Dólar oficial" to="/macro" />
+                )}
+
+                {ipc ? (
+                  <MacroTile
+                    label="IPC mensual"
+                    value={fmtPct(Number(ipc.value))}
+                    date={ipc.effectiveDate}
+                    source="INDEC"
+                    icon={Number(ipc.value) >= 5 ? TrendingUp : TrendingDown}
+                    accentColor={Number(ipc.value) >= 5 ? '#e74c3c' : '#27ae60'}
+                    warning={Number(ipc.value) >= 5 ? 'Inflación elevada — revisá precios' : undefined}
+                  />
+                ) : (
+                  <EmptyMacroTile label="IPC mensual" to="/macro" />
+                )}
+              </div>
+            </div>
+
+            {/* Alerts panel */}
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                  Alertas recientes
+                </h2>
+                {unread > 0 && (
                   <Link to="/alerts">
-                    <Button variant="ghost" size="sm">
-                      Ver todas <ArrowRight className="size-4" />
-                    </Button>
+                    <button className="flex items-center gap-1 text-[12px] font-medium text-amber-500 hover:text-amber-700 transition-colors">
+                      Ver todas <ArrowRight className="size-3" />
+                    </button>
                   </Link>
-                }
-              />
-              <CardBody className="p-0">
-                <ul className="divide-y divide-line">
-                  {alerts.filter((a) => !a.isRead).slice(0, 4).map((a) => (
-                    <li key={a.id} className="flex items-start justify-between gap-3 px-5 py-3">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-yellow-500" />
-                        <span className="text-[13px] text-ink">{a.message}</span>
-                      </div>
-                      <span className="shrink-0 text-[11px] text-ink-soft">{formatDate(a.createdAt)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardBody>
-            </Card>
-          )}
+                )}
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+                {unread === 0 ? (
+                  <div className="flex flex-col items-center py-8 text-center">
+                    <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-emerald-50">
+                      <CheckCircle2 className="size-5 text-emerald-500" />
+                    </div>
+                    <p className="text-[13px] font-semibold text-gray-700">Sin alertas pendientes</p>
+                    <p className="mt-0.5 text-[12px] text-gray-400">Todos los márgenes están en orden</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-50">
+                    {alerts.filter((a) => !a.isRead).slice(0, 4).map((a) => (
+                      <li key={a.id} className="flex items-start gap-3 px-4 py-3">
+                        <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                          <AlertTriangle className="size-3 text-amber-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] leading-snug text-gray-700">{a.message}</p>
+                          <p className="mt-0.5 text-[11px] text-gray-400">{formatDate(a.createdAt)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* Quick actions */}
+            <div>
+              <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                Accesos rápidos
+              </h2>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: 'Nuevo cliente', to: '/companies', icon: Building2 },
+                  { label: 'Validaciones', to: '/validaciones', icon: ClipboardCheck },
+                  { label: 'Variables macro', to: '/macro', icon: TrendingUp },
+                  { label: 'Alertas', to: '/alerts', icon: Bell },
+                ].map(({ label, to, icon: Icon }) => (
+                  <Link key={to} to={to}>
+                    <button className="flex w-full items-center gap-2.5 rounded-xl border border-gray-100 bg-white px-4 py-3 text-[12px] font-semibold text-gray-600 transition-all hover:border-gray-200 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm">
+                      <Icon className="size-3.5 text-gray-400" />
+                      {label}
+                    </button>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
     </AppShell>
   );
 }
 
-// ── KPI Card ──────────────────────────────────────────────────────────────────
+// ── Palette for company avatars ────────────────────────────────────────────────
+const PALETTE = [
+  '#1a6ef7', '#e74c3c', '#27ae60', '#8e44ad',
+  '#f39c12', '#16a085', '#2c3e50', '#c0392b',
+];
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function MiniStat({
+  label, value, sub, alert, isString,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  alert?: boolean;
+  isString?: boolean;
+}) {
+  return (
+    <div className="text-right">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-white/40">{label}</p>
+      <p className={cn(
+        'text-[22px] font-bold tabular-nums leading-none',
+        isString ? 'text-[16px] mt-0.5' : '',
+        alert ? 'text-red-400' : 'text-white',
+      )}
+        style={isString ? { fontFamily: "'Plus Jakarta Sans', sans-serif" } : { fontFamily: "'Instrument Serif', serif" }}
+      >
+        {value}
+      </p>
+      {sub && <p className="text-[10px] text-white/30">{sub}</p>}
+    </div>
+  );
+}
 
 function KPICard({
-  icon: Icon, label, value, sub, to, alert,
+  icon: Icon, label, value, sub, to, color, urgent,
 }: {
   icon: typeof Building2;
   label: string;
   value: number;
   sub: string;
   to: string;
-  alert?: boolean;
+  color: 'blue' | 'red' | 'green' | 'amber' | 'purple';
+  urgent?: boolean;
 }) {
+  const colors = {
+    blue:   { bg: 'bg-blue-50',   text: 'text-blue-700',   icon: 'bg-blue-100 text-blue-600',   bar: '#1a6ef7' },
+    red:    { bg: 'bg-red-50',    text: 'text-red-700',    icon: 'bg-red-100 text-red-600',     bar: '#e74c3c' },
+    green:  { bg: 'bg-emerald-50',text: 'text-emerald-700',icon: 'bg-emerald-100 text-emerald-600', bar: '#27ae60' },
+    amber:  { bg: 'bg-amber-50',  text: 'text-amber-700',  icon: 'bg-amber-100 text-amber-600', bar: '#f59e0b' },
+    purple: { bg: 'bg-purple-50', text: 'text-purple-700', icon: 'bg-purple-100 text-purple-600', bar: '#8e44ad' },
+  }[color];
+
   return (
     <Link to={to}>
-      <Card className="transition-shadow hover:shadow-md">
-        <CardBody className="flex items-start gap-4 py-5">
-          <div className={cn(
-            'flex size-10 shrink-0 items-center justify-center rounded-md',
-            alert ? 'bg-action/10 text-action' : 'bg-granate-tenue text-granate',
-          )}>
-            <Icon className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-2xl font-bold tabular-nums text-ink">{value}</p>
-            <p className="text-[13px] font-medium text-ink">{label}</p>
-            <p className="mt-0.5 truncate text-[12px] text-ink-soft">{sub}</p>
-          </div>
-        </CardBody>
-      </Card>
+      <div className={cn(
+        'relative overflow-hidden rounded-xl border border-gray-100 bg-white p-4 transition-all hover:shadow-md hover:-translate-y-0.5',
+        urgent && 'ring-1 ring-red-200',
+      )}>
+        {/* Left accent bar */}
+        <div
+          className="absolute left-0 top-0 h-full w-[3px] rounded-l-xl"
+          style={{ background: colors.bar }}
+        />
+        <div className={cn('mb-3 flex size-8 items-center justify-center rounded-lg', colors.icon)}>
+          <Icon className="size-4" />
+        </div>
+        <p
+          className={cn('text-[28px] font-bold leading-none tabular-nums', colors.text)}
+          style={{ fontFamily: "'Instrument Serif', serif" }}
+        >
+          {value}
+        </p>
+        <p className="mt-1.5 text-[12px] font-semibold text-gray-700">{label}</p>
+        <p className="mt-0.5 truncate text-[11px] text-gray-400">{sub}</p>
+      </div>
     </Link>
   );
 }
 
-// ── Macro Card ────────────────────────────────────────────────────────────────
-
-function MacroCard({
-  label, value, date, source, icon: Icon, color, note,
+function MacroTile({
+  label, value, date, source, icon: Icon, accentColor, warning,
 }: {
   label: string;
   value: string;
   date: string;
   source: string;
   icon: typeof DollarSign;
-  color: 'blue' | 'red' | 'green';
-  note?: string;
+  accentColor: string;
+  warning?: string;
 }) {
-  const colors = {
-    blue:  { bg: 'bg-blue-50',   text: 'text-blue-700',  icon: 'bg-blue-100 text-blue-600'  },
-    red:   { bg: 'bg-red-50',    text: 'text-red-700',   icon: 'bg-red-100 text-red-600'    },
-    green: { bg: 'bg-green-50',  text: 'text-green-700', icon: 'bg-green-100 text-green-600' },
-  }[color];
-
   return (
-    <div className={cn('rounded-lg border border-line p-4', colors.bg)}>
-      <div className="flex items-center justify-between">
+    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+      <div className="flex items-center justify-between px-4 py-3.5">
         <div className="flex items-center gap-3">
-          <div className={cn('flex size-9 items-center justify-center rounded-md', colors.icon)}>
-            <Icon className="size-4" />
+          <div
+            className="flex size-8 items-center justify-center rounded-lg"
+            style={{ background: `${accentColor}18` }}
+          >
+            <Icon className="size-4" style={{ color: accentColor }} />
           </div>
           <div>
-            <p className="text-[12px] text-ink-soft">{label}</p>
-            <p className={cn('text-xl font-bold tabular-nums', colors.text)}>{value}</p>
+            <p className="text-[11px] font-medium text-gray-400">{label}</p>
+            <p
+              className="text-[20px] font-bold leading-none tabular-nums"
+              style={{ color: accentColor, fontFamily: "'Instrument Serif', serif" }}
+            >
+              {value}
+            </p>
           </div>
         </div>
         <div className="text-right">
-          <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+            style={{ background: accentColor }}
+          >
             {source}
           </span>
-          <p className="mt-1 text-[11px] text-ink-soft">{new Date(date).toLocaleDateString('es-AR')}</p>
+          <p className="mt-1 text-[11px] text-gray-400">
+            {new Date(date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+          </p>
         </div>
       </div>
-      {note && (
-        <p className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-red-700">
-          <AlertTriangle className="size-3.5" /> {note}
-        </p>
+      {warning && (
+        <div className="flex items-center gap-2 border-t border-red-100 bg-red-50 px-4 py-2">
+          <AlertTriangle className="size-3 shrink-0 text-red-500" />
+          <p className="text-[11px] font-medium text-red-700">{warning}</p>
+        </div>
       )}
     </div>
   );
 }
 
-function EmptyMacroCard({ label, hint, to }: { label: string; hint: string; to: string }) {
+function EmptyMacroTile({ label, to }: { label: string; to: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-line bg-surface p-4">
-      <p className="text-[13px] font-medium text-ink-soft">{label}</p>
-      <p className="mt-1 text-[12px] text-ink-soft">{hint}</p>
-      <Link to={to} className="mt-2 inline-block text-[12px] font-medium text-granate hover:text-action">
-        Ir a variables macro →
+    <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3.5">
+      <p className="text-[12px] font-semibold text-gray-400">{label}</p>
+      <Link to={to} className="mt-0.5 block text-[11px] font-medium text-blue-500 hover:text-blue-700">
+        Sincronizar datos →
+      </Link>
+    </div>
+  );
+}
+
+function EmptyPortfolio() {
+  return (
+    <div className="flex flex-col items-center py-12 text-center">
+      <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-gray-100">
+        <Building2 className="size-6 text-gray-400" />
+      </div>
+      <p className="text-[14px] font-semibold text-gray-700">Sin clientes cargados</p>
+      <p className="mt-1 text-[12px] text-gray-400">Agregá tu primer cliente para empezar</p>
+      <Link to="/companies" className="mt-4">
+        <Button size="sm">Agregar cliente</Button>
       </Link>
     </div>
   );
