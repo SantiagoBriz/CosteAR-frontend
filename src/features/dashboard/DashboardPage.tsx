@@ -10,7 +10,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useCompanies } from '@/features/companies/company-hooks';
 import { useAlerts } from '@/features/alerts/alert-hooks';
-import { usePendingCount } from '@/features/validaciones/validaciones-hooks';
+import { usePendingCount, usePendingEntries } from '@/features/validaciones/validaciones-hooks';
 import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api';
 import { formatDate, cn } from '@/lib/utils';
@@ -52,6 +52,7 @@ export function DashboardPage() {
   const { data: companies = [] } = useCompanies();
   const { data: alerts = [] } = useAlerts();
   const { data: pendingCount = 0 } = usePendingCount();
+  const { data: pendingEntries } = usePendingEntries(1);
   const { data: macro = [] } = useMacroLatest();
 
   const totalStructures = companies.reduce((acc, c) => acc + (c._count?.costStructures ?? 0), 0);
@@ -253,15 +254,57 @@ export function DashboardPage() {
                   </Link>
                 }
               />
-              <CardBody className="flex items-center justify-center py-8 gap-4">
-                <div className="flex size-14 items-center justify-center rounded-full bg-action/10">
-                  <Inbox className="size-7 text-action" />
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-ink">{pendingCount}</p>
-                  <p className="text-[13px] text-ink-soft">
-                    {pendingCount === 1 ? 'documento esperando' : 'documentos esperando'}
-                  </p>
+              <CardBody className="p-0">
+                {/* Breakdown por empresa */}
+                {pendingEntries?.items && (() => {
+                  const byCompany = pendingEntries.items.reduce<Map<string, { name: string; count: number; items: typeof pendingEntries.items }>>(
+                    (map, entry) => {
+                      const { id, name } = entry.connection.company;
+                      if (!map.has(id)) map.set(id, { name, count: 0, items: [] });
+                      const g = map.get(id)!;
+                      g.count++;
+                      g.items.push(entry);
+                      return map;
+                    },
+                    new Map(),
+                  );
+                  return (
+                    <ul className="divide-y divide-line">
+                      {[...byCompany.entries()].map(([cid, { name, count, items }]) => (
+                        <li key={cid}>
+                          <Link
+                            to="/validaciones"
+                            className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-surface-alt/60 transition-colors"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-action/10">
+                                <Inbox className="size-3.5 text-action" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[13px] font-medium text-ink truncate">{name}</p>
+                                <p className="text-[11px] text-ink-soft">
+                                  {items.slice(0, 2).map((e) => e.fileName ?? e.rawContent.slice(0, 30)).join(' · ')}
+                                  {count > 2 ? ` · +${count - 2} más` : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="shrink-0 rounded-full bg-action/10 px-2 py-0.5 text-[12px] font-semibold text-action">
+                              {count}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })()}
+                {/* Totalizador */}
+                <div className="flex items-center justify-between border-t border-line px-5 py-3">
+                  <span className="text-[13px] text-ink-soft">Total pendientes</span>
+                  <Link to="/validaciones">
+                    <Button size="sm" className="h-7 text-[12px]">
+                      Ver todo <ArrowRight className="size-3" />
+                    </Button>
+                  </Link>
                 </div>
               </CardBody>
             </Card>

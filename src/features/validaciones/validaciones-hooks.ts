@@ -10,6 +10,9 @@ export interface DataEntry {
   reviewNote: string | null;
   reviewedAt: string | null;
   createdAt: string;
+  fileName: string | null;
+  fileMimeType: string | null;
+  fileData: string | null;
   connection: {
     company: { id: string; name: string; industry: string | null };
   };
