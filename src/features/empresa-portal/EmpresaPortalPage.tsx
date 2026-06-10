@@ -253,6 +253,80 @@ export function EmpresaPortalPage() {
   // Mensajes del chat: historial de DB + respuestas AI locales intercaladas
   const messages: ChatMessage[] = [...submissions].reverse().map(submissionToMessage);
 
+  // ── Pantalla de bienvenida cuando no hay empresas activas ────────────────────
+
+  if (companies.length === 0) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-[#f6f5f3] px-4">
+        <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="mb-8 flex items-center gap-2">
+            <div className="flex size-8 items-center justify-center rounded-md bg-[#6B1D1D] text-sm font-bold text-white">C</div>
+            <span className="text-lg font-bold tracking-tight text-gray-900">CosteAR</span>
+          </div>
+
+          {/* Card */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex size-12 items-center justify-center rounded-xl bg-[#6B1D1D]/10">
+              <svg className="size-6 text-[#6B1D1D]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+              </svg>
+            </div>
+
+            <h1 className="mb-1 text-[18px] font-bold text-gray-900">Hola, {user?.name?.split(' ')[0] ?? 'operador'}</h1>
+            <p className="mb-5 text-[13px] text-gray-500">
+              Tu cuenta está activa pero todavía no estás vinculado a ninguna empresa.
+              Ingresá el código que te envió tu costista para acceder.
+            </p>
+
+            {inviteSuccess ? (
+              <div className="rounded-xl bg-emerald-50 px-4 py-3">
+                <p className="text-[13px] font-semibold text-emerald-800">✅ {inviteSuccess}</p>
+                <p className="mt-1 text-[12px] text-emerald-600">Recargando tu acceso…</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-gray-500">
+                    Código de invitación
+                  </label>
+                  <input
+                    value={inviteCode}
+                    onChange={(e) => { setInviteCode(e.target.value.toUpperCase()); setInviteError(null); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') acceptInvite.mutate(inviteCode.trim()); }}
+                    placeholder="Ej: METAL-A3F2B1"
+                    className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-2.5 font-mono text-[14px] text-gray-800 placeholder-gray-400 outline-none focus:border-[#6B1D1D] focus:bg-white transition-colors"
+                  />
+                  {inviteError && (
+                    <p className="mt-1.5 text-[12px] font-medium text-red-600">{inviteError}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => acceptInvite.mutate(inviteCode.trim())}
+                  disabled={inviteCode.trim().length < 5 || acceptInvite.isPending}
+                  className="w-full rounded-xl bg-[#6B1D1D] py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#5a1818] disabled:opacity-50"
+                >
+                  {acceptInvite.isPending ? 'Verificando…' : 'Acceder a la empresa'}
+                </button>
+                <p className="text-center text-[11px] text-gray-400">
+                  No tenés código? Pedíselo al costista que te invitó.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Logout */}
+          <button
+            onClick={() => { useAuthStore.getState().clear(); window.location.href = '/login'; }}
+            className="mt-4 w-full text-center text-[12px] text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
