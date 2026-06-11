@@ -83,6 +83,7 @@ export function ValidacionesPage() {
   const [reviewing, setReviewing] = useState<{ entry: DataEntry; action: 'APPROVED' | 'REJECTED' | 'CORRECTED' } | null>(null);
   const [note, setNote] = useState('');
   const [correctedContent, setCorrectedContent] = useState('');
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const handleReview = async (status: 'APPROVED' | 'REJECTED' | 'CORRECTED') => {
     if (!reviewing) return;
@@ -128,11 +129,17 @@ export function ValidacionesPage() {
 
             {/* Preview del archivo */}
             {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) && reviewing.entry.fileMimeType?.startsWith('image/') && (
-              <img
-                src={reviewing.entry.fileUrl ?? `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`}
-                alt={reviewing.entry.fileName ?? 'documento'}
-                className="mb-4 w-full rounded-md object-contain max-h-64 border border-line bg-surface-alt"
-              />
+              <button
+                type="button"
+                onClick={() => setLightboxSrc(reviewing.entry.fileUrl ?? `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`)}
+                className="mb-4 w-full focus:outline-none"
+              >
+                <img
+                  src={reviewing.entry.fileUrl ?? `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`}
+                  alt={reviewing.entry.fileName ?? 'documento'}
+                  className="w-full rounded-md object-contain max-h-64 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
+                />
+              </button>
             )}
             {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) && reviewing.entry.fileMimeType === 'application/pdf' && (
               <div className="mb-4 flex items-center gap-2 rounded-md border border-line bg-surface-alt p-3">
@@ -236,6 +243,7 @@ export function ValidacionesPage() {
                   setCorrectedContent(entry.rawContent);
                   setReviewing({ entry, action: 'CORRECTED' });
                 }}
+                onZoom={setLightboxSrc}
               />
             ))}
           </div>
@@ -261,6 +269,28 @@ export function ValidacionesPage() {
           )}
         </>
       )}
+
+      {/* Lightbox — ampliar imagen */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <img
+            src={lightboxSrc}
+            alt="Vista ampliada"
+            className="max-w-full max-h-full rounded-lg shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={() => setLightboxSrc(null)}
+            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full size-9 text-lg transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </AppShell>
   );
 }
@@ -274,6 +304,7 @@ function CompanySection({
   onApprove,
   onReject,
   onCorrect,
+  onZoom,
 }: {
   companyName: string;
   industry: string | null;
@@ -281,6 +312,7 @@ function CompanySection({
   onApprove: (e: DataEntry) => void;
   onReject: (e: DataEntry) => void;
   onCorrect: (e: DataEntry) => void;
+  onZoom: (src: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -321,6 +353,7 @@ function CompanySection({
               onApprove={() => onApprove(entry)}
               onReject={() => onReject(entry)}
               onCorrect={() => onCorrect(entry)}
+              onZoom={onZoom}
             />
           ))}
         </div>
@@ -336,11 +369,13 @@ function EntryRow({
   onApprove,
   onReject,
   onCorrect,
+  onZoom,
 }: {
   entry: DataEntry;
   onApprove: () => void;
   onReject: () => void;
   onCorrect: () => void;
+  onZoom: (src: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isImage = entry.fileMimeType?.startsWith('image/');
@@ -412,13 +447,18 @@ function EntryRow({
         <div className="mt-4 space-y-3 animate-rise">
           {/* Preview imagen — Cloudinary URL o base64 legacy */}
           {isImage && (entry.fileUrl ?? entry.fileData) && (
-            <a href={entry.fileUrl ?? '#'} target="_blank" rel="noopener noreferrer">
+            <button
+              type="button"
+              onClick={() => onZoom(entry.fileUrl ?? `data:${entry.fileMimeType};base64,${entry.fileData}`)}
+              className="w-full focus:outline-none"
+            >
               <img
                 src={entry.fileUrl ?? `data:${entry.fileMimeType};base64,${entry.fileData}`}
                 alt={entry.fileName ?? 'documento'}
                 className="w-full rounded-md object-contain max-h-80 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
               />
-            </a>
+              <p className="text-center text-[11px] text-ink-soft mt-1">Clic para ampliar</p>
+            </button>
           )}
 
           {/* PDF — link a Cloudinary o indicador legacy */}
