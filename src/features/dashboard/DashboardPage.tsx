@@ -12,7 +12,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { useCompanies } from '@/features/companies/company-hooks';
 import { useAlerts } from '@/features/alerts/alert-hooks';
-import { usePendingCount, usePendingEntries } from '@/features/validaciones/validaciones-hooks';
+import { usePendingCount, usePendingEntries, useAttention } from '@/features/validaciones/validaciones-hooks';
 import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api';
 import { formatDate, cn } from '@/lib/utils';
@@ -121,6 +121,7 @@ export function DashboardPage() {
   const { data: alerts = [] } = useAlerts();
   const { data: pendingCount = 0 } = usePendingCount();
   const { data: pendingEntries } = usePendingEntries(1);
+  const { data: attention = [] } = useAttention();
   const { data: macro = [] } = useMacroLatest();
   const { data: recentDocs = [] } = useRecentDocs();
   const [search, setSearch] = useState('');
@@ -240,6 +241,46 @@ export function DashboardPage() {
             variant="neutral"
           />
         </div>
+
+        {/* ── Qué necesita mi atención hoy (cruza todas las empresas) ───────── */}
+        {attention.some((a) => a.needsAttention) && (
+          <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+            <div className="border-b border-gray-100 px-5 py-3">
+              <span className="text-[13px] font-semibold text-gray-800">Qué necesita tu atención hoy</span>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {attention.filter((a) => a.needsAttention).map((a) => (
+                <Link
+                  key={a.companyId}
+                  to="/validaciones"
+                  className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-medium text-gray-900">{a.companyName}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      {a.conflicts > 0 && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
+                          {a.conflicts} a revisar
+                        </span>
+                      )}
+                      {a.pending > 0 && (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-800">
+                          {a.pending} pendiente{a.pending !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {a.daysSinceActivity != null && a.daysSinceActivity >= 14 && (
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600">
+                          sin novedades hace {a.daysSinceActivity} días
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0 text-gray-400" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Urgent: pending validations ──────────────────────────────────── */}
         {pendingCount > 0 && (

@@ -89,6 +89,28 @@ export function useHistorial(page = 1) {
   });
 }
 
+export interface AttentionItem {
+  companyId: string;
+  companyName: string;
+  industry: string | null;
+  pending: number;
+  conflicts: number;
+  lastActivity: string | null;
+  daysSinceActivity: number | null;
+  needsAttention: boolean;
+}
+
+export function useAttention() {
+  return useQuery({
+    queryKey: ['validaciones', 'attention'],
+    queryFn: async () => {
+      const res = await api.get<{ data: AttentionItem[] }>('/validaciones/attention');
+      return res.data.data;
+    },
+    staleTime: 30_000,
+  });
+}
+
 export function useBulkApprove() {
   const qc = useQueryClient();
   return useMutation({
