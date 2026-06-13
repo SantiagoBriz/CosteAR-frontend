@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { BookOpen, ImageIcon, Bot, PenLine, FileText } from 'lucide-react';
+import { BookOpen, ImageIcon, Bot, PenLine, FileText, FileDown } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { formatMoney, formatDate } from '@/lib/utils';
 import { useCompanies } from '@/features/companies/company-hooks';
 import { useLedger, type LedgerEntry } from './libro-hooks';
+import { ClientReport } from './ClientReport';
 
 const SECTION_LABELS: Record<string, string> = {
   MATERIA_PRIMA: 'Materia Prima',
@@ -27,6 +29,9 @@ export function LibroCostosPage() {
   const [period, setPeriod] = useState<string>('');
   const { data, isLoading } = useLedger(companyId || undefined, period || undefined);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [showReport, setShowReport] = useState(false);
+
+  const selectedCompanyName = companies.find((c) => c.id === companyId)?.name ?? 'Todas las empresas';
 
   const entries = data?.entries ?? [];
   const grouped = SECTION_ORDER
@@ -62,6 +67,11 @@ export function LibroCostosPage() {
             <option key={p} value={p}>{periodLabel(p)}</option>
           ))}
         </select>
+        {entries.length > 0 && (
+          <Button size="sm" variant="secondary" className="ml-auto" onClick={() => setShowReport(true)}>
+            <FileDown className="size-4" /> Generar reporte para el cliente
+          </Button>
+        )}
       </div>
 
       {/* Totales por sección */}
@@ -106,6 +116,16 @@ export function LibroCostosPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {showReport && data && (
+        <ClientReport
+          companyName={selectedCompanyName}
+          period={period}
+          entries={entries}
+          totalsBySection={data.totalsBySection}
+          onClose={() => setShowReport(false)}
+        />
       )}
 
       {lightbox && (
