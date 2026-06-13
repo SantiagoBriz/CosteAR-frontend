@@ -17,6 +17,7 @@ import { AlertsPage } from '@/features/alerts/AlertsPage';
 import { MacroPage } from '@/features/macro/MacroPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { ValidacionesPage } from '@/features/validaciones/ValidacionesPage';
+import { LibroCostosPage } from '@/features/libro/LibroCostosPage';
 import { HistorialPage } from '@/features/validaciones/HistorialPage';
 import { EmpresaPortalPage } from '@/features/empresa-portal/EmpresaPortalPage';
 import { PropagacionPage } from '@/features/propagacion/PropagacionPage';
@@ -68,6 +69,7 @@ const alertsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/alert
 const macroRoute = createRoute({ getParentRoute: () => rootRoute, path: '/macro', beforeLoad: requireAuth, component: MacroPage });
 const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireAuth, component: ProfilePage });
 const validacionesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/validaciones', beforeLoad: requireAuth, component: ValidacionesPage });
+const libroRoute = createRoute({ getParentRoute: () => rootRoute, path: '/libro', beforeLoad: requireAuth, component: LibroCostosPage });
 const historialRoute = createRoute({ getParentRoute: () => rootRoute, path: '/historial', beforeLoad: requireAuth, component: HistorialPage });
 const propagacionRoute = createRoute({ getParentRoute: () => rootRoute, path: '/propagacion', beforeLoad: requireAuth, component: PropagacionPage });
 const automatizacionRoute = createRoute({ getParentRoute: () => rootRoute, path: '/automatizacion', beforeLoad: requireAuth, component: AutomatizacionPage });
@@ -107,6 +109,7 @@ const routeTree = rootRoute.addChildren([
   macroRoute,
   profileRoute,
   validacionesRoute,
+  libroRoute,
   historialRoute,
   propagacionRoute,
   automatizacionRoute,
