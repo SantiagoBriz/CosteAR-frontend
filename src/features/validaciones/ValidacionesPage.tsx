@@ -68,6 +68,18 @@ const SECTION_LABELS: Record<string, string> = {
   DESCONOCIDO: 'Sin clasificar',
 };
 
+// Opciones canónicas (MAYÚSCULA) para el selector de reclasificación.
+const DOC_TYPE_OPTIONS: Record<string, string> = {
+  FACTURA_COMPRA: 'Factura de compra',
+  FACTURA_VENTA: 'Factura de venta',
+  REMITO: 'Remito',
+  LIQUIDACION_MOD: 'Liquidación de sueldos',
+  PLANILLA_HORAS: 'Planilla de horas',
+  NOTA_DEBITO: 'Nota de débito',
+  NOTA_CREDITO: 'Nota de crédito',
+  DESCONOCIDO: 'Sin clasificar',
+};
+
 function fmt(n?: number | null) {
   if (n == null) return null;
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n);
@@ -84,6 +96,8 @@ export function ValidacionesPage() {
   const [note, setNote] = useState('');
   const [correctedContent, setCorrectedContent] = useState('');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [correctedType, setCorrectedType] = useState<string>('');
+  const [correctedSection, setCorrectedSection] = useState<string>('');
 
   const handleReview = async (status: 'APPROVED' | 'REJECTED' | 'CORRECTED') => {
     if (!reviewing) return;
@@ -92,10 +106,14 @@ export function ValidacionesPage() {
       status,
       note: note || undefined,
       correctedContent: status === 'CORRECTED' ? correctedContent : undefined,
+      correctedDocumentType: status === 'CORRECTED' && correctedType ? correctedType : undefined,
+      correctedCostSection: status === 'CORRECTED' && correctedSection ? correctedSection : undefined,
     });
     setReviewing(null);
     setNote('');
     setCorrectedContent('');
+    setCorrectedType('');
+    setCorrectedSection('');
   };
 
   // Agrupar por empresa
@@ -160,17 +178,53 @@ export function ValidacionesPage() {
             </div>
 
             {reviewing.action === 'CORRECTED' && (
-              <div className="mb-4">
-                <label className="block text-[12px] font-medium uppercase tracking-wide text-ink-soft mb-1.5">
-                  Contenido corregido
-                </label>
-                <textarea
-                  className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none min-h-[80px]"
-                  placeholder="Escribí la versión corregida del dato…"
-                  value={correctedContent}
-                  onChange={(e) => setCorrectedContent(e.target.value)}
-                />
-              </div>
+              <>
+                {/* Reclasificación: tipo + sección correctos. Esto entrena al
+                    clasificador — la próxima vez acierta solo. */}
+                <div className="mb-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] font-medium uppercase tracking-wide text-ink-soft mb-1.5">
+                      Tipo correcto
+                    </label>
+                    <select
+                      className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none"
+                      value={correctedType}
+                      onChange={(e) => setCorrectedType(e.target.value)}
+                    >
+                      <option value="">— sin cambiar —</option>
+                      {Object.entries(DOC_TYPE_OPTIONS).map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-medium uppercase tracking-wide text-ink-soft mb-1.5">
+                      Sección correcta
+                    </label>
+                    <select
+                      className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none"
+                      value={correctedSection}
+                      onChange={(e) => setCorrectedSection(e.target.value)}
+                    >
+                      <option value="">— sin cambiar —</option>
+                      {Object.entries(SECTION_LABELS).map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-[12px] font-medium uppercase tracking-wide text-ink-soft mb-1.5">
+                    Contenido corregido
+                  </label>
+                  <textarea
+                    className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none min-h-[80px]"
+                    placeholder="Escribí la versión corregida del dato…"
+                    value={correctedContent}
+                    onChange={(e) => setCorrectedContent(e.target.value)}
+                  />
+                </div>
+              </>
             )}
 
             <div className="mb-5">
@@ -241,6 +295,8 @@ export function ValidacionesPage() {
                 onReject={(entry) => setReviewing({ entry, action: 'REJECTED' })}
                 onCorrect={(entry) => {
                   setCorrectedContent(entry.rawContent);
+                  setCorrectedType(entry.classificationAudits?.[0]?.documentType ?? '');
+                  setCorrectedSection(entry.classificationAudits?.[0]?.costSection ?? '');
                   setReviewing({ entry, action: 'CORRECTED' });
                 }}
                 onZoom={setLightboxSrc}

@@ -76,16 +76,22 @@ export function useReviewEntry() {
       status,
       note,
       correctedContent,
+      correctedDocumentType,
+      correctedCostSection,
     }: {
       entryId: string;
       status: 'APPROVED' | 'REJECTED' | 'CORRECTED';
       note?: string;
       correctedContent?: string;
+      correctedDocumentType?: string;
+      correctedCostSection?: string;
     }) => {
       const res = await api.post<{ data: DataEntry }>(`/validaciones/${entryId}/review`, {
         status,
         note,
         correctedContent,
+        correctedDocumentType,
+        correctedCostSection,
       });
       return res.data.data;
     },
