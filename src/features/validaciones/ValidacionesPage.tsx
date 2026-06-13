@@ -8,7 +8,7 @@ import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-import { usePendingEntries, useReviewEntry, type DataEntry } from './validaciones-hooks';
+import { usePendingEntries, useReviewEntry, useAccuracyStats, type DataEntry } from './validaciones-hooks';
 import { formatDate } from '@/lib/utils';
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -90,6 +90,7 @@ function fmt(n?: number | null) {
 export function ValidacionesPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading } = usePendingEntries(page);
+  const { data: accuracy } = useAccuracyStats();
   const review = useReviewEntry();
 
   const [reviewing, setReviewing] = useState<{ entry: DataEntry; action: 'APPROVED' | 'REJECTED' | 'CORRECTED' } | null>(null);
@@ -133,6 +134,33 @@ export function ValidacionesPage() {
         title="Validaciones"
         description="Revisá los datos enviados por tus clientes antes de aplicarlos"
       />
+
+      {/* Panel de precisión del clasificador */}
+      {accuracy && accuracy.total >= 3 && (
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <AccuracyCard
+            label="Precisión"
+            value={accuracy.accuracy != null ? `${accuracy.accuracy}%` : '—'}
+            hint={`${accuracy.correct}/${accuracy.total} sin corregir`}
+            accent
+          />
+          <AccuracyCard
+            label="Cuando está seguro"
+            value={accuracy.confidentAccuracy != null ? `${accuracy.confidentAccuracy}%` : '—'}
+            hint="acierto sin pedir revisión"
+          />
+          <AccuracyCard
+            label="Reglas"
+            value={accuracy.rules.accuracy != null ? `${accuracy.rules.accuracy}%` : '—'}
+            hint={`${accuracy.rules.total} casos`}
+          />
+          <AccuracyCard
+            label="Con IA"
+            value={accuracy.ai.accuracy != null ? `${accuracy.ai.accuracy}%` : '—'}
+            hint={`${accuracy.ai.total} casos`}
+          />
+        </div>
+      )}
 
       {/* Modal de revisión */}
       {reviewing && (
@@ -348,6 +376,21 @@ export function ValidacionesPage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+// ── Tarjeta de métrica de precisión ───────────────────────────────────────────
+
+function AccuracyCard({ label, value, hint, accent }: { label: string; value: string; hint: string; accent?: boolean }) {
+  return (
+    <div className={cn(
+      'rounded-lg border p-3',
+      accent ? 'border-granate/30 bg-granate-tenue/40' : 'border-line bg-surface',
+    )}>
+      <p className="text-[11px] uppercase tracking-wide text-ink-soft">{label}</p>
+      <p className={cn('mt-0.5 text-2xl font-bold tabular-nums', accent ? 'text-granate' : 'text-ink')}>{value}</p>
+      <p className="text-[11px] text-ink-soft/70">{hint}</p>
+    </div>
   );
 }
 

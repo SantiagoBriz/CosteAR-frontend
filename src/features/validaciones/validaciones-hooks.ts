@@ -47,6 +47,27 @@ export function usePendingEntries(page = 1) {
   });
 }
 
+export interface AccuracyStats {
+  total: number;
+  correct: number;
+  corrected: number;
+  accuracy: number | null;
+  confidentAccuracy: number | null;
+  rules: { total: number; accuracy: number | null };
+  ai: { total: number; accuracy: number | null };
+}
+
+export function useAccuracyStats() {
+  return useQuery({
+    queryKey: ['validaciones', 'accuracy'],
+    queryFn: async () => {
+      const res = await api.get<{ data: AccuracyStats }>('/validaciones/accuracy');
+      return res.data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
 export function usePendingCount() {
   return useQuery({
     queryKey: ['validaciones', 'pending', 'count'],
