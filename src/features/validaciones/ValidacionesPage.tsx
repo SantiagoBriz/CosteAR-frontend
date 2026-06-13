@@ -182,12 +182,29 @@ export function ValidacionesPage() {
       {reviewing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-lg rounded-lg border border-line bg-surface p-6 shadow-xl animate-rise">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="font-bold text-ink">Revisar entrada</h3>
-              <span className="rounded-full bg-surface-alt px-2.5 py-0.5 text-[12px] text-ink-soft">
+              {/* Empresa prominente: evita aplicar un costo al cliente equivocado */}
+              <span className="flex items-center gap-1.5 rounded-full bg-granate-tenue px-3 py-1 text-[13px] font-semibold text-granate">
+                <Building2 className="size-3.5" />
                 {reviewing.entry.connection.company.name}
               </span>
             </div>
+
+            {/* Monto que se registrará — verificá contra el comprobante antes de aprobar */}
+            {(() => {
+              const ai = parseAIAnalysis(reviewing.entry.reviewNote);
+              const ed = ai?.extractedData as Record<string, unknown> | undefined;
+              const amt = ed?.totalAmount ?? ed?.netAmount;
+              if (amt == null || typeof amt !== 'number' || amt <= 0) return null;
+              return (
+                <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-amber-700">Se registrará en el libro de costos</p>
+                  <p className="text-lg font-bold tabular-nums text-amber-900">{fmt(amt)}</p>
+                  <p className="text-[11px] text-amber-700">Verificá que coincida con el comprobante antes de aprobar.</p>
+                </div>
+              );
+            })()}
 
             {/* Preview del archivo */}
             {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) && reviewing.entry.fileMimeType?.startsWith('image/') && (
