@@ -8,7 +8,7 @@ import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-import { usePendingEntries, useReviewEntry, useAccuracyStats, type DataEntry } from './validaciones-hooks';
+import { usePendingEntries, useReviewEntry, useAccuracyStats, useBulkApprove, type DataEntry } from './validaciones-hooks';
 import { formatDate } from '@/lib/utils';
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -92,6 +92,22 @@ export function ValidacionesPage() {
   const { data, isLoading } = usePendingEntries(page);
   const { data: accuracy } = useAccuracyStats();
   const review = useReviewEntry();
+  const bulkApprove = useBulkApprove();
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
+
+  // Cuántas entradas el sistema clasificó con confianza (no requieren revisión).
+  const confidentCount = (data?.items ?? []).filter(
+    (e) => e.classificationAudits?.[0] && !e.classificationAudits[0].requiresReview,
+  ).length;
+
+  const handleBulkApprove = async () => {
+    const res = await bulkApprove.mutateAsync(undefined);
+    setBulkMsg(
+      res.approved > 0
+        ? `Aprobaste ${res.approved} ${res.approved === 1 ? 'entrada' : 'entradas'} de confianza alta. ${res.skipped > 0 ? `Quedan ${res.skipped} para revisar a mano.` : ''}`
+        : 'No había entradas de confianza alta para aprobar en bloque.',
+    );
+  };
 
   const [reviewing, setReviewing] = useState<{ entry: DataEntry; action: 'APPROVED' | 'REJECTED' | 'CORRECTED' } | null>(null);
   const [note, setNote] = useState('');
@@ -303,13 +319,28 @@ export function ValidacionesPage() {
         </Card>
       ) : (
         <>
-          {/* Resumen */}
-          <div className="mb-4 flex items-center gap-2">
+          {/* Resumen + aprobación masiva */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-action/10 px-3 py-1 text-[13px] font-semibold text-action">
               {data.total} pendientes
             </span>
             <span className="text-[13px] text-ink-soft">en {byCompany.size} {byCompany.size === 1 ? 'empresa' : 'empresas'}</span>
+            {confidentCount > 0 && (
+              <Button
+                size="sm"
+                onClick={handleBulkApprove}
+                loading={bulkApprove.isPending}
+                className="ml-auto bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle2 className="size-3.5" /> Aprobar {confidentCount} de confianza alta
+              </Button>
+            )}
           </div>
+          {bulkMsg && (
+            <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-[13px] text-green-800">
+              {bulkMsg}
+            </div>
+          )}
 
           {/* Sección por empresa */}
           <div className="space-y-4">

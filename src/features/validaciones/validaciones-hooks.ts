@@ -89,6 +89,23 @@ export function useHistorial(page = 1) {
   });
 }
 
+export function useBulkApprove() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (companyId?: string) => {
+      const res = await api.post<{ data: { approved: number; skipped: number } }>(
+        '/validaciones/bulk-approve',
+        companyId ? { companyId } : {},
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['validaciones'] });
+      qc.invalidateQueries({ queryKey: ['ledger'] });
+    },
+  });
+}
+
 export function useReviewEntry() {
   const qc = useQueryClient();
   return useMutation({
