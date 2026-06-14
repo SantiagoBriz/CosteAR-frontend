@@ -21,6 +21,7 @@ import {
   useSimulate,
   useCalculationHistory,
 } from './cost-structure-hooks';
+import { useLedger } from '@/features/libro/libro-hooks';
 import { RawMaterialForm } from './RawMaterialForm';
 import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
@@ -227,7 +228,7 @@ export function CostStructurePage() {
       )}
 
       {activeTab === 'result' && (
-        <ResultTab result={shown} structureId={id} />
+        <ResultTab result={shown} structureId={id} companyId={structure?.companyId} period={structure?.period} />
       )}
     </AppShell>
   );
@@ -307,7 +308,7 @@ function SalesTab({
 
 // ── Result Tab ────────────────────────────────────────────────────────────────
 
-function ResultTab({ result, structureId }: { result: CalculationResult | null; structureId: string }) {
+function ResultTab({ result, structureId, companyId, period }: { result: CalculationResult | null; structureId: string; companyId?: string; period?: string }) {
   const [view, setView] = useState<ResultView>('result');
   return (
     <div className="space-y-4">
@@ -326,7 +327,7 @@ function ResultTab({ result, structureId }: { result: CalculationResult | null; 
           </button>
         ))}
       </div>
-      {view === 'result'    && (result ? <ResultPanel result={result} /> : <EmptyResult />)}
+      {view === 'result'    && (result ? <ResultPanel result={result} companyId={companyId} period={period} /> : <EmptyResult />)}
       {view === 'simulator' && <SimulatorPanel structureId={structureId} baseResult={result} />}
       {view === 'history'   && <HistoryPanel structureId={structureId} />}
     </div>
@@ -335,7 +336,7 @@ function ResultTab({ result, structureId }: { result: CalculationResult | null; 
 
 // ── Result Panel ──────────────────────────────────────────────────────────────
 
-function ResultPanel({ result }: { result: CalculationResult }) {
+function ResultPanel({ result, companyId, period }: { result: CalculationResult; companyId?: string; period?: string }) {
   const rows = [
     { label: 'Materia Prima consumida', value: result.rawMaterialConsumed },
     { label: 'Mano de Obra Directa',    value: result.directLaborTotal },
@@ -345,6 +346,17 @@ function ResultPanel({ result }: { result: CalculationResult }) {
     <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
       {/* Izquierda: tablas */}
       <div className="space-y-4">
+        {companyId && period && (
+          <ReconciliationCard
+            companyId={companyId}
+            period={period}
+            structureCosts={{
+              MATERIA_PRIMA: result.rawMaterialConsumed,
+              MANO_DE_OBRA: result.directLaborTotal,
+              COSTOS_INDIRECTOS: result.indirectCostsApplied,
+            }}
+          />
+        )}
         <Card>
           <CardHeader title="Desglose de costos" />
           <CardBody className="p-0">
@@ -610,4 +622,83 @@ function latestToResult(latest: CostCalculation): CalculationResult {
     grossMarginPct:       Number(latest.grossMarginPct),
     detail:               latest.detail,
   };
+}
+
+// ── Reconciliación: estructura vs documentos (libro de costos) ──────────────────
+
+const RECON_LABELS: Record<string, string> = {
+  MATERIA_PRIMA: 'Materia Prima',
+  MANO_DE_OBRA: 'Mano de Obra',
+  COSTOS_INDIRECTOS: 'Costos Indirectos',
+};
+
+/**
+ * Compara, sin tocar el modelo, lo que dice la estructura calculada contra los
+ * costos reales del libro mayor (documentos aprobados) para el mismo período.
+ * Le permite al costista detectar desvíos: "presupuestaste MP en $X pero tus
+ * comprobantes suman $Y". Es read-only: reconcilia a ojo, no auto-inyecta.
+ */
+function ReconciliationCard({ companyId, period, structureCosts }: {
+  companyId: string;
+  period: string;
+  structureCosts: Record<string, number>;
+}) {
+  const { data, isLoading } = useLedger(companyId, period);
+  const totals = data?.totalsBySection ?? {};
+  const hasLedger = Object.keys(RECON_LABELS).some((s) => totals[s] != null);
+
+  if (isLoading || !hasLedger) return null;
+
+  return (
+    <Card>
+      <CardHeader
+        title="Reconciliación con documentos"
+        description={`Tu estructura vs lo que suman los comprobantes aprobados del período ${period}`}
+      />
+      <CardBody className="p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
+              <th className="px-6 py-3 text-left font-semibold">Elemento</th>
+              <th className="px-6 py-3 text-right font-semibold">Según estructura</th>
+              <th className="px-6 py-3 text-right font-semibold">Según documentos</th>
+              <th className="px-6 py-3 text-right font-semibold">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {Object.entries(RECON_LABELS).map(([section, label]) => {
+              const structureVal = structureCosts[section] ?? 0;
+              const ledgerVal = totals[section];
+              if (ledgerVal == null) {
+                return (
+                  <tr key={section} className="hover:bg-surface-alt/40">
+                    <td className="px-6 py-3 text-ink-soft">{label}</td>
+                    <td className="px-6 py-3 text-right"><Money value={structureVal} /></td>
+                    <td className="px-6 py-3 text-right text-ink-soft/50">sin documentos</td>
+                    <td className="px-6 py-3 text-right text-ink-soft/50">—</td>
+                  </tr>
+                );
+              }
+              const diff = structureVal - ledgerVal;
+              const pct = ledgerVal > 0 ? (diff / ledgerVal) * 100 : null;
+              const big = pct != null && Math.abs(pct) >= 10;
+              return (
+                <tr key={section} className="hover:bg-surface-alt/40">
+                  <td className="px-6 py-3 text-ink-soft">{label}</td>
+                  <td className="px-6 py-3 text-right"><Money value={structureVal} /></td>
+                  <td className="px-6 py-3 text-right"><Money value={ledgerVal} /></td>
+                  <td className={cn('px-6 py-3 text-right tabular-nums font-medium', big ? 'text-amber-600' : 'text-ink-soft')}>
+                    {diff >= 0 ? '+' : ''}{pct != null ? `${pct.toFixed(0)}%` : '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p className="px-6 py-3 text-[11px] text-ink-soft/70">
+          Una diferencia grande (≥10%) sugiere revisar: o la estructura quedó desactualizada, o faltan/sobran comprobantes cargados.
+        </p>
+      </CardBody>
+    </Card>
+  );
 }
