@@ -22,6 +22,7 @@ import {
   useCalculationHistory,
 } from './cost-structure-hooks';
 import { useLedger } from '@/features/libro/libro-hooks';
+import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { RawMaterialForm } from './RawMaterialForm';
 import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
@@ -346,6 +347,19 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
     <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
       {/* Izquierda: tablas */}
       <div className="space-y-4">
+        <AdvisorPanel
+          kind="cost_result"
+          label="Analizar el resultado con IA"
+          context={{
+            materiaPrima: result.rawMaterialConsumed,
+            manoDeObra: result.directLaborTotal,
+            costosIndirectos: result.indirectCostsApplied,
+            costoProduccion: result.productionCost,
+            cogs: result.costOfGoodsSold,
+            margenBruto: result.grossMargin,
+            margenBrutoPct: result.grossMarginPct,
+          }}
+        />
         {companyId && period && (
           <ReconciliationCard
             companyId={companyId}
@@ -695,9 +709,24 @@ function ReconciliationCard({ companyId, period, structureCosts }: {
             })}
           </tbody>
         </table>
-        <p className="px-6 py-3 text-[11px] text-ink-soft/70">
-          Una diferencia grande (≥10%) sugiere revisar: o la estructura quedó desactualizada, o faltan/sobran comprobantes cargados.
-        </p>
+        <div className="px-6 py-3">
+          <p className="mb-2 text-[11px] text-ink-soft/70">
+            Una diferencia grande (≥10%) sugiere revisar: o la estructura quedó desactualizada, o faltan/sobran comprobantes cargados.
+          </p>
+          <AdvisorPanel
+            kind="reconciliation"
+            label="Explicar los desvíos con IA"
+            context={{
+              structureCosts,
+              ledgerCosts: {
+                MATERIA_PRIMA: totals['MATERIA_PRIMA'] ?? null,
+                MANO_DE_OBRA: totals['MANO_DE_OBRA'] ?? null,
+                COSTOS_INDIRECTOS: totals['COSTOS_INDIRECTOS'] ?? null,
+              },
+              period,
+            }}
+          />
+        </div>
       </CardBody>
     </Card>
   );

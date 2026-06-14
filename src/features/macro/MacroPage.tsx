@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Plus, TrendingUp, DollarSign, BarChart3, Zap, X } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
+import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { api, apiErrorMessage } from '@/lib/api';
@@ -77,6 +78,22 @@ export function MacroPage() {
       )}
 
       {showForm && <ManualEntryForm onDone={() => { setShowForm(false); qc.invalidateQueries({ queryKey: ['macro'] }); }} />}
+
+      {!!data?.length && (
+        <div className="mb-4">
+          <AdvisorPanel
+            kind="macro"
+            label="Interpretar impacto en costos con IA"
+            context={{
+              variables: data.map((m) => ({
+                indicador: INDICATOR_LABELS[m.indicatorCode] ?? m.indicatorCode,
+                valor: Number(m.value),
+                fuente: m.source,
+              })),
+            }}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <p className="text-sm text-ink-soft">Cargando…</p>

@@ -1,4 +1,5 @@
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
+import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -26,6 +27,22 @@ export function AlertsPage() {
   return (
     <AppShell>
       <PageHeader title="Alertas" description="Tu sistema de aviso temprano de márgenes" />
+
+      {!!alerts?.length && (
+        <div className="mb-5">
+          <AdvisorPanel
+            kind="alerts"
+            label="Priorizar alertas con IA"
+            context={{
+              alertas: alerts.slice(0, 40).map((a) => ({
+                mensaje: a.message,
+                leida: a.isRead,
+                fecha: a.createdAt,
+              })),
+            }}
+          />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <Card>
