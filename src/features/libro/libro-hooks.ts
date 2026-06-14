@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
 export interface LedgerEntry {
@@ -37,5 +37,48 @@ export function useLedger(companyId?: string, period?: string) {
       const res = await api.get<{ data: LedgerResult }>(`/validaciones/ledger${qs ? `?${qs}` : ''}`);
       return res.data.data;
     },
+  });
+}
+
+export interface ManualLedgerInput {
+  companyId: string;
+  period: string;
+  costSection: string;
+  description: string;
+  amount: number;
+  supplier?: string;
+  currency?: string;
+  docDate?: string;
+}
+
+export function useCreateLedgerEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: ManualLedgerInput) => {
+      const res = await api.post<{ data: LedgerEntry }>('/validaciones/ledger', input);
+      return res.data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ledger'] }),
+  });
+}
+
+export function useUpdateLedgerEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...patch }: { id: string } & Partial<ManualLedgerInput>) => {
+      const res = await api.patch<{ data: LedgerEntry }>(`/validaciones/ledger/${id}`, patch);
+      return res.data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ledger'] }),
+  });
+}
+
+export function useDeleteLedgerEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/validaciones/ledger/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ledger'] }),
   });
 }

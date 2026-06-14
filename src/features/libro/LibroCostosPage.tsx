@@ -1,12 +1,46 @@
 import { useState } from 'react';
-import { BookOpen, ImageIcon, Bot, PenLine, FileText, FileDown } from 'lucide-react';
+import { BookOpen, ImageIcon, Bot, PenLine, FileText, FileDown, Plus, Pencil, Trash2, Table } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatMoney, formatDate } from '@/lib/utils';
 import { useCompanies } from '@/features/companies/company-hooks';
-import { useLedger, type LedgerEntry } from './libro-hooks';
+import { useLedger, useDeleteLedgerEntry, type LedgerEntry } from './libro-hooks';
 import { ClientReport } from './ClientReport';
+import { LedgerEntryModal } from './LedgerEntryModal';
+
+const SECTION_LABELS_FULL: Record<string, string> = {
+  MATERIA_PRIMA: 'Materia Prima',
+  MANO_DE_OBRA: 'Mano de Obra',
+  COSTOS_INDIRECTOS: 'Costos Indirectos',
+  VENTAS: 'Ventas',
+};
+
+/** Exporta las líneas a CSV (Excel) — los costistas viven en Excel. */
+function exportCsv(entries: LedgerEntry[], companyName: string) {
+  const headers = ['Periodo', 'Fecha', 'Seccion', 'Tipo', 'Proveedor', 'Descripcion', 'Monto', 'Moneda', 'Confianza', 'IA', 'Corregido'];
+  const rows = entries.map((e) => [
+    e.period,
+    e.docDate ? new Date(e.docDate).toLocaleDateString('es-AR') : '',
+    SECTION_LABELS_FULL[e.costSection] ?? e.costSection,
+    e.documentType,
+    e.supplier ?? '',
+    e.description.replace(/"/g, '""'),
+    String(e.amount),
+    e.currency,
+    e.confidence != null ? `${e.confidence}%` : '',
+    e.aiUsed ? 'si' : 'no',
+    e.wasCorrected ? 'si' : 'no',
+  ]);
+  const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `libro-costos-${companyName.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const SECTION_LABELS: Record<string, string> = {
   MATERIA_PRIMA: 'Materia Prima',
@@ -28,10 +62,19 @@ export function LibroCostosPage() {
   const [companyId, setCompanyId] = useState<string>('');
   const [period, setPeriod] = useState<string>('');
   const { data, isLoading } = useLedger(companyId || undefined, period || undefined);
+  const del = useDeleteLedgerEntry();
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const [editing, setEditing] = useState<LedgerEntry | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const selectedCompanyName = companies.find((c) => c.id === companyId)?.name ?? 'Todas las empresas';
+
+  const handleDelete = async (e: LedgerEntry) => {
+    if (window.confirm(`¿Borrar "${e.description}" (${formatMoney(e.amount)})? Esto no se puede deshacer.`)) {
+      await del.mutateAsync(e.id);
+    }
+  };
 
   const entries = data?.entries ?? [];
   const grouped = SECTION_ORDER
@@ -67,11 +110,21 @@ export function LibroCostosPage() {
             <option key={p} value={p}>{periodLabel(p)}</option>
           ))}
         </select>
-        {entries.length > 0 && (
-          <Button size="sm" variant="secondary" className="ml-auto" onClick={() => setShowReport(true)}>
-            <FileDown className="size-4" /> Generar reporte para el cliente
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setAdding(true)} title={companyId ? '' : 'Elegí una empresa para cargar manual'}>
+            <Plus className="size-4" /> Agregar manual
           </Button>
-        )}
+          {entries.length > 0 && (
+            <Button size="sm" variant="ghost" onClick={() => exportCsv(entries, selectedCompanyName)}>
+              <Table className="size-4" /> Excel (CSV)
+            </Button>
+          )}
+          {entries.length > 0 && (
+            <Button size="sm" variant="secondary" onClick={() => setShowReport(true)}>
+              <FileDown className="size-4" /> Reporte para el cliente
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Totales por sección */}
@@ -110,12 +163,21 @@ export function LibroCostosPage() {
               </div>
               <div className="divide-y divide-line">
                 {items.map((e) => (
-                  <LedgerRow key={e.id} entry={e} onZoom={setLightbox} />
+                  <LedgerRow key={e.id} entry={e} onZoom={setLightbox} onEdit={setEditing} onDelete={handleDelete} />
                 ))}
               </div>
             </Card>
           ))}
         </div>
+      )}
+
+      {(adding || editing) && (
+        <LedgerEntryModal
+          entry={editing ?? undefined}
+          companyId={companyId || undefined}
+          defaultPeriod={period || undefined}
+          onClose={() => { setAdding(false); setEditing(null); }}
+        />
       )}
 
       {showReport && data && (
@@ -138,7 +200,12 @@ export function LibroCostosPage() {
   );
 }
 
-function LedgerRow({ entry, onZoom }: { entry: LedgerEntry; onZoom: (src: string) => void }) {
+function LedgerRow({ entry, onZoom, onEdit, onDelete }: {
+  entry: LedgerEntry;
+  onZoom: (src: string) => void;
+  onEdit: (e: LedgerEntry) => void;
+  onDelete: (e: LedgerEntry) => void;
+}) {
   const isImage = entry.sourceImageUrl && /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(entry.sourceImageUrl);
   return (
     <div className="flex items-center gap-3 px-5 py-3">
@@ -180,6 +247,16 @@ function LedgerRow({ entry, onZoom }: { entry: LedgerEntry; onZoom: (src: string
           {entry.currency !== 'ARS' && <span className="text-[11px] text-ink-soft">{entry.currency} </span>}
           {formatMoney(entry.amount)}
         </p>
+      </div>
+
+      {/* Editar / borrar */}
+      <div className="flex shrink-0 items-center gap-1">
+        <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded p-1.5 text-ink-soft hover:bg-surface-alt hover:text-ink">
+          <Pencil className="size-3.5" />
+        </button>
+        <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded p-1.5 text-ink-soft hover:bg-danger/10 hover:text-danger">
+          <Trash2 className="size-3.5" />
+        </button>
       </div>
     </div>
   );
