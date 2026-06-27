@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { LayoutDashboard, Building2, Bell, LogOut, User, ClipboardCheck, Zap, Menu } from 'lucide-react';
+import { LayoutDashboard, Building2, Bell, LogOut, User, ClipboardCheck, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
@@ -35,20 +35,25 @@ export function AppShell({ children }: { children: ReactNode }) {
           collapsed ? "w-16" : "w-60"
         )}
       >
-        <div className="flex h-16 items-center gap-2.5 border-b border-zinc-800 px-4">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-granate text-sm font-bold text-white">
-            C
+        {/* Toggle Button */}
+        <button
+          type="button"
+          onClick={toggleCollapse}
+          className="absolute top-5 -right-3 flex size-6 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-all z-40 focus:outline-none"
+          title={collapsed ? "Expandir" : "Colapsar"}
+        >
+          {collapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
+        </button>
+
+        <div className={cn("flex h-16 items-center border-b border-zinc-800 px-4 transition-all duration-200", collapsed && "justify-center px-0")}>
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-granate text-sm font-bold text-white">
+              C
+            </div>
+            {!collapsed && (
+              <span className="text-lg font-bold tracking-tight text-white animate-rise">CosteAR</span>
+            )}
           </div>
-          {!collapsed && (
-            <span className="text-lg font-bold tracking-tight text-white animate-rise">CosteAR</span>
-          )}
-          <button
-            type="button"
-            onClick={toggleCollapse}
-            className="ml-auto flex size-8 items-center justify-center rounded-md hover:bg-zinc-900 text-zinc-400 hover:text-white transition-colors"
-          >
-            <Menu className="size-4.5" />
-          </button>
         </div>
 
         <NavItems currentPath={location.pathname} collapsed={collapsed} />
