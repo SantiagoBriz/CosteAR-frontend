@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, Fragment } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send, Paperclip, X, Building2, CheckCircle2,
@@ -335,17 +336,17 @@ export function EmpresaPortalPage() {
   return (
     <div className="flex h-screen bg-[#f6f5f3]">
       {/* Sidebar */}
-      <aside className="flex w-56 shrink-0 flex-col bg-[#6B1D1D] text-white">
-        <div className="flex h-14 items-center gap-2 border-b border-white/10 px-4">
-          <div className="flex size-7 items-center justify-center rounded-md bg-white/20 text-sm font-bold">C</div>
-          <span className="text-base font-bold tracking-tight">CosteAR</span>
+      <aside className="flex w-56 shrink-0 flex-col bg-zinc-950 border-r border-zinc-800 text-zinc-100">
+        <div className="flex h-14 items-center gap-2 border-b border-zinc-800 px-4">
+          <div className="flex size-7 items-center justify-center rounded-md bg-granate text-sm font-bold text-white">C</div>
+          <span className="text-base font-bold tracking-tight text-white">CosteAR</span>
         </div>
 
         {/* Mis empresas */}
         <div className="flex-1 overflow-y-auto p-2">
-          <p className="mb-1 px-2 text-[10px] uppercase tracking-widest text-white/40">Mis empresas</p>
+          <p className="mb-1 px-2 text-[10px] uppercase tracking-widest text-zinc-500">Mis empresas</p>
           {companies.length === 0 && (
-            <p className="px-2 text-[12px] text-white/50">Sin empresas aún</p>
+            <p className="px-2 text-[12px] text-zinc-500">Sin empresas aún</p>
           )}
           {companies.map((c) => (
             <button
@@ -355,8 +356,8 @@ export function EmpresaPortalPage() {
               className={cn(
                 'w-full rounded-md px-3 py-2 text-left text-[13px] transition-colors',
                 activeConnectionId === c.connectionId
-                  ? 'bg-white/20 font-semibold text-white'
-                  : 'text-white/70 hover:bg-white/10',
+                  ? 'bg-granate font-semibold text-white'
+                  : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
               )}
             >
               <Building2 className="mb-0.5 inline size-3.5 mr-1.5 opacity-70" />
@@ -366,17 +367,25 @@ export function EmpresaPortalPage() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-white/10 p-3 space-y-2">
+        <div className="border-t border-zinc-800 p-3 space-y-2">
+          {user?.role === 'COSTISTA' && (
+            <Link
+              to="/dashboard"
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[12px] text-action-soft hover:bg-zinc-900 transition-colors font-medium"
+            >
+              Volver a Panel Costista
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => { setShowInviteModal(true); setInviteError(null); setInviteSuccess(null); }}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[12px] text-white/70 hover:bg-white/10"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[12px] text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
           >
             <Plus className="size-3.5" /> Unirme a empresa
           </button>
           <div className="px-2">
-            <p className="text-[10px] text-white/40">Portal de empresa</p>
-            <p className="truncate text-[12px] font-medium text-white/80">{user?.name}</p>
+            <p className="text-[10px] text-zinc-500">Portal de empresa</p>
+            <p className="truncate text-[12px] font-medium text-zinc-300">{user?.name}</p>
           </div>
         </div>
       </aside>

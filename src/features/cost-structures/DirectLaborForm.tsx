@@ -11,13 +11,40 @@ interface Props {
   saving: boolean;
 }
 
+export function ensureDefaultUncertainConcepts(config?: DirectLaborConfig): DirectLaborConfig {
+  const base = config ? JSON.parse(JSON.stringify(config)) : emptyDirectLabor();
+  if (!base.itcs) {
+    base.itcs = { derivationBase: 0.27, fixedArt: 0.015, uncertainRemunerative: [], uncertainNonRemunerative: [] };
+  }
+  if (!base.itcs.uncertainRemunerative) {
+    base.itcs.uncertainRemunerative = [];
+  }
+  
+  const defaults = [
+    'IAP (Indemnización por Accidentes Predeterminada)',
+    'PAP (Premio Asistencia Perfecta)',
+    'PPP (Premio por Productividad)'
+  ];
+  
+  defaults.forEach(name => {
+    const exists = base.itcs.uncertainRemunerative.some((r: any) => r.name && r.name.startsWith(name.slice(0, 3)));
+    if (!exists) {
+      base.itcs.uncertainRemunerative.push({ name, coefficient: 0 });
+    }
+  });
+  
+  return base;
+}
+
 export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
   const { register, control, handleSubmit, reset } = useForm<DirectLaborConfig>({
-    defaultValues: defaultValues ?? emptyDirectLabor(),
+    defaultValues: ensureDefaultUncertainConcepts(defaultValues),
   });
 
   useEffect(() => {
-    if (defaultValues) reset(defaultValues);
+    if (defaultValues) {
+      reset(ensureDefaultUncertainConcepts(defaultValues));
+    }
   }, [defaultValues, reset]);
 
   const { fields: remFields, append: appendRem, remove: removeRem } = useFieldArray({ control, name: 'itcs.uncertainRemunerative' });

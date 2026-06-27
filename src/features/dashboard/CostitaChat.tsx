@@ -13,8 +13,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   X, Send, ChevronRight, CheckCircle2,
-  AlertTriangle, BookOpen, TrendingUp, Loader2, Sparkles,
-  BarChart2, Check, XIcon,
+  AlertTriangle, BookOpen, Loader2, Sparkles,
+  Check, XIcon, Building2, ClipboardCheck, Zap,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -57,31 +57,31 @@ interface ChatMessage {
 
 const QUICK_OPTIONS = [
   {
-    id: 'cartera',
-    icon: BarChart2,
-    label: '¿Cómo está mi cartera?',
-    sub: 'Resumen del estado actual',
+    id: 'empresa',
+    icon: Building2,
+    label: '¿Cómo cargo una nueva empresa?',
+    sub: 'Gestión y alta de clientes',
     color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
   },
   {
-    id: 'ajuste',
-    icon: TrendingUp,
-    label: 'Registrar ajuste de costos',
-    sub: 'Subió un insumo, energía, salario...',
+    id: 'ppp',
+    icon: BookOpen,
+    label: '¿Cómo funciona la ficha PPP?',
+    sub: 'Valuación de materia prima',
     color: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100',
   },
   {
-    id: 'alerta',
-    icon: AlertTriangle,
-    label: 'Marcar empresa en alerta',
-    sub: 'Situación de riesgo a seguir',
+    id: 'itcs',
+    icon: ClipboardCheck,
+    label: '¿Cómo se calcula el ITCS?',
+    sub: 'Cargas sociales de MOD',
     color: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
   },
   {
-    id: 'inflacion',
-    icon: BookOpen,
-    label: 'Impacto de la inflación',
-    sub: 'Análisis sobre la cartera',
+    id: 'secundario',
+    icon: Zap,
+    label: '¿Cómo hacer el prorrateo?',
+    sub: 'CIP fijo y variable',
     color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
   },
 ] as const;
@@ -283,7 +283,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
         )}
       >
         <Sparkles className="size-4" />
-        Chat con IA
+        Asistente CosteAR
       </button>
 
       {/* ── Overlay ───────────────────────────────────────────────────────── */}
@@ -313,7 +313,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
             </div>
             <div>
               <p className="text-[13px] font-semibold text-gray-800">Asistente CosteAR</p>
-              <p className="text-[11px] text-gray-400">IA para tu cartera</p>
+              <p className="text-[11px] text-gray-400">Soporte tecnológico</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -346,7 +346,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
                     <Sparkles className="size-3 text-white" />
                   </div>
                   <div className="rounded-2xl rounded-tl-none bg-gray-50 px-4 py-3 text-[13px] leading-relaxed text-gray-700">
-                    Hola! Soy tu asistente de costos. Podés preguntarme sobre tu cartera, registrar un ajuste o crear una alerta. ¿Por dónde arrancamos?
+                    ¡Hola! Soy tu asistente técnico de CosteAR. Podés preguntarme cómo operar el software, configurar parámetros de materia prima, liquidaciones MOD o prorrateos de CIP. ¿Qué querés consultar?
                   </div>
                 </div>
 
@@ -476,7 +476,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
               </button>
             </div>
             <p className="mt-1.5 text-center text-[10px] text-gray-300">
-              La IA propone — vos confirmás antes de cualquier cambio
+              Soporte técnico y metodológico sobre CosteAR
             </p>
           </div>
         </div>

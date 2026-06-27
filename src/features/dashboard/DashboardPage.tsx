@@ -3,9 +3,9 @@ import { Link } from '@tanstack/react-router';
 import { CostitaChat } from './CostitaChat';
 import {
   Building2, Bell, ArrowRight, ClipboardCheck,
-  TrendingUp, TrendingDown, DollarSign, AlertTriangle,
+  DollarSign, AlertTriangle,
   CheckCircle2, FileText, ChevronRight, Activity,
-  Percent, Search, FileInput, Image, MessageSquare,
+  Percent, Search, FileInput, Image, MessageSquare, User,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/AppShell';
@@ -468,101 +468,6 @@ export function DashboardPage() {
           {/* Right: sidebar ─────────────────────────────────────────────── */}
           <div className="flex flex-col gap-5">
 
-            {/* Variables macro */}
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
-                <h2 className="text-[14px] font-semibold text-gray-800"
-                  style={{ fontFamily: "'Syne', sans-serif" }}>
-                  Contexto macro
-                </h2>
-                <Link to="/macro">
-                  <button className="text-[12px] font-medium text-gray-400 hover:text-gray-700 transition-colors">
-                    Ver todo →
-                  </button>
-                </Link>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {dolarOficial ? (
-                  <div className="flex items-center justify-between px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-9 items-center justify-center rounded-xl bg-blue-50">
-                        <DollarSign className="size-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-medium text-gray-400">Dólar oficial</p>
-                        <p className="text-[18px] font-bold tabular-nums text-blue-700"
-                          style={{ fontFamily: "'Syne', sans-serif" }}>
-                          {fmtARS(Number(dolarOficial.value))}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="rounded-md bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                        BCRA
-                      </span>
-                      <p className="mt-1 text-[11px] text-gray-400">
-                        {new Date(dolarOficial.effectiveDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="px-5 py-4">
-                    <p className="text-[12px] text-gray-400">Sin datos de dólar</p>
-                    <Link to="/macro" className="text-[11px] font-medium text-blue-500">Sincronizar →</Link>
-                  </div>
-                )}
-
-                {ipc ? (
-                  <div className="flex items-center justify-between px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        'flex size-9 items-center justify-center rounded-xl',
-                        Number(ipc.value) >= 5 ? 'bg-red-50' : 'bg-green-50',
-                      )}>
-                        {Number(ipc.value) >= 5
-                          ? <TrendingUp className="size-4 text-red-600" />
-                          : <TrendingDown className="size-4 text-green-600" />}
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-medium text-gray-400">IPC mensual</p>
-                        <p className={cn(
-                          'text-[18px] font-bold tabular-nums',
-                          Number(ipc.value) >= 5 ? 'text-red-700' : 'text-green-700',
-                        )} style={{ fontFamily: "'Syne', sans-serif" }}>
-                          {Number(ipc.value) > 0 ? '+' : ''}{Number(ipc.value).toFixed(1)}%
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={cn(
-                        'rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white',
-                        Number(ipc.value) >= 5 ? 'bg-red-600' : 'bg-green-600',
-                      )}>
-                        INDEC
-                      </span>
-                      <p className="mt-1 text-[11px] text-gray-400">
-                        {new Date(ipc.effectiveDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="px-5 py-4">
-                    <p className="text-[12px] text-gray-400">Sin datos de IPC</p>
-                    <Link to="/macro" className="text-[11px] font-medium text-blue-500">Sincronizar →</Link>
-                  </div>
-                )}
-
-                {ipc && Number(ipc.value) >= 5 && (
-                  <div className="flex items-center gap-2 bg-amber-50 px-5 py-2.5">
-                    <AlertTriangle className="size-3.5 shrink-0 text-amber-600" />
-                    <p className="text-[11px] font-medium text-amber-800">
-                      Inflación elevada — revisá precios de venta
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Alerts */}
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
               <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
@@ -650,25 +555,35 @@ export function DashboardPage() {
                   Acciones rápidas
                 </h2>
               </div>
-              <div className="p-3">
-                {[
-                  { label: 'Nuevo cliente', sub: 'Agregar empresa a la cartera', to: '/companies', icon: Building2, color: 'text-blue-600 bg-blue-50' },
-                  { label: 'Ver validaciones', sub: `${pendingCount} doc${pendingCount !== 1 ? 's' : ''} pendiente${pendingCount !== 1 ? 's' : ''}`, to: '/validaciones', icon: FileText, color: pendingCount > 0 ? 'text-red-600 bg-red-50' : 'text-gray-500 bg-gray-100' },
-                  { label: 'Variables macro', sub: 'Sincronizar BCRA / INDEC', to: '/macro', icon: TrendingUp, color: 'text-green-600 bg-green-50' },
-                ].map(({ label, sub, to, icon: Icon, color }) => (
-                  <Link key={to} to={to}>
-                    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-gray-50 transition-colors">
-                      <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', color)}>
-                        <Icon className="size-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-semibold text-gray-800">{label}</p>
-                        <p className="text-[11px] text-gray-400">{sub}</p>
-                      </div>
-                      <ChevronRight className="size-3.5 text-gray-300" />
-                    </div>
-                  </Link>
-                ))}
+              <div className="grid grid-cols-2 gap-2.5 p-4 bg-zinc-50/50">
+                <Link to="/companies" className="flex flex-col gap-2 rounded-xl border border-zinc-200/60 bg-white p-3 hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm">
+                  <Building2 className="size-4.5 text-granate" />
+                  <div>
+                    <p className="text-[12px] font-bold text-zinc-800 leading-tight">Nuevo Cliente</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">Crear empresa</p>
+                  </div>
+                </Link>
+                <Link to="/validaciones" className="flex flex-col gap-2 rounded-xl border border-zinc-200/60 bg-white p-3 hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm">
+                  <ClipboardCheck className="size-4.5 text-granate" />
+                  <div>
+                    <p className="text-[12px] font-bold text-zinc-800 leading-tight">Validaciones</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">{pendingCount} pendientes</p>
+                  </div>
+                </Link>
+                <Link to="/alerts" className="flex flex-col gap-2 rounded-xl border border-zinc-200/60 bg-white p-3 hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm">
+                  <Bell className="size-4.5 text-granate" />
+                  <div>
+                    <p className="text-[12px] font-bold text-zinc-800 leading-tight">Alertas</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">{unread} activas</p>
+                  </div>
+                </Link>
+                <Link to="/profile" className="flex flex-col gap-2 rounded-xl border border-zinc-200/60 bg-white p-3 hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm">
+                  <User className="size-4.5 text-granate" />
+                  <div>
+                    <p className="text-[12px] font-bold text-zinc-800 leading-tight">Mi Perfil</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">Configuración</p>
+                  </div>
+                </Link>
               </div>
             </div>
 

@@ -79,11 +79,15 @@ export function usePendingCount() {
   });
 }
 
-export function useHistorial(page = 1) {
+export function useHistorial(page = 1, companyId?: string) {
   return useQuery({
-    queryKey: ['validaciones', 'historial', page],
+    queryKey: ['validaciones', 'historial', page, companyId],
     queryFn: async () => {
-      const res = await api.get<{ data: PaginatedResult }>(`/validaciones/historial?page=${page}&limit=20`);
+      const params = new URLSearchParams({ page: String(page), limit: '20' });
+      if (companyId) {
+        params.append('companyId', companyId);
+      }
+      const res = await api.get<{ data: PaginatedResult }>(`/validaciones/historial?${params.toString()}`);
       return res.data.data;
     },
   });

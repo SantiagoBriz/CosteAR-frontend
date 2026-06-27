@@ -16,7 +16,7 @@ export function useCostStructure(id: string) {
 export function useCreateCostStructure(companyId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { productName: string; period: string }) => {
+    mutationFn: async (input: { productName: string; period: string; costingSystem?: string }) => {
       const res = await api.post<{ data: CostStructure }>(
         `/companies/${companyId}/cost-structures`,
         input,

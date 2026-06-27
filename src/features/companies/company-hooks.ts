@@ -46,3 +46,29 @@ export function useCostStructures(companyId: string) {
     enabled: !!companyId,
   });
 }
+
+export function useUpdateCompany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name, industry, cuit }: { id: string; name: string; industry?: string; cuit?: string }) => {
+      const res = await api.put<{ data: Company }>(`/companies/${id}`, { name, industry, cuit });
+      return res.data.data;
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['companies'] });
+      qc.invalidateQueries({ queryKey: ['companies', variables.id] });
+    },
+  });
+}
+
+export function useDeleteCompany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/companies/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['companies'] });
+    },
+  });
+}

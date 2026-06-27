@@ -16,6 +16,7 @@ export interface CostStructure {
   productName: string;
   period: string;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+  costingSystem?: 'ORDERS' | 'PROCESSES';
   rawMaterialConfig: unknown | null;
   directLaborConfig: unknown | null;
   indirectCostConfig: unknown | null;
@@ -38,7 +39,16 @@ export interface CalculationResult {
     indirectCosts: {
       perDepartment: Record<
         string,
-        { cipTotal: number; appliedCip: number; budgetVariance: number; volumeVariance: number }
+        {
+          cipTotal: number;
+          appliedCip: number;
+          budgetVariance: number;
+          volumeVariance: number;
+          normalCapacity?: number;
+          actualActivity?: number;
+          quota?: number;
+          actualCip?: number;
+        }
       >;
     };
   };

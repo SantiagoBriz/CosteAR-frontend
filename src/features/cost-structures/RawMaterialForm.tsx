@@ -9,10 +9,11 @@ interface Props {
   defaultValues?: RawMaterialConfig;
   onSave: (data: RawMaterialConfig) => Promise<void>;
   saving: boolean;
+  isProcesses?: boolean;
 }
 
-export function RawMaterialForm({ defaultValues, onSave, saving }: Props) {
-  const { register, control, handleSubmit, reset } = useForm<RawMaterialConfig>({
+export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: Props) {
+  const { register, control, handleSubmit, reset, watch } = useForm<RawMaterialConfig>({
     defaultValues: defaultValues ?? emptyRawMaterial(),
   });
 
@@ -25,17 +26,19 @@ export function RawMaterialForm({ defaultValues, onSave, saving }: Props) {
   return (
     <form onSubmit={handleSubmit(onSave)} className="space-y-5 pt-3">
       {/* Wilson */}
-      <section>
-        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
-          Lote óptimo de Wilson
-        </h4>
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="Demanda anual (R)" type="number" step="1" numeric {...register('wilson.annualDemand', { valueAsNumber: true })} />
-          <Input label="Costo de pedido (S) $" type="number" step="0.01" numeric {...register('wilson.orderCost', { valueAsNumber: true })} />
-          <Input label="Tasa de mantenimiento (K) ej: 0.30" type="number" step="0.01" numeric {...register('wilson.holdingRate', { valueAsNumber: true })} />
-          <Input label="Costo unitario (C) $" type="number" step="0.01" numeric {...register('wilson.unitCost', { valueAsNumber: true })} />
-        </div>
-      </section>
+      {!isProcesses && (
+        <section>
+          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+            Lote óptimo de Wilson
+          </h4>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Demanda anual (R)" type="number" step="1" numeric {...register('wilson.annualDemand', { valueAsNumber: true })} />
+            <Input label="Costo de pedido (S) $" type="number" step="0.01" numeric {...register('wilson.orderCost', { valueAsNumber: true })} />
+            <Input label="Tasa de mantenimiento (K) ej: 0.30" type="number" step="0.01" numeric {...register('wilson.holdingRate', { valueAsNumber: true })} />
+            <Input label="Costo unitario (C) $" type="number" step="0.01" numeric {...register('wilson.unitCost', { valueAsNumber: true })} />
+          </div>
+        </section>
+      )}
 
       {/* Política de stock */}
       <section>
@@ -90,33 +93,43 @@ export function RawMaterialForm({ defaultValues, onSave, saving }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {movements.map((field, i) => (
-                <tr key={field.id}>
-                  <td className="px-2 py-1.5">
-                    <input type="date" className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.date`)} />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <select className="rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.type`)}>
-                      <option value="purchase">Compra</option>
-                      <option value="consumption">Consumo</option>
-                    </select>
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <input className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Detalle…" {...register(`movements.${i}.detail`)} />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.quantity`, { valueAsNumber: true })} />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Solo compras" {...register(`movements.${i}.unitCost`, { valueAsNumber: true })} />
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    <button type="button" onClick={() => remove(i)} className="text-ink-soft hover:text-danger">
-                      <Trash2 className="size-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {movements.map((field, i) => {
+                const isConsumption = watch(`movements.${i}.type`) === 'consumption';
+                return (
+                  <tr key={field.id}>
+                    <td className="px-2 py-1.5">
+                      <input type="date" className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.date`)} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <select className="rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.type`)}>
+                        <option value="purchase">Compra</option>
+                        <option value="consumption">Consumo</option>
+                      </select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Detalle…" {...register(`movements.${i}.detail`)} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.quantity`, { valueAsNumber: true })} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        type="number"
+                        step="0.01"
+                        disabled={isConsumption}
+                        className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none disabled:opacity-50 disabled:bg-surface-alt"
+                        placeholder={isConsumption ? 'PPP' : 'Monto...'}
+                        {...register(`movements.${i}.unitCost`, { valueAsNumber: true })}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <button type="button" onClick={() => remove(i)} className="text-ink-soft hover:text-danger">
+                        <Trash2 className="size-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
               {movements.length === 0 && (
                 <tr><td colSpan={6} className="px-4 py-6 text-center text-[13px] text-ink-soft">Sin movimientos — agregá compras y consumos.</td></tr>
               )}

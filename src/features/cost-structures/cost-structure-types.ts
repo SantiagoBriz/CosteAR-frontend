@@ -67,7 +67,9 @@ export interface IndirectCostConfig {
   }>;
   serviceDistributions: Array<{
     serviceCenterId: string;
-    toProductive: Record<string, number>;
+    toProductive?: Record<string, number>;
+    toProductiveFixed?: Record<string, number>;
+    toProductiveVariable?: Record<string, number>;
   }>;
   productiveSettings: Array<{
     centerId: string;

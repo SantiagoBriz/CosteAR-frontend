@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Calculator, Package, Users, Factory,
   TrendingUp, BarChart2, CheckCircle2, Zap, History,
-  Download,
+  Download, Loader2,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -97,6 +97,7 @@ export function CostStructurePage() {
 
   return (
     <AppShell>
+      <FullScreenCalculatorLoader active={calculate.isPending} />
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -178,6 +179,7 @@ export function CostStructurePage() {
             defaultValues={structure?.rawMaterialConfig as RawMaterialConfig | undefined}
             onSave={(d) => saveSection('raw-material', d)}
             saving={updateSection.isPending}
+            isProcesses={structure?.costingSystem === 'PROCESSES'}
           />
         </SectionShell>
       )}
@@ -307,6 +309,62 @@ function SalesTab({
   );
 }
 
+function FullScreenCalculatorLoader({ active }: { active: boolean }) {
+  const [step, setStep] = useState(0);
+  const steps = [
+    { pct: 10, msg: "Obteniendo datos de la estructura..." },
+    { pct: 30, msg: "Calculando consumos de materia prima por ficha PPP..." },
+    { pct: 55, msg: "Procesando días hábiles efectivos y cargas sociales MOD..." },
+    { pct: 75, msg: "Ejecutando distribución primaria y secundaria dual de CIP..." },
+    { pct: 90, msg: "Analizando variaciones presupuestarias y de volumen..." },
+    { pct: 98, msg: "Generando reporte de costos finales..." }
+  ];
+
+  useEffect(() => {
+    if (!active) {
+      setStep(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 850);
+    return () => clearInterval(interval);
+  }, [active]);
+
+  if (!active) return null;
+
+  const current = steps[step]!;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-md p-6 text-white animate-fade-in">
+      <div className="w-full max-w-sm text-center space-y-6">
+        <div className="relative flex justify-center">
+          <div className="absolute inset-0 size-16 rounded-full bg-granate/20 blur-xl animate-pulse mx-auto" />
+          <Loader2 className="size-16 animate-spin text-granate relative" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-lg font-bold tracking-tight">Ejecutando Cálculo de Costos</h3>
+          <p className="text-sm text-zinc-400 min-h-[40px] px-4 leading-relaxed transition-all duration-300">
+            {current.msg}
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden border border-zinc-700/50">
+            <div
+              className="h-full bg-granate transition-all duration-500 ease-out rounded-full"
+              style={{ width: `${current.pct}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[11px] font-semibold text-zinc-500 font-mono">
+            <span>PROGRESO</span>
+            <span>{current.pct}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Result Tab ────────────────────────────────────────────────────────────────
 
 function ResultTab({ result, structureId, companyId, period }: { result: CalculationResult | null; structureId: string; companyId?: string; period?: string }) {
@@ -409,26 +467,45 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
 
         {Object.keys(result.detail.indirectCosts.perDepartment).length > 0 && (
           <Card>
-            <CardHeader title="Análisis de variaciones — CIP" description="Variación presupuestaria y de volumen por centro productivo" />
-            <CardBody className="p-0">
-              <table className="w-full text-sm">
+            <CardHeader title="Análisis de variaciones — CIP" description="Detalle de base, cuota, aplicación y variaciones de costos indirectos" />
+            <CardBody className="p-0 overflow-x-auto">
+              <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
-                    {['Departamento','CIP total','CIP aplicado','Var. presup.','Var. volumen'].map((h) => (
-                      <th key={h} className={cn('px-6 py-3 font-semibold', h === 'Departamento' ? 'text-left' : 'text-right')}>{h}</th>
-                    ))}
+                  <tr className="border-b-2 border-line bg-surface-alt uppercase tracking-wider text-ink-soft text-[10px]">
+                    <th className="px-4 py-3 text-left font-semibold">Dpto / Centro</th>
+                    <th className="px-4 py-3 text-right font-semibold">CIP Presup.</th>
+                    <th className="px-4 py-3 text-right font-semibold">Base Presup.</th>
+                    <th className="px-4 py-3 text-right font-semibold">Cuota Presup.</th>
+                    <th className="px-4 py-3 text-right font-semibold">Base Real</th>
+                    <th className="px-4 py-3 text-right font-semibold">CIP Aplicado</th>
+                    <th className="px-4 py-3 text-right font-semibold">CIP Real</th>
+                    <th className="px-4 py-3 text-right font-semibold">Var. Presup.</th>
+                    <th className="px-4 py-3 text-right font-semibold">Var. Volumen</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
-                  {Object.entries(result.detail.indirectCosts.perDepartment).map(([dept, d]) => (
-                    <tr key={dept} className="hover:bg-surface-alt/40">
-                      <td className="px-6 py-3 font-medium text-ink">{dept}</td>
-                      <td className="px-6 py-3 text-right"><Money value={d.cipTotal} /></td>
-                      <td className="px-6 py-3 text-right"><Money value={d.appliedCip} /></td>
-                      <td className={cn('px-6 py-3 text-right', d.budgetVariance < 0 ? 'text-danger' : 'text-ok')}><Money value={d.budgetVariance} /></td>
-                      <td className={cn('px-6 py-3 text-right', d.volumeVariance < 0 ? 'text-danger' : 'text-ok')}><Money value={d.volumeVariance} /></td>
-                    </tr>
-                  ))}
+                  {Object.entries(result.detail.indirectCosts.perDepartment).map(([dept, d]) => {
+                    const normalCapacity = d.normalCapacity ?? 0;
+                    const quota = d.quota ?? 0;
+                    const budgetedCip = normalCapacity * quota;
+                    return (
+                      <tr key={dept} className="hover:bg-surface-alt/45">
+                        <td className="px-4 py-3 font-semibold text-ink">{dept}</td>
+                        <td className="px-4 py-3 text-right"><Money value={budgetedCip} /></td>
+                        <td className="px-4 py-3 text-right font-mono">{normalCapacity} hs</td>
+                        <td className="px-4 py-3 text-right"><Money value={quota} /></td>
+                        <td className="px-4 py-3 text-right font-mono">{d.actualActivity ?? 0} hs</td>
+                        <td className="px-4 py-3 text-right font-bold text-ink"><Money value={d.appliedCip} /></td>
+                        <td className="px-4 py-3 text-right font-bold text-ink"><Money value={d.actualCip ?? d.cipTotal} /></td>
+                        <td className={cn('px-4 py-3 text-right font-medium', d.budgetVariance < 0 ? 'text-danger' : 'text-ok')}>
+                          <Money value={d.budgetVariance} />
+                        </td>
+                        <td className={cn('px-4 py-3 text-right font-medium', d.volumeVariance < 0 ? 'text-danger' : 'text-ok')}>
+                          <Money value={d.volumeVariance} />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </CardBody>

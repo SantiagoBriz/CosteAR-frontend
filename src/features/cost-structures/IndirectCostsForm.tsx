@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, Fragment } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -141,7 +141,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
               Prorrateo secundario — distribución de servicios (%)
             </h4>
-            <Button type="button" size="sm" variant="secondary" onClick={() => addServiceDist({ serviceCenterId: '', toProductive: {} })}>
+            <Button type="button" size="sm" variant="secondary" onClick={() => addServiceDist({ serviceCenterId: '', toProductiveFixed: {}, toProductiveVariable: {} })}>
               <Plus className="size-3" /> Agregar
             </Button>
           </div>
@@ -149,11 +149,19 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium">Centro de servicio</th>
+                  <th className="px-3 py-2 text-left font-medium border-b border-line" rowSpan={2}>Centro de servicio</th>
                   {productiveCenters.map((c) => (
-                    <th key={c.id} className="px-3 py-2 text-right font-medium">{c.name || c.id} %</th>
+                    <th key={c.id} className="px-3 py-2 text-center font-medium border-b border-line" colSpan={2}>{c.name || c.id}</th>
                   ))}
-                  <th className="px-3 py-2" />
+                  <th className="px-3 py-2 border-b border-line" rowSpan={2} />
+                </tr>
+                <tr>
+                  {productiveCenters.map((c) => (
+                    <Fragment key={c.id}>
+                      <th className="px-3 py-1 text-right font-medium text-[10px] text-ink-soft border-b border-line">Fijo %</th>
+                      <th className="px-3 py-1 text-right font-medium text-[10px] text-ink-soft border-b border-line">Var %</th>
+                    </Fragment>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -168,9 +176,14 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                       </select>
                     </td>
                     {productiveCenters.map((c) => (
-                      <td key={c.id} className="px-2 py-1.5">
-                        <input type="number" step="0.1" min="0" max="100" className="w-16 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductive.${c.id}`, { valueAsNumber: true })} />
-                      </td>
+                      <Fragment key={c.id}>
+                        <td className="px-1 py-1.5">
+                          <input type="number" step="0.1" min="0" max="100" className="w-16 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <input type="number" step="0.1" min="0" max="100" className="w-16 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />
+                        </td>
+                      </Fragment>
                     ))}
                     <td className="px-2 py-1.5 text-center">
                       <button type="button" onClick={() => removeServiceDist(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>

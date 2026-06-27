@@ -1,25 +1,26 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /*
  * Sistema de diseño CosteAR — derivado 1:1 del documento "Identidad Visual v1.0".
  * Minimalismo de precisión: mucho blanco, granate como firma, rojo solo en acción.
- * Tipografía: Inter (UI) + JetBrains Mono (montos). Grilla de 8px.
+ * Tipografía: Outfit (UI) + JetBrains Mono (montos). Grilla de 8px.
  */
 @theme {
   /* Marca */
-  --color-granate: #6e1423;
-  --color-granate-deep: #50101a;
-  --color-action: #c2192a;
-  --color-action-soft: #e04050;
-  --color-granate-tenue: #f6ebec;
+  --color-granate: #4a151b;
+  --color-granate-deep: #2e080f;
+  --color-action: #b31929;
+  --color-action-soft: #d13042;
+  --color-granate-tenue: #f4eaeb;
 
   /* Neutros y superficies */
   --color-surface: #ffffff;
-  --color-surface-alt: #faf7f7;
-  --color-ink: #16181d;
-  --color-ink-soft: #5b6066;
-  --color-line: #e4e2e3;
-  --color-line-strong: #cbc7c8;
+  --color-surface-alt: #fcfbfa;
+  --color-ink: #111215;
+  --color-ink-soft: #525860;
+  --color-line: #e6e4e3;
+  --color-line-strong: #cfcbca;
 
   /* Semáforo de estado */
   --color-ok: #16a34a;
@@ -28,7 +29,7 @@
   --color-danger: #b91c1c;
 
   /* Tipografía */
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
   /* Radios (4 inputs, 6 botones, 8 tarjetas) */
