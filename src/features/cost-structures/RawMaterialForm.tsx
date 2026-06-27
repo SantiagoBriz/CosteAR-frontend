@@ -12,19 +12,78 @@ interface Props {
   isProcesses?: boolean;
 }
 
+function cleanRawMaterialForForm(cfg?: RawMaterialConfig): any {
+  const base = cfg ?? emptyRawMaterial();
+  return {
+    wilson: {
+      annualDemand: base.wilson?.annualDemand === 0 ? '' : (base.wilson?.annualDemand ?? ''),
+      orderCost: base.wilson?.orderCost === 0 ? '' : (base.wilson?.orderCost ?? ''),
+      holdingRate: base.wilson?.holdingRate === 0 ? '' : (base.wilson?.holdingRate ?? ''),
+      unitCost: base.wilson?.unitCost === 0 ? '' : (base.wilson?.unitCost ?? ''),
+    },
+    stockPolicy: {
+      minConsumption: base.stockPolicy?.minConsumption === 0 ? '' : (base.stockPolicy?.minConsumption ?? ''),
+      maxConsumption: base.stockPolicy?.maxConsumption === 0 ? '' : (base.stockPolicy?.maxConsumption ?? ''),
+      minLeadTime: base.stockPolicy?.minLeadTime === 0 ? '' : (base.stockPolicy?.minLeadTime ?? ''),
+      maxLeadTime: base.stockPolicy?.maxLeadTime === 0 ? '' : (base.stockPolicy?.maxLeadTime ?? ''),
+      safetyStock: base.stockPolicy?.safetyStock === 0 ? '' : (base.stockPolicy?.safetyStock ?? ''),
+    },
+    initialStock: {
+      quantity: base.initialStock?.quantity === 0 ? '' : (base.initialStock?.quantity ?? ''),
+      unitCost: base.initialStock?.unitCost === 0 ? '' : (base.initialStock?.unitCost ?? ''),
+    },
+    movements: (base.movements ?? []).map((m) => ({
+      ...m,
+      quantity: m.quantity === 0 ? '' : (m.quantity ?? ''),
+      unitCost: m.unitCost === 0 ? '' : (m.unitCost ?? ''),
+    })),
+  };
+}
+
+function cleanRawMaterialForSubmit(data: any): RawMaterialConfig {
+  const fallbackNum = (val: any) => {
+    if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
+    return Number(val);
+  };
+  return {
+    wilson: {
+      annualDemand: fallbackNum(data.wilson?.annualDemand),
+      orderCost: fallbackNum(data.wilson?.orderCost),
+      holdingRate: fallbackNum(data.wilson?.holdingRate),
+      unitCost: fallbackNum(data.wilson?.unitCost),
+    },
+    stockPolicy: {
+      minConsumption: fallbackNum(data.stockPolicy?.minConsumption),
+      maxConsumption: fallbackNum(data.stockPolicy?.maxConsumption),
+      minLeadTime: fallbackNum(data.stockPolicy?.minLeadTime),
+      maxLeadTime: fallbackNum(data.stockPolicy?.maxLeadTime),
+      safetyStock: fallbackNum(data.stockPolicy?.safetyStock),
+    },
+    initialStock: {
+      quantity: fallbackNum(data.initialStock?.quantity),
+      unitCost: fallbackNum(data.initialStock?.unitCost),
+    },
+    movements: (data.movements ?? []).map((m: any) => ({
+      ...m,
+      quantity: fallbackNum(m.quantity),
+      unitCost: fallbackNum(m.unitCost),
+    })),
+  };
+}
+
 export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: Props) {
   const { register, control, handleSubmit, reset, watch } = useForm<RawMaterialConfig>({
-    defaultValues: defaultValues ?? emptyRawMaterial(),
+    defaultValues: cleanRawMaterialForForm(defaultValues) as any,
   });
 
   useEffect(() => {
-    if (defaultValues) reset(defaultValues);
+    if (defaultValues) reset(cleanRawMaterialForForm(defaultValues));
   }, [defaultValues, reset]);
 
   const { fields: movements, append, remove } = useFieldArray({ control, name: 'movements' });
 
   return (
-    <form onSubmit={handleSubmit(onSave)} className="space-y-5 pt-3">
+    <form onSubmit={handleSubmit((data) => onSave(cleanRawMaterialForSubmit(data)))} className="space-y-5 pt-3">
       {/* Wilson */}
       {!isProcesses && (
         <section>

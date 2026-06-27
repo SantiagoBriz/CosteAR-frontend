@@ -10,13 +10,96 @@ interface Props {
   saving: boolean;
 }
 
+function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
+  const base = cfg ?? emptyIndirectCosts();
+  
+  const cleanRecord = (rec?: Record<string, number>) => {
+    if (!rec) return {};
+    const res: Record<string, any> = {};
+    for (const k in rec) {
+      res[k] = rec[k] === 0 ? '' : rec[k];
+    }
+    return res;
+  };
+
+  return {
+    centers: base.centers ?? [],
+    concepts: (base.concepts ?? []).map((c) => ({
+      ...c,
+      amount: {
+        fixed: c.amount?.fixed === 0 ? '' : (c.amount?.fixed ?? ''),
+        variable: c.amount?.variable === 0 ? '' : (c.amount?.variable ?? ''),
+      },
+      distribution: cleanRecord(c.distribution),
+    })),
+    serviceDistributions: (base.serviceDistributions ?? []).map((s) => ({
+      ...s,
+      toProductiveFixed: cleanRecord(s.toProductiveFixed),
+      toProductiveVariable: cleanRecord(s.toProductiveVariable),
+    })),
+    productiveSettings: (base.productiveSettings ?? []).map((p) => ({
+      ...p,
+      budget: {
+        fixed: p.budget?.fixed === 0 ? '' : (p.budget?.fixed ?? ''),
+        variable: p.budget?.variable === 0 ? '' : (p.budget?.variable ?? ''),
+      },
+      normalCapacity: p.normalCapacity === 0 ? '' : (p.normalCapacity ?? ''),
+      actualActivity: p.actualActivity === 0 ? '' : (p.actualActivity ?? ''),
+      actualCip: p.actualCip === 0 ? '' : (p.actualCip ?? ''),
+    })),
+  };
+}
+
+function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
+  const fallbackNum = (val: any) => {
+    if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
+    return Number(val);
+  };
+
+  const cleanRecord = (rec?: Record<string, any>) => {
+    if (!rec) return {};
+    const res: Record<string, number> = {};
+    for (const k in rec) {
+      res[k] = fallbackNum(rec[k]);
+    }
+    return res;
+  };
+
+  return {
+    centers: data.centers ?? [],
+    concepts: (data.concepts ?? []).map((c: any) => ({
+      ...c,
+      amount: {
+        fixed: fallbackNum(c.amount?.fixed),
+        variable: fallbackNum(c.amount?.variable),
+      },
+      distribution: cleanRecord(c.distribution),
+    })),
+    serviceDistributions: (data.serviceDistributions ?? []).map((s: any) => ({
+      ...s,
+      toProductiveFixed: cleanRecord(s.toProductiveFixed),
+      toProductiveVariable: cleanRecord(s.toProductiveVariable),
+    })),
+    productiveSettings: (data.productiveSettings ?? []).map((p: any) => ({
+      ...p,
+      budget: {
+        fixed: fallbackNum(p.budget?.fixed),
+        variable: fallbackNum(p.budget?.variable),
+      },
+      normalCapacity: fallbackNum(p.normalCapacity),
+      actualActivity: fallbackNum(p.actualActivity),
+      actualCip: fallbackNum(p.actualCip),
+    })),
+  };
+}
+
 export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   const { register, control, handleSubmit, reset } = useForm<IndirectCostConfig>({
-    defaultValues: defaultValues ?? emptyIndirectCosts(),
+    defaultValues: cleanIndirectCostsForForm(defaultValues) as any,
   });
 
   useEffect(() => {
-    if (defaultValues) reset(defaultValues);
+    if (defaultValues) reset(cleanIndirectCostsForForm(defaultValues));
   }, [defaultValues, reset]);
 
   const { fields: centers, append: addCenter, remove: removeCenter } = useFieldArray({ control, name: 'centers' });
@@ -30,7 +113,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   const serviceCenters = watchedCenters?.filter((c) => c.type === 'service') ?? [];
 
   return (
-    <form onSubmit={handleSubmit(onSave)} className="space-y-6 pt-3">
+    <form onSubmit={handleSubmit((data) => onSave(cleanIndirectCostsForSubmit(data)))} className="space-y-6 pt-3">
       {/* Centros de costo */}
       <section>
         <div className="mb-2 flex items-center justify-between">

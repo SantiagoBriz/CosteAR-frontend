@@ -36,14 +36,95 @@ export function ensureDefaultUncertainConcepts(config?: DirectLaborConfig): Dire
   return base;
 }
 
+function cleanDirectLaborForForm(cfg?: DirectLaborConfig): any {
+  const base = ensureDefaultUncertainConcepts(cfg);
+  return {
+    workingDays: {
+      totalDaysPerYear: base.workingDays?.totalDaysPerYear === 0 ? '' : (base.workingDays?.totalDaysPerYear ?? ''),
+      unpaidAbsence: {
+        sundays: base.workingDays?.unpaidAbsence?.sundays === 0 ? '' : (base.workingDays?.unpaidAbsence?.sundays ?? ''),
+        saturdays: base.workingDays?.unpaidAbsence?.saturdays === 0 ? '' : (base.workingDays?.unpaidAbsence?.saturdays ?? ''),
+        unjustifiedAbsences: base.workingDays?.unpaidAbsence?.unjustifiedAbsences === 0 ? '' : (base.workingDays?.unpaidAbsence?.unjustifiedAbsences ?? ''),
+        holidaysOnWeekend: base.workingDays?.unpaidAbsence?.holidaysOnWeekend === 0 ? '' : (base.workingDays?.unpaidAbsence?.holidaysOnWeekend ?? ''),
+      },
+      paidAbsence: {
+        holidays: base.workingDays?.paidAbsence?.holidays === 0 ? '' : (base.workingDays?.paidAbsence?.holidays ?? ''),
+        vacations: base.workingDays?.paidAbsence?.vacations === 0 ? '' : (base.workingDays?.paidAbsence?.vacations ?? ''),
+        sickness: base.workingDays?.paidAbsence?.sickness === 0 ? '' : (base.workingDays?.paidAbsence?.sickness ?? ''),
+        specialLeaves: base.workingDays?.paidAbsence?.specialLeaves === 0 ? '' : (base.workingDays?.paidAbsence?.specialLeaves ?? ''),
+        workAccidents: base.workingDays?.paidAbsence?.workAccidents === 0 ? '' : (base.workingDays?.paidAbsence?.workAccidents ?? ''),
+      },
+    },
+    itcs: {
+      derivationBase: base.itcs?.derivationBase === 0 ? '' : (base.itcs?.derivationBase ?? ''),
+      fixedArt: base.itcs?.fixedArt === 0 ? '' : (base.itcs?.fixedArt ?? ''),
+      uncertainRemunerative: (base.itcs?.uncertainRemunerative ?? []).map((r) => ({
+        ...r,
+        coefficient: r.coefficient === 0 ? '' : (r.coefficient ?? ''),
+      })),
+      uncertainNonRemunerative: (base.itcs?.uncertainNonRemunerative ?? []).map((r) => ({
+        ...r,
+        coefficient: r.coefficient === 0 ? '' : (r.coefficient ?? ''),
+      })),
+    },
+    departments: (base.departments ?? []).map((d) => ({
+      ...d,
+      basicRemuneration: d.basicRemuneration === 0 ? '' : (d.basicRemuneration ?? ''),
+      hoursWorked: d.hoursWorked === 0 ? '' : (d.hoursWorked ?? ''),
+    })),
+  };
+}
+
+function cleanDirectLaborForSubmit(data: any): DirectLaborConfig {
+  const fallbackNum = (val: any, def = 0) => {
+    if (val === '' || val === null || val === undefined || isNaN(Number(val))) return def;
+    return Number(val);
+  };
+  return {
+    workingDays: {
+      totalDaysPerYear: fallbackNum(data.workingDays?.totalDaysPerYear, 365),
+      unpaidAbsence: {
+        sundays: fallbackNum(data.workingDays?.unpaidAbsence?.sundays),
+        saturdays: fallbackNum(data.workingDays?.unpaidAbsence?.saturdays),
+        unjustifiedAbsences: fallbackNum(data.workingDays?.unpaidAbsence?.unjustifiedAbsences),
+        holidaysOnWeekend: fallbackNum(data.workingDays?.unpaidAbsence?.holidaysOnWeekend),
+      },
+      paidAbsence: {
+        holidays: fallbackNum(data.workingDays?.paidAbsence?.holidays),
+        vacations: fallbackNum(data.workingDays?.paidAbsence?.vacations),
+        sickness: fallbackNum(data.workingDays?.paidAbsence?.sickness),
+        specialLeaves: fallbackNum(data.workingDays?.paidAbsence?.specialLeaves),
+        workAccidents: fallbackNum(data.workingDays?.paidAbsence?.workAccidents),
+      },
+    },
+    itcs: {
+      derivationBase: fallbackNum(data.itcs?.derivationBase, 0.27),
+      fixedArt: fallbackNum(data.itcs?.fixedArt, 0.015),
+      uncertainRemunerative: (data.itcs?.uncertainRemunerative ?? []).map((r: any) => ({
+        ...r,
+        coefficient: fallbackNum(r.coefficient),
+      })),
+      uncertainNonRemunerative: (data.itcs?.uncertainNonRemunerative ?? []).map((r: any) => ({
+        ...r,
+        coefficient: fallbackNum(r.coefficient),
+      })),
+    },
+    departments: (data.departments ?? []).map((d: any) => ({
+      ...d,
+      basicRemuneration: fallbackNum(d.basicRemuneration),
+      hoursWorked: fallbackNum(d.hoursWorked),
+    })),
+  };
+}
+
 export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
   const { register, control, handleSubmit, reset } = useForm<DirectLaborConfig>({
-    defaultValues: ensureDefaultUncertainConcepts(defaultValues),
+    defaultValues: cleanDirectLaborForForm(defaultValues) as any,
   });
 
   useEffect(() => {
     if (defaultValues) {
-      reset(ensureDefaultUncertainConcepts(defaultValues));
+      reset(cleanDirectLaborForForm(defaultValues));
     }
   }, [defaultValues, reset]);
 
@@ -52,7 +133,7 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
   const { fields: deptFields, append: appendDept, remove: removeDept } = useFieldArray({ control, name: 'departments' });
 
   return (
-    <form onSubmit={handleSubmit(onSave)} className="space-y-5 pt-3">
+    <form onSubmit={handleSubmit((data) => onSave(cleanDirectLaborForSubmit(data)))} className="space-y-5 pt-3">
       {/* Distribución del año */}
       <section>
         <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
