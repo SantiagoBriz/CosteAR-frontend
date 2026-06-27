@@ -280,9 +280,28 @@ function SalesTab({
   onCalculate: () => void;
   calculating: boolean;
 }) {
-  const { register, handleSubmit } = useForm<{ unitPrice: number; quantity: number }>({
-    defaultValues: { unitPrice: defaultPrice, quantity: defaultQty },
+  const { register, handleSubmit, reset } = useForm<{ unitPrice: any; quantity: any }>({
+    defaultValues: {
+      unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
+      quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
+    },
   });
+
+  useEffect(() => {
+    reset({
+      unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
+      quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
+    });
+  }, [defaultPrice, defaultQty, reset]);
+
+  const onSubmit = (v: any) => {
+    const fallbackNum = (val: any) => {
+      if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
+      return Number(val);
+    };
+    onSave(fallbackNum(v.unitPrice), fallbackNum(v.quantity));
+  };
+
   return (
     <Card>
       <CardHeader
@@ -290,11 +309,11 @@ function SalesTab({
         description="Precio unitario y cantidad producida para calcular el margen bruto"
       />
       <CardBody>
-        <form onSubmit={handleSubmit((v) => onSave(Number(v.unitPrice), Number(v.quantity)))} className="max-w-sm space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="max-w-sm space-y-4">
           <Input label="Precio de venta unitario $" type="number" step="0.01" numeric
-            {...register('unitPrice', { required: true, valueAsNumber: true })} />
+            {...register('unitPrice', { required: true })} />
           <Input label="Cantidad producida / vendida" type="number" step="1" numeric
-            {...register('quantity', { required: true, valueAsNumber: true })} />
+            {...register('quantity', { required: true })} />
           <div className="flex gap-3 pt-1">
             <Button type="submit" variant="secondary" loading={saving}>Guardar precio</Button>
             {allReady && (
