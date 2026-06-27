@@ -13,8 +13,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   X, Send, ChevronRight, CheckCircle2,
-  AlertTriangle, BookOpen, Loader2, Sparkles,
-  Check, XIcon, Building2, ClipboardCheck, Zap,
+  AlertTriangle, Loader2, Sparkles,
+  Check, XIcon, Building2, ClipboardCheck, Zap, User,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -64,24 +64,24 @@ const QUICK_OPTIONS = [
     color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
   },
   {
-    id: 'ppp',
-    icon: BookOpen,
-    label: '¿Cómo funciona la ficha PPP?',
-    sub: 'Valuación de materia prima',
+    id: 'estructura',
+    icon: ClipboardCheck,
+    label: '¿Cómo creo una estructura de costos?',
+    sub: 'Configurar productos y procesos',
     color: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100',
   },
   {
-    id: 'itcs',
-    icon: ClipboardCheck,
-    label: '¿Cómo se calcula el ITCS?',
-    sub: 'Cargas sociales de MOD',
+    id: 'invitar',
+    icon: User,
+    label: '¿Cómo invito a un operador?',
+    sub: 'Asignar permisos de carga',
     color: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
   },
   {
-    id: 'secundario',
+    id: 'exportar',
     icon: Zap,
-    label: '¿Cómo hacer el prorrateo?',
-    sub: 'CIP fijo y variable',
+    label: '¿Cómo descargo reportes en Excel?',
+    sub: 'Exportar cálculos terminados',
     color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
   },
 ] as const;
@@ -313,7 +313,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
             </div>
             <div>
               <p className="text-[13px] font-semibold text-gray-800">Asistente CosteAR</p>
-              <p className="text-[11px] text-gray-400">Soporte tecnológico</p>
+              <p className="text-[11px] text-gray-400">Guía de uso y soporte</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -346,7 +346,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
                     <Sparkles className="size-3 text-white" />
                   </div>
                   <div className="rounded-2xl rounded-tl-none bg-gray-50 px-4 py-3 text-[13px] leading-relaxed text-gray-700">
-                    ¡Hola! Soy tu asistente técnico de CosteAR. Podés preguntarme cómo operar el software, configurar parámetros de materia prima, liquidaciones MOD o prorrateos de CIP. ¿Qué querés consultar?
+                    ¡Hola! Soy tu asistente de CosteAR. Podés preguntarme cómo operar el sistema, cómo crear estructuras de costos, invitar operadores o exportar tus reportes a Excel. ¿En qué te puedo ayudar hoy?
                   </div>
                 </div>
 
@@ -476,7 +476,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
               </button>
             </div>
             <p className="mt-1.5 text-center text-[10px] text-gray-300">
-              Soporte técnico y metodológico sobre CosteAR
+              Soporte técnico y guía de uso del software CosteAR
             </p>
           </div>
         </div>
