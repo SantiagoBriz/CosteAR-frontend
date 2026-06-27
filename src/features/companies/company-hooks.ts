@@ -26,7 +26,7 @@ export function useCompany(id: string) {
 export function useCreateCompany() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; industry?: string; cuit?: string }) => {
+    mutationFn: async (input: { name: string; industry?: string; cuit?: string; description?: string }) => {
       const res = await api.post<{ data: Company }>('/companies', input);
       return res.data.data;
     },
@@ -50,8 +50,8 @@ export function useCostStructures(companyId: string) {
 export function useUpdateCompany() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, name, industry, cuit }: { id: string; name: string; industry?: string; cuit?: string }) => {
-      const res = await api.put<{ data: Company }>(`/companies/${id}`, { name, industry, cuit });
+    mutationFn: async ({ id, name, industry, cuit, description }: { id: string; name: string; industry?: string; cuit?: string; description?: string }) => {
+      const res = await api.put<{ data: Company }>(`/companies/${id}`, { name, industry, cuit, description });
       return res.data.data;
     },
     onSuccess: (_, variables) => {

@@ -334,7 +334,7 @@ export function DashboardPage() {
         )}
 
         {/* ── Main 2-col grid ──────────────────────────────────────────────── */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px] items-start">
 
           {/* Left: portfolio ─────────────────────────────────────────────── */}
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">

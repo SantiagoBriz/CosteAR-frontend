@@ -180,8 +180,14 @@ export function ValidacionesPage() {
 
       {/* Modal de revisión */}
       {reviewing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg rounded-lg border border-line bg-surface p-6 shadow-xl animate-rise">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={() => setReviewing(null)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-lg border border-line bg-surface p-6 shadow-xl animate-rise max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="font-bold text-ink">Revisar entrada</h3>
               {/* Empresa prominente: evita aplicar un costo al cliente equivocado */}

@@ -13,6 +13,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, hint, numeric, id, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id ?? generatedId;
+
+    let value = props.value;
+    let placeholder = props.placeholder;
+    if (props.type === 'number') {
+      if (value === 0 || value === '0') {
+        value = '';
+      }
+      placeholder = placeholder ?? '0';
+    }
+
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -34,7 +44,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className,
           )}
           aria-invalid={!!error}
+          onFocus={(e) => {
+            e.target.select();
+            if (props.onFocus) props.onFocus(e);
+          }}
           {...props}
+          value={value}
+          placeholder={placeholder}
         />
         {error ? (
           <span className="text-[12px] text-danger">{error}</span>

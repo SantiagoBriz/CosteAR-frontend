@@ -8,7 +8,7 @@ import { useLogout } from '@/features/auth/auth-hooks';
 import { usePendingCount } from '@/features/validaciones/validaciones-hooks';
 
 const NAV = [
-  { to: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/companies', label: 'Clientes', icon: Building2 },
   { to: '/validaciones', label: 'Validaciones', icon: ClipboardCheck, badge: true },
   { to: '/alerts', label: 'Alertas', icon: Bell },

@@ -3,35 +3,15 @@ import { Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send, Paperclip, X, Building2, CheckCircle2,
-  FileText, Image, ChevronDown, Plus, Bot,
+  FileText, Image, ChevronDown, Plus, LogOut,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useLogout } from '@/features/auth/auth-hooks';
 import { api, apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/utils';
 
-// ── AI Analysis type (espeja DocumentAnalysis del backend) ───────────────────
 
-interface DocumentAnalysis {
-  documentType: string;
-  quality: 'legible' | 'parcial' | 'ilegible';
-  qualityNote?: string;
-  costSection: 'MATERIA_PRIMA' | 'MANO_DE_OBRA' | 'COSTOS_INDIRECTOS' | 'VENTAS' | 'DESCONOCIDO';
-  message: string;
-  extractedData: {
-    date?: string | null;
-    supplier?: string | null;
-    invoiceNumber?: string | null;
-    totalAmount?: number | null;
-    taxAmount?: number | null;
-    netAmount?: number | null;
-    currency?: string | null;
-    items?: { description: string; quantity?: number | null; unitCost?: number | null; total?: number | null }[];
-    department?: string | null;
-    hoursWorked?: number | null;
-    employeeCount?: number | null;
-  };
-}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +27,7 @@ interface Submission {
   sourceType: 'TEXT' | 'PDF' | 'IMAGE';
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CORRECTED';
   reviewNote: string | null;
+  costistaNote: string | null;
   createdAt: string;
   fileName: string | null;
   fileMimeType: string | null;
@@ -64,6 +45,7 @@ interface ChatMessage {
   fileUrl?: string | null;
   status?: Submission['status'];
   reviewNote?: string | null;
+  costistaNote?: string | null;
   createdAt: string;
 }
 
@@ -95,25 +77,18 @@ function submissionToMessage(s: Submission): ChatMessage {
     fileUrl: s.fileUrl ?? undefined,
     status: s.status,
     reviewNote: s.reviewNote ?? undefined,
+    costistaNote: s.costistaNote ?? undefined,
     createdAt: s.createdAt,
   };
 }
 
-function parseAIFromNote(reviewNote?: string | null): DocumentAnalysis | null {
-  if (!reviewNote) return null;
-  try {
-    const parsed: DocumentAnalysis = typeof reviewNote === 'string' ? JSON.parse(reviewNote) : reviewNote;
-    if (parsed && parsed.documentType) return parsed;
-    return null;
-  } catch {
-    return null;
-  }
-}
+
 
 // ── Main component ───────────────────────────────────────────────────────────
 
 export function EmpresaPortalPage() {
   const user = useAuthStore((s) => s.user);
+  const logout = useLogout();
   const qc = useQueryClient();
 
   // Empresa activa
@@ -383,6 +358,13 @@ export function EmpresaPortalPage() {
           >
             <Plus className="size-3.5" /> Unirme a empresa
           </button>
+          <button
+            type="button"
+            onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[12px] text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+          >
+            <LogOut className="size-3.5" /> Cerrar sesión
+          </button>
           <div className="px-2">
             <p className="text-[10px] text-zinc-500">Portal de empresa</p>
             <p className="truncate text-[12px] font-medium text-zinc-300">{user?.name}</p>
@@ -435,43 +417,9 @@ export function EmpresaPortalPage() {
           )}
 
           {messages.map((msg) => {
-            const ai = parseAIFromNote(msg.reviewNote);
             return (
               <Fragment key={msg.id}>
                 <ChatBubble message={msg} />
-                {ai && (
-                  <div className="flex justify-start">
-                    <div className="max-w-[80%] rounded-2xl rounded-tl-none border border-indigo-100 bg-indigo-50 px-4 py-3 space-y-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <Bot className="size-3.5 shrink-0 text-indigo-400" />
-                        <span className="text-[11px] text-indigo-400 font-medium uppercase tracking-wide">Análisis automático</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className="rounded-full border border-indigo-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
-                          {{ factura_compra: 'Factura de compra', factura_venta: 'Factura de venta', remito: 'Remito', liquidacion_sueldos: 'Liquidación de sueldos', planilla_horas: 'Planilla de horas', nota_debito: 'Nota de débito', recibo: 'Recibo', otro: 'Otro documento' }[ai.documentType] ?? ai.documentType}
-                        </span>
-                        <span className={cn('rounded-full border px-2.5 py-0.5 text-[11px] font-medium', {
-                          legible:  'border-green-200 bg-green-50 text-green-700',
-                          parcial:  'border-yellow-200 bg-yellow-50 text-yellow-700',
-                          ilegible: 'border-red-200 bg-red-50 text-red-700',
-                        }[ai.quality])}>
-                          {{ legible: '✓ Legible', parcial: '⚠ Parcialmente legible', ilegible: '✕ Difícil de leer' }[ai.quality]}
-                        </span>
-                      </div>
-                      {ai.quality === 'ilegible' && (
-                        <p className="text-[12px] text-red-700">
-                          El documento no se pudo leer bien. Si podés, intentá sacar una foto más clara con buena luz.
-                        </p>
-                      )}
-                      {ai.quality === 'parcial' && ai.qualityNote && (
-                        <p className="text-[12px] text-yellow-700">{ai.qualityNote}</p>
-                      )}
-                      {ai.quality === 'legible' && (
-                        <p className="text-[12px] text-indigo-700">Tu costista lo recibió y está pendiente de revisión.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </Fragment>
             );
           })}
@@ -681,6 +629,14 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
             </span>
           )}
         </div>
+
+        {/* Nota del Costista (Rechazo / Aprobación / Corrección) */}
+        {msg.costistaNote && (
+          <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-700 shadow-sm leading-relaxed mt-1 text-left">
+            <p className="font-semibold text-gray-800 mb-0.5">Nota de revisión:</p>
+            <p className="italic">"{msg.costistaNote}"</p>
+          </div>
+        )}
 
       </div>
     </div>
