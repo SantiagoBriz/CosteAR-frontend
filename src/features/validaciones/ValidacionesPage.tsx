@@ -65,6 +65,7 @@ const SECTION_LABELS: Record<string, string> = {
   MANO_DE_OBRA: 'Mano de Obra',
   COSTOS_INDIRECTOS: 'Costos Indirectos',
   VENTAS: 'Ventas',
+  MULTIPLE: 'Múltiples Secciones',
   DESCONOCIDO: 'Sin clasificar',
 };
 
