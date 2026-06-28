@@ -551,7 +551,7 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
           <CardHeader title="Detalle MOD" />
           <CardBody className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-ink-soft">Días hábiles efectivos</span><span className="font-medium">{result.detail.directLabor.workingDays} días</span></div>
-            <div className="flex justify-between"><span className="text-ink-soft">ITCS</span><span className="font-medium">{(result.detail.directLabor.itcsPercent * 100).toFixed(2)}%</span></div>
+            <div className="flex justify-between"><span className="text-ink-soft">ITCS</span><span className="font-medium">{result.detail.directLabor.itcsPercent.toFixed(2)}%</span></div>
             {Object.entries(result.detail.directLabor.hourlyRates).map(([dept, rate]) => (
               <div key={dept} className="flex justify-between">
                 <span className="text-ink-soft">{dept}</span>
