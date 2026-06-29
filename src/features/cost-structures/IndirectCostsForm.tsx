@@ -1,8 +1,15 @@
-import { useEffect, Fragment } from 'react';
+import { useEffect, useRef, Fragment } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import type { IndirectCostConfig } from './cost-structure-types';
+
+/** Formatea un importe derivado (presupuesto del prorrateo) para mostrarlo. */
+function fmtBudget(value: unknown): string {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!isFinite(n) || n === 0) return '—';
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
 
 interface Props {
   defaultValues?: IndirectCostConfig;
@@ -98,8 +105,17 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
     defaultValues: cleanIndirectCostsForForm(defaultValues) as any,
   });
 
+  // Recargar el form solo si el contenido persistido cambió de verdad (no en cada
+  // re-fetch por referencia), para no pisar la edición en curso sin guardar. Esto
+  // sí permite refrescar cuando el backend auto-completa el presupuesto al guardar
+  // (el contenido cambia), pero no borra datos ante una invalidación inocua (BUG-05).
+  const loadedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (defaultValues) reset(cleanIndirectCostsForForm(defaultValues));
+    if (!defaultValues) return;
+    const snapshot = JSON.stringify(defaultValues);
+    if (snapshot === loadedRef.current) return;
+    loadedRef.current = snapshot;
+    reset(cleanIndirectCostsForForm(defaultValues));
   }, [defaultValues, reset]);
 
   const { fields: centers, append: addCenter, remove: removeCenter } = useFieldArray({ control, name: 'centers' });
@@ -109,6 +125,8 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
 
   // Watch centers to generate distribution columns
   const watchedCenters = useWatch({ control, name: 'centers' });
+  // Watch productive settings to render the auto-derived budget (read-only).
+  const watchedProdSettings = useWatch({ control, name: 'productiveSettings' });
   const productiveCenters = watchedCenters?.filter((c) => c.type === 'productive') ?? [];
   const serviceCenters = watchedCenters?.filter((c) => c.type === 'service') ?? [];
 
@@ -290,8 +308,16 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
               <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Centro</th>
-                  <th className="px-3 py-2 text-right font-medium">Presup. fijo $</th>
-                  <th className="px-3 py-2 text-right font-medium">Presup. variable $</th>
+                  <th className="bg-surface-alt/60 px-3 py-2 text-right font-medium text-action">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <Lock className="size-3" /> Presup. fijo $
+                    </span>
+                  </th>
+                  <th className="bg-surface-alt/60 px-3 py-2 text-right font-medium text-action">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <Lock className="size-3" /> Presup. variable $
+                    </span>
+                  </th>
                   <th className="px-3 py-2 text-right font-medium">Cap. normal (hs)</th>
                   <th className="px-3 py-2 text-right font-medium">Actividad real (hs)</th>
                   <th className="px-3 py-2 text-right font-medium">CIP real $</th>
@@ -309,8 +335,20 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                         ))}
                       </select>
                     </td>
-                    <td className="px-2 py-1.5"><input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.budget.fixed`, { valueAsNumber: true })} /></td>
-                    <td className="px-2 py-1.5"><input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.budget.variable`, { valueAsNumber: true })} /></td>
+                    <td className="bg-surface-alt/40 px-2 py-1.5">
+                      <div className="flex w-28 items-center justify-end gap-1 rounded border border-dashed border-action/30 bg-surface-alt px-2 py-1 text-right font-mono text-sm text-ink-soft" title="Calculado automáticamente por el prorrateo (no editable)">
+                        <Lock className="size-3 shrink-0 text-action/50" />
+                        <span>{fmtBudget(watchedProdSettings?.[i]?.budget?.fixed)}</span>
+                      </div>
+                      <input type="hidden" {...register(`productiveSettings.${i}.budget.fixed`, { valueAsNumber: true })} />
+                    </td>
+                    <td className="bg-surface-alt/40 px-2 py-1.5">
+                      <div className="flex w-28 items-center justify-end gap-1 rounded border border-dashed border-action/30 bg-surface-alt px-2 py-1 text-right font-mono text-sm text-ink-soft" title="Calculado automáticamente por el prorrateo (no editable)">
+                        <Lock className="size-3 shrink-0 text-action/50" />
+                        <span>{fmtBudget(watchedProdSettings?.[i]?.budget?.variable)}</span>
+                      </div>
+                      <input type="hidden" {...register(`productiveSettings.${i}.budget.variable`, { valueAsNumber: true })} />
+                    </td>
                     <td className="px-2 py-1.5"><input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.normalCapacity`, { valueAsNumber: true })} /></td>
                     <td className="px-2 py-1.5"><input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.actualActivity`, { valueAsNumber: true })} /></td>
                     <td className="px-2 py-1.5"><input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.actualCip`, { valueAsNumber: true })} /></td>
@@ -325,6 +363,10 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
               </tbody>
             </table>
           </div>
+          <p className="mt-1.5 flex items-center gap-1 text-[11px] text-ink-soft">
+            <Lock className="size-3 text-action/60" />
+            El <strong className="font-medium text-action">presupuesto fijo/variable</strong> se calcula automáticamente con el prorrateo (primario + cierre del secundario) al guardar. Solo cargás capacidad normal, actividad real y CIP real.
+          </p>
           <Button
             type="button"
             size="sm"

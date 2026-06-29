@@ -46,11 +46,15 @@ export function useUpdateCostSection(id: string) {
 }
 
 export function useUpdateSales(id: string) {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { salesUnitPrice: number; salesQuantity: number }) => {
       const res = await api.put(`/cost-structures/${id}/sales`, input);
       return res.data;
     },
+    // Refrescar la estructura para que la sección Venta quede marcada como
+    // completa y se habilite "Calcular" sin necesidad de recargar la página.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['cost-structures', id] }),
   });
 }
 
