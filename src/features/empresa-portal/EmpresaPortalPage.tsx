@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send, Paperclip, X, Building2, CheckCircle2,
-  FileText, Image, ChevronDown, Plus, LogOut, ArrowLeft,
+  FileText, Image, ChevronDown, ChevronRight, Package, Plus, LogOut, ArrowLeft,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
@@ -98,6 +98,10 @@ export function EmpresaPortalPage() {
   // Empresa activa
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
+  // Empresa desplegada en el sidebar y producto/estructura activo (aislamiento).
+  const [expandedConnectionId, setExpandedConnectionId] = useState<string | null>(null);
+  const [activeStructureId, setActiveStructureId] = useState<string | null>(null);
+  const [activeStructureName, setActiveStructureName] = useState<string | null>(null);
 
   // Chat
   const [text, setText] = useState('');
@@ -126,10 +130,13 @@ export function EmpresaPortalPage() {
   });
 
   const { data: submissions = [] } = useQuery<Submission[]>({
-    queryKey: ['my-submissions', activeConnectionId],
+    queryKey: ['my-submissions', activeConnectionId, activeStructureId],
     queryFn: async () => {
-      const params = activeConnectionId ? `?connectionId=${activeConnectionId}` : '';
-      const res = await api.get<{ data: Submission[] }>(`/empresa-portal/my-submissions${params}`);
+      const qs = new URLSearchParams();
+      if (activeConnectionId) qs.set('connectionId', activeConnectionId);
+      if (activeStructureId) qs.set('costStructureId', activeStructureId);
+      const suffix = qs.toString() ? `?${qs.toString()}` : '';
+      const res = await api.get<{ data: Submission[] }>(`/empresa-portal/my-submissions${suffix}`);
       return res.data.data;
     },
     refetchInterval: 15_000,
@@ -197,6 +204,7 @@ export function EmpresaPortalPage() {
         rawContent: text,
         sourceType,
         connectionId: activeConnectionId ?? undefined,
+        costStructureId: activeStructureId ?? undefined,
         fileName,
         fileData,
         fileMimeType,
@@ -205,7 +213,7 @@ export function EmpresaPortalPage() {
       setText('');
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      qc.invalidateQueries({ queryKey: ['my-submissions', activeConnectionId] });
+      qc.invalidateQueries({ queryKey: ['my-submissions', activeConnectionId, activeStructureId] });
     } catch (e) {
       setSendError(apiErrorMessage(e));
     } finally {
@@ -336,22 +344,47 @@ export function EmpresaPortalPage() {
           {companies.length === 0 && (
             <p className="px-2 text-[12px] text-zinc-500">Sin empresas aún</p>
           )}
-          {companies.map((c) => (
-            <button
-              key={c.connectionId}
-              type="button"
-              onClick={() => setActiveConnectionId(c.connectionId)}
-              className={cn(
-                'w-full rounded-md px-3 py-2 text-left text-[13px] transition-colors',
-                activeConnectionId === c.connectionId
-                  ? 'bg-granate font-semibold text-white'
-                  : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
-              )}
-            >
-              <Building2 className="mb-0.5 inline size-3.5 mr-1.5 opacity-70" />
-              {c.connection.company.name}
-            </button>
-          ))}
+          {companies.map((c) => {
+            const isExpanded = expandedConnectionId === c.connectionId;
+            const isActiveCompany = activeConnectionId === c.connectionId;
+            return (
+              <div key={c.connectionId} className="mb-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveConnectionId(c.connectionId);
+                    setExpandedConnectionId(isExpanded ? null : c.connectionId);
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-1.5 rounded-md px-2.5 py-2 text-left text-[13px] transition-colors',
+                    isActiveCompany
+                      ? 'bg-granate font-semibold text-white'
+                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
+                  )}
+                >
+                  {isExpanded ? <ChevronDown className="size-3.5 shrink-0 opacity-70" /> : <ChevronRight className="size-3.5 shrink-0 opacity-70" />}
+                  <Building2 className="size-3.5 shrink-0 opacity-70" />
+                  <span className="truncate">{c.connection.company.name}</span>
+                </button>
+
+                {isExpanded && (
+                  <CompanyStructures
+                    connectionId={c.connectionId}
+                    activeStructureId={activeStructureId}
+                    onSelectStructure={(id, name) => {
+                      setActiveConnectionId(c.connectionId);
+                      setActiveStructureId(id);
+                      setActiveStructureName(name);
+                    }}
+                    onClearStructure={() => {
+                      setActiveStructureId(null);
+                      setActiveStructureName(null);
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Footer */}
@@ -389,20 +422,29 @@ export function EmpresaPortalPage() {
       <main className="flex flex-1 flex-col min-w-0">
         {/* Header */}
         <div className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-5">
-          <div>
+          <div className="min-w-0">
             {activeCompany ? (
               <>
-                <span className="text-[15px] font-semibold text-gray-900">
-                  {activeCompany.connection.company.name}
-                </span>
-                {companies.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCompanyPicker(true)}
-                    className="ml-2 text-[12px] text-gray-400 hover:text-gray-600"
-                  >
-                    <ChevronDown className="inline size-3.5" /> cambiar
-                  </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-[15px] font-semibold text-gray-900">
+                    {activeCompany.connection.company.name}
+                  </span>
+                  {companies.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCompanyPicker(true)}
+                      className="text-[12px] text-gray-400 hover:text-gray-600"
+                    >
+                      <ChevronDown className="inline size-3.5" /> cambiar
+                    </button>
+                  )}
+                </div>
+                {activeStructureName ? (
+                  <p className="flex items-center gap-1 text-[12px] text-granate">
+                    <Package className="size-3" /> Cargando datos para: <span className="font-semibold">{activeStructureName}</span>
+                  </p>
+                ) : (
+                  <p className="text-[12px] text-gray-400">Todos los productos · elegí uno en el menú para separar sus datos</p>
                 )}
               </>
             ) : (
@@ -667,6 +709,76 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
         )}
 
       </div>
+    </div>
+  );
+}
+
+// ── Desplegable de productos/estructuras de una empresa ───────────────────────
+
+interface PortalStructure {
+  id: string;
+  productName: string;
+  period: string;
+  status: string;
+}
+
+function CompanyStructures({
+  connectionId,
+  activeStructureId,
+  onSelectStructure,
+  onClearStructure,
+}: {
+  connectionId: string;
+  activeStructureId: string | null;
+  onSelectStructure: (id: string, name: string) => void;
+  onClearStructure: () => void;
+}) {
+  const { data: structures = [], isLoading } = useQuery<PortalStructure[]>({
+    queryKey: ['portal-structures', connectionId],
+    queryFn: async () => {
+      const res = await api.get<{ data: PortalStructure[] }>(
+        `/empresa-portal/connections/${connectionId}/structures`,
+      );
+      return res.data.data;
+    },
+  });
+
+  return (
+    <div className="ml-3.5 mt-0.5 space-y-0.5 border-l border-zinc-800 py-1 pl-2">
+      {isLoading && <p className="px-2 py-1 text-[11px] text-zinc-500">Cargando productos…</p>}
+      {!isLoading && structures.length === 0 && (
+        <p className="px-2 py-1 text-[11px] text-zinc-500">Sin productos cargados</p>
+      )}
+      {structures.length > 0 && (
+        <button
+          type="button"
+          onClick={onClearStructure}
+          className={cn(
+            'flex w-full items-center rounded px-2 py-1 text-left text-[12px] transition-colors',
+            activeStructureId === null ? 'font-medium text-zinc-200' : 'text-zinc-500 hover:text-zinc-200',
+          )}
+        >
+          Todos los productos
+        </button>
+      )}
+      {structures.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => onSelectStructure(s.id, s.productName)}
+          className={cn(
+            'flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[12px] transition-colors',
+            activeStructureId === s.id
+              ? 'bg-granate/40 font-medium text-white'
+              : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
+          )}
+          title={`${s.productName} · ${s.period}`}
+        >
+          <Package className="size-3 shrink-0 opacity-70" />
+          <span className="truncate">{s.productName}</span>
+          <span className="ml-auto shrink-0 text-[10px] text-zinc-500">{s.period}</span>
+        </button>
+      ))}
     </div>
   );
 }
