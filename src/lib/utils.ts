@@ -30,6 +30,21 @@ export function formatPercent(value: number | null | undefined): string {
   return `${pctFormatter.format(value)}%`;
 }
 
+/**
+ * Conversión de TASAS: internamente se guardan como fracción (0.30), pero en la
+ * UI siempre se muestran/tipean como porcentaje (30). Estos helpers hacen el
+ * puente sin tocar el motor de cálculo (que sigue recibiendo la fracción).
+ */
+export function fractionToPercentInput(frac: number | null | undefined): number | '' {
+  if (frac == null || !Number.isFinite(Number(frac)) || Number(frac) === 0) return '';
+  return Number((Number(frac) * 100).toFixed(6));
+}
+
+export function percentInputToFraction(pct: unknown): number {
+  if (pct === '' || pct == null || Number.isNaN(Number(pct))) return 0;
+  return Number((Number(pct) / 100).toFixed(8));
+}
+
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
   return new Intl.DateTimeFormat('es-AR', {

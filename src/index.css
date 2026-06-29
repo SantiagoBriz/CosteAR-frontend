@@ -63,6 +63,17 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Sin flechitas (spinners) en los inputs numéricos — UI más limpia. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Scrollbar sobria coherente con la estética premium. */
 ::-webkit-scrollbar {
   width: 10px;

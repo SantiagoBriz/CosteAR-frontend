@@ -655,22 +655,14 @@ function EntryRow({
                 <div className="rounded border border-indigo-200 bg-white p-3 space-y-1.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">Por qué se clasificó así</p>
                   {entry.classificationAudits[0].explanation && (
-                    <p className="text-[12px] text-ink-soft leading-relaxed">{entry.classificationAudits[0].explanation}</p>
+                    <p className="text-[12px] text-ink-soft leading-relaxed">
+                      {entry.classificationAudits[0].explanation.replace(/\.?\s*Confianza:\s*\d+(?:[.,]\d+)?\s*%\.?/i, '').trim()}
+                    </p>
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {entry.classificationAudits[0].confidence != null && (
-                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700">
-                        {Math.round(entry.classificationAudits[0].confidence ?? 0)}% confianza
-                      </span>
-                    )}
                     {entry.classificationAudits[0].definitiveSignal && (
                       <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700 font-mono">
                         señal: {entry.classificationAudits[0].definitiveSignal}
-                      </span>
-                    )}
-                    {entry.classificationAudits[0].aiUsed && (
-                      <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 text-[11px] text-purple-700">
-                        IA utilizada
                       </span>
                     )}
                     {entry.classificationAudits[0].requiresReview && (
