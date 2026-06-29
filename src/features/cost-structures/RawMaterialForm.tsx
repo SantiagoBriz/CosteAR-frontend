@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -76,8 +76,17 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
     defaultValues: cleanRawMaterialForForm(defaultValues) as any,
   });
 
+  // Cargar los datos persistidos en el formulario SOLO cuando su contenido cambia
+  // de verdad. Sin esta guarda, cualquier re-fetch de la estructura (p. ej. tras
+  // invalidar la query al guardar otra sección o calcular) reseteaba el form por
+  // cambio de referencia y BORRABA la edición en curso sin guardar (BUG-05).
+  const loadedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (defaultValues) reset(cleanRawMaterialForForm(defaultValues));
+    if (!defaultValues) return;
+    const snapshot = JSON.stringify(defaultValues);
+    if (snapshot === loadedRef.current) return;
+    loadedRef.current = snapshot;
+    reset(cleanRawMaterialForForm(defaultValues));
   }, [defaultValues, reset]);
 
   const { fields: movements, append, remove } = useFieldArray({ control, name: 'movements' });
