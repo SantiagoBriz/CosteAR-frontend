@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send, Paperclip, X, Building2, CheckCircle2,
-  FileText, Image, ChevronDown, Plus, LogOut,
+  FileText, Image, ChevronDown, Plus, LogOut, ArrowLeft,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
@@ -18,7 +18,11 @@ import { formatDate } from '@/lib/utils';
 interface Company {
   id: string;
   connectionId: string;
-  connection: { id: string; company: { id: string; name: string; industry: string | null } };
+  connection: {
+    id: string;
+    company: { id: string; name: string; industry: string | null };
+    costist?: { id: string; name: string } | null;
+  };
 }
 
 interface Submission {
@@ -238,6 +242,15 @@ export function EmpresaPortalPage() {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-[#f6f5f3] px-4">
         <div className="w-full max-w-sm">
+          {/* Volver atrás */}
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="mb-4 flex items-center gap-1 text-[13px] text-gray-500 transition-colors hover:text-gray-800"
+          >
+            <ArrowLeft className="size-4" /> Volver
+          </button>
+
           {/* Logo */}
           <div className="mb-8 flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-md bg-[#6B1D1D] text-sm font-bold text-white">C</div>
@@ -396,7 +409,12 @@ export function EmpresaPortalPage() {
               <span className="text-[14px] text-gray-400">Seleccioná una empresa</span>
             )}
           </div>
-          <p className="text-[12px] text-gray-400">Los mensajes van directo a tu costista</p>
+          <p className="text-[13px] text-gray-500">
+            Los mensajes van directo a{' '}
+            <span className="font-bold text-gray-900">
+              {activeCompany?.connection.costist?.name ?? 'tu costista'}
+            </span>
+          </p>
         </div>
 
         {/* Messages */}
@@ -423,6 +441,16 @@ export function EmpresaPortalPage() {
               </Fragment>
             );
           })}
+
+          {/* Burbuja de envío en curso */}
+          {sending && (
+            <div className="flex justify-end">
+              <div className="flex items-center gap-2 rounded-2xl rounded-tr-sm bg-[#6B1D1D]/80 px-4 py-2.5 text-sm text-white">
+                <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Enviando…
+              </div>
+            </div>
+          )}
 
           <div ref={bottomRef} />
         </div>
