@@ -83,7 +83,7 @@ export function MacroPage() {
         <div className="mb-4">
           <AdvisorPanel
             kind="macro"
-            label="Interpretar impacto en costos con IA"
+            label="Interpretar impacto en costos con análisis"
             context={{
               variables: data.map((m) => ({
                 indicador: INDICATOR_LABELS[m.indicatorCode] ?? m.indicatorCode,

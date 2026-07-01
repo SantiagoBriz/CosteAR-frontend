@@ -12,16 +12,37 @@ import {
   useUpdateAlertSettings,
 } from './alert-hooks';
 import { useForm } from 'react-hook-form';
+import { useEffect } from 'react';
+import { Mail } from 'lucide-react';
+
+interface SettingsForm {
+  marginThresholdPct: number;
+  emailNotifications: boolean;
+}
 
 export function AlertsPage() {
   const { data: alerts } = useAlerts();
   const markRead = useMarkAlertRead();
   const { data: settings } = useAlertSettings();
   const updateSettings = useUpdateAlertSettings();
-  const { register, handleSubmit } = useForm<{ marginThresholdPct: number }>();
+  const { register, handleSubmit, reset } = useForm<SettingsForm>({
+    defaultValues: { marginThresholdPct: 15, emailNotifications: true },
+  });
 
-  const onSaveThreshold = handleSubmit(async ({ marginThresholdPct }) => {
-    await updateSettings.mutateAsync({ marginThresholdPct: Number(marginThresholdPct) });
+  useEffect(() => {
+    if (settings != null) {
+      reset({
+        marginThresholdPct: Number(settings.marginThresholdPct),
+        emailNotifications: settings.emailNotifications ?? true,
+      });
+    }
+  }, [settings, reset]);
+
+  const onSave = handleSubmit(async ({ marginThresholdPct, emailNotifications }) => {
+    await updateSettings.mutateAsync({
+      marginThresholdPct: Number(marginThresholdPct),
+      emailNotifications,
+    });
   });
 
   return (
@@ -32,7 +53,7 @@ export function AlertsPage() {
         <div className="mb-5">
           <AdvisorPanel
             kind="alerts"
-            label="Priorizar alertas con IA"
+            label="Priorizar alertas"
             context={{
               alertas: alerts.slice(0, 40).map((a) => ({
                 mensaje: a.message,
@@ -77,25 +98,54 @@ export function AlertsPage() {
           </CardBody>
         </Card>
 
-        <Card className="h-fit">
-          <CardHeader title="Configuración" />
-          <CardBody>
-            <form onSubmit={onSaveThreshold} className="space-y-4">
-              <Input
-                label="Umbral de margen (%)"
-                type="number"
-                step="0.1"
-                numeric
-                defaultValue={settings ? Number(settings.marginThresholdPct) : 15}
-                hint="Te avisamos si el margen cae por debajo de este valor"
-                {...register('marginThresholdPct', { required: true })}
-              />
-              <Button type="submit" size="sm" className="w-full" loading={updateSettings.isPending}>
-                Guardar
-              </Button>
-            </form>
-          </CardBody>
-        </Card>
+        <div className="space-y-4">
+          <Card className="h-fit">
+            <CardHeader title="Configuración" />
+            <CardBody>
+              <form onSubmit={onSave} className="space-y-4">
+                <Input
+                  label="Umbral de margen (%)"
+                  type="number"
+                  step="0.1"
+                  numeric
+                  hint="Te avisamos si el margen cae por debajo de este valor"
+                  {...register('marginThresholdPct', { required: true, valueAsNumber: true })}
+                />
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-line text-granate accent-granate"
+                    {...register('emailNotifications')}
+                  />
+                  <span className="text-sm text-ink">Recibir alertas por email</span>
+                </label>
+                <Button type="submit" size="sm" className="w-full" loading={updateSettings.isPending}>
+                  Guardar
+                </Button>
+              </form>
+            </CardBody>
+          </Card>
+
+          <Card className="h-fit border-action/20 bg-action/5">
+            <CardBody className="space-y-2">
+              <div className="flex items-center gap-2 text-[12px] font-semibold text-action">
+                <Mail className="size-3.5" /> Configuración de email (servidor)
+              </div>
+              <p className="text-[12px] text-ink-soft leading-relaxed">
+                Para usar Gmail SMTP, configurá estas variables de entorno en el servidor:
+              </p>
+              <pre className="rounded bg-surface-alt px-3 py-2 text-[11px] font-mono text-ink leading-relaxed overflow-x-auto">{`SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=tu@gmail.com
+SMTP_PASS=<contraseña-de-app>
+EMAIL_FROM=tu@gmail.com`}</pre>
+              <p className="text-[11px] text-ink-soft">
+                Usá una <strong>Contraseña de aplicación</strong> de Google (no tu contraseña normal). Activala en tu cuenta Google → Seguridad → Verificación en 2 pasos → Contraseñas de aplicación.
+              </p>
+            </CardBody>
+          </Card>
+        </div>
       </div>
     </AppShell>
   );

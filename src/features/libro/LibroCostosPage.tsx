@@ -18,7 +18,7 @@ const SECTION_LABELS_FULL: Record<string, string> = {
 
 /** Exporta las líneas a CSV (Excel) — los costistas viven en Excel. */
 function exportCsv(entries: LedgerEntry[], companyName: string) {
-  const headers = ['Periodo', 'Fecha', 'Seccion', 'Tipo', 'Proveedor', 'Descripcion', 'Monto', 'Moneda', 'Confianza', 'IA', 'Corregido'];
+  const headers = ['Periodo', 'Fecha', 'Seccion', 'Tipo', 'Proveedor', 'Descripcion', 'Monto', 'Moneda', 'Confianza', 'Auto', 'Corregido'];
   const rows = entries.map((e) => [
     e.period,
     e.docDate ? new Date(e.docDate).toLocaleDateString('es-AR') : '',
@@ -234,7 +234,7 @@ function LedgerRow({ entry, onZoom, onEdit, onDelete }: {
             <span className="flex items-center gap-0.5 rounded bg-blue-50 px-1 text-blue-700"><PenLine className="size-3" /> corregido</span>
           )}
           {entry.aiUsed && (
-            <span className="flex items-center gap-0.5 rounded bg-purple-50 px-1 text-purple-700"><Bot className="size-3" /> IA</span>
+            <span className="flex items-center gap-0.5 rounded bg-purple-50 px-1 text-purple-700"><Bot className="size-3" /> Auto</span>
           )}
           {entry.confidence != null && entry.confidence < 72 && (
             <span className="rounded bg-amber-50 px-1 text-amber-700">conf. {entry.confidence}%</span>

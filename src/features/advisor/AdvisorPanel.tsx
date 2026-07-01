@@ -13,7 +13,7 @@ interface AdvisorResult {
  * Consejero de IA reusable. Toma datos reales ya calculados y pide a la IA una
  * lectura + recomendaciones. Siempre etiquetado como sugerencia — no aplica nada.
  */
-export function AdvisorPanel({ kind, context, label = 'Analizar con IA' }: {
+export function AdvisorPanel({ kind, context, label = 'Analizar' }: {
   kind: AdvisorKind;
   context: Record<string, unknown>;
   label?: string;
@@ -51,7 +51,7 @@ export function AdvisorPanel({ kind, context, label = 'Analizar con IA' }: {
     <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
       <div className="mb-2 flex items-center gap-1.5">
         <Sparkles className="size-3.5 text-indigo-500" />
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">Sugerencia de IA</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">Sugerencia</span>
       </div>
 
       {loading && (

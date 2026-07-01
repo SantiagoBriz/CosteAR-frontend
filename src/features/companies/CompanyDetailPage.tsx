@@ -86,7 +86,7 @@ export function CompanyDetailPage() {
 
       {showForm && <NewStructureForm companyId={id} onDone={() => setShowForm(false)} />}
 
-      {/* Asistente de Configuración Inicial (IA) */}
+      {/* Asistente de Configuración Inicial */}
       <AiSuggesterSection companyName={company?.name ?? ''} />
 
       {/* Tabs */}
@@ -282,7 +282,7 @@ function AiSuggesterSection({ companyName }: { companyName: string }) {
   return (
     <Card className="mb-6 border-zinc-200 shadow-xs bg-zinc-50/20">
       <CardHeader
-        title="Asistente de Configuración Inicial (IA)"
+        title="Asistente de Configuración Inicial"
         description="Describí el proceso de la empresa o dictalo por voz para recibir recomendaciones de modelado de costos en base a la cátedra de la UNT."
       />
       <CardBody className="space-y-4">
@@ -324,7 +324,7 @@ function AiSuggesterSection({ companyName }: { companyName: string }) {
           <div className="rounded-xl border border-zinc-150 bg-white p-4 animate-rise text-zinc-700 text-sm leading-relaxed whitespace-pre-wrap shadow-xs">
             <div className="flex items-center gap-2 font-bold text-zinc-800 mb-2">
               <Sparkles className="size-4 text-granate" />
-              Sugerencia de Configuración IA
+              Sugerencia de Configuración
             </div>
             {suggs}
           </div>
@@ -524,7 +524,7 @@ function LedgerRow({
             <span className="flex items-center gap-0.5 rounded bg-blue-50 px-1.5 py-0.5 text-blue-700"><PenLine className="size-3" /> corregido</span>
           )}
           {entry.aiUsed && (
-            <span className="flex items-center gap-0.5 rounded bg-purple-50 px-1.5 py-0.5 text-purple-700">IA</span>
+            <span className="flex items-center gap-0.5 rounded bg-purple-50 px-1.5 py-0.5 text-purple-700">Auto</span>
           )}
         </div>
       </div>

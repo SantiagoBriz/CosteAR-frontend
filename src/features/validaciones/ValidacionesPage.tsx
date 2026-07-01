@@ -172,7 +172,7 @@ export function ValidacionesPage() {
             hint={`${accuracy.rules.total} casos`}
           />
           <AccuracyCard
-            label="Con IA"
+            label="Auto-clasificados"
             value={accuracy.ai.accuracy != null ? `${accuracy.ai.accuracy}%` : '—'}
             hint={`${accuracy.ai.total} casos`}
           />
@@ -704,7 +704,7 @@ function EntryRow({
                     )}
                     {entry.classificationAudits[0].aiUsed && (
                       <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 text-[11px] text-purple-700">
-                        IA utilizada
+                        Auto-procesado
                       </span>
                     )}
                     {entry.classificationAudits[0].requiresReview && (
