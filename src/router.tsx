@@ -24,6 +24,8 @@ import { PropagacionPage } from '@/features/propagacion/PropagacionPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { AutomatizacionPage } from '@/features/automatizacion/AutomatizacionPage';
 import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage';
+import { LandingPage } from '@/features/landing/LandingPage';
+
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -51,11 +53,14 @@ const indexRoute = createRoute({
   path: '/',
   beforeLoad: () => {
     const { accessToken, user } = useAuthStore.getState();
-    if (!accessToken) throw redirect({ to: '/login' });
-    if (user?.role === 'EMPRESA_OPERATOR') throw redirect({ to: '/portal' });
-    throw redirect({ to: '/dashboard' });
+    if (accessToken) {
+      if (user?.role === 'EMPRESA_OPERATOR') throw redirect({ to: '/portal' });
+      throw redirect({ to: '/dashboard' });
+    }
   },
+  component: LandingPage,
 });
+
 
 const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: '/login', component: LoginPage });
 const registerRoute = createRoute({ getParentRoute: () => rootRoute, path: '/register', component: RegisterPage });
