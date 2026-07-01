@@ -80,6 +80,9 @@ function cleanDirectLaborForSubmit(data: any): DirectLaborConfig {
     if (val === '' || val === null || val === undefined || isNaN(Number(val))) return def;
     return Number(val);
   };
+  const normPercent = (val: number) => {
+    return val > 1 ? val / 100 : val;
+  };
   return {
     workingDays: {
       totalDaysPerYear: fallbackNum(data.workingDays?.totalDaysPerYear, 365),
@@ -98,15 +101,15 @@ function cleanDirectLaborForSubmit(data: any): DirectLaborConfig {
       },
     },
     itcs: {
-      derivationBase: fallbackNum(data.itcs?.derivationBase, 0.27),
-      fixedArt: fallbackNum(data.itcs?.fixedArt, 0.015),
+      derivationBase: normPercent(fallbackNum(data.itcs?.derivationBase, 0.27)),
+      fixedArt: normPercent(fallbackNum(data.itcs?.fixedArt, 0.015)),
       uncertainRemunerative: (data.itcs?.uncertainRemunerative ?? []).map((r: any) => ({
         ...r,
-        coefficient: fallbackNum(r.coefficient),
+        coefficient: normPercent(fallbackNum(r.coefficient)),
       })),
       uncertainNonRemunerative: (data.itcs?.uncertainNonRemunerative ?? []).map((r: any) => ({
         ...r,
-        coefficient: fallbackNum(r.coefficient),
+        coefficient: normPercent(fallbackNum(r.coefficient)),
       })),
     },
     departments: (data.departments ?? []).map((d: any) => ({

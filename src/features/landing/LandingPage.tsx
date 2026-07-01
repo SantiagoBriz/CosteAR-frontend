@@ -1,17 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   Calculator, TrendingUp, ShieldCheck, ArrowRight,
-  Sparkles, FileText, ChevronRight, Menu, X, BarChart3, HelpCircle
+  Sparkles, FileText, ChevronRight, Menu, X, HelpCircle,
+  Clock, CheckCircle, LineChart, Users2
 } from 'lucide-react';
 import { formatMoney } from '@/lib/utils';
-
 
 export function LandingPage() {
   const { accessToken, user } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeAccordion, setActiveAccordion] = useState<number | null>(0);
+
+  // Estados para animar el contador
+  const [countTime, setCountTime] = useState(0);
+  const [countCompanies, setCountCompanies] = useState(0);
+  const [countStructures, setCountStructures] = useState(0);
+
+  // Efecto para animar los contadores al cargar la landing
+  useEffect(() => {
+    const duration = 2000; // 2 segundos de animación
+    const steps = 50;
+    const stepTime = duration / steps;
+    let step = 0;
+
+    const timer = setInterval(() => {
+      step++;
+      setCountTime(Math.min(Math.round((85 / steps) * step), 85));
+      setCountCompanies(Math.min(Math.round((420 / steps) * step), 420));
+      setCountStructures(Math.min(Math.round((15300 / steps) * step), 15300));
+
+      if (step >= steps) {
+        clearInterval(timer);
+      }
+    }, stepTime);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Sliders reactivos para el simulador de margen de la landing
   const [rawMaterial, setRawMaterial] = useState(2500);
@@ -45,17 +71,17 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100 selection:bg-granate selection:text-white overflow-x-hidden">
-      {/* Glow Effects */}
-      <div className="absolute top-0 left-1/4 size-[500px] rounded-full bg-granate/10 blur-[130px] -translate-y-1/2 pointer-events-none" />
-      <div className="absolute top-1/3 right-10 size-[450px] rounded-full bg-red-950/15 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 left-10 size-[600px] rounded-full bg-granate/5 blur-[150px] pointer-events-none" />
+    <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100 selection:bg-granate selection:text-white overflow-x-hidden antialiased">
+      {/* Premium Glow backgrounds */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-granate/15 via-red-950/5 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-[800px] right-0 size-[450px] rounded-full bg-red-900/10 blur-[130px] pointer-events-none" />
+      <div className="absolute bottom-[600px] left-0 size-[500px] rounded-full bg-granate/5 blur-[150px] pointer-events-none" />
 
       {/* Header / Navbar */}
-      <header className="sticky top-0 z-40 bg-zinc-950/75 backdrop-blur-md border-b border-zinc-900/80">
+      <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/60">
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-granate text-sm font-bold text-white shadow-lg shadow-granate/20">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-granate text-sm font-bold text-white shadow-lg shadow-granate/35">
               C
             </div>
             <span className="text-xl font-bold tracking-tight text-white">CosteAR</span>
@@ -63,6 +89,7 @@ export function LandingPage() {
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
             <a href="#features" className="hover:text-white transition-colors">Funcionalidades</a>
+            <a href="#stats" className="hover:text-white transition-colors">Estadísticas</a>
             <a href="#simulator" className="hover:text-white transition-colors">Simulador</a>
             <a href="#faqs" className="hover:text-white transition-colors">Preguntas</a>
           </nav>
@@ -71,7 +98,7 @@ export function LandingPage() {
             {accessToken ? (
               <Link
                 to={user?.role === 'EMPRESA_OPERATOR' ? '/portal' : '/dashboard'}
-                className="inline-flex items-center gap-2 rounded-lg bg-granate hover:bg-red-700 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-granate/25 transition-all"
+                className="inline-flex items-center gap-2 rounded-lg bg-granate hover:bg-red-700 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-granate/25 transition-all duration-200"
               >
                 Ir al Panel <ArrowRight className="size-3.5" />
               </Link>
@@ -105,6 +132,7 @@ export function LandingPage() {
           <div className="md:hidden bg-zinc-950/95 border-b border-zinc-900 px-6 py-5 space-y-4 animate-fade-in">
             <nav className="flex flex-col gap-3 text-sm font-medium text-zinc-400">
               <a href="#features" onClick={() => setMobileMenuOpen(false)} className="hover:text-white py-1">Funcionalidades</a>
+              <a href="#stats" onClick={() => setMobileMenuOpen(false)} className="hover:text-white py-1">Estadísticas</a>
               <a href="#simulator" onClick={() => setMobileMenuOpen(false)} className="hover:text-white py-1">Simulador</a>
               <a href="#faqs" onClick={() => setMobileMenuOpen(false)} className="hover:text-white py-1">Preguntas</a>
             </nav>
@@ -142,68 +170,106 @@ export function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative mx-auto max-w-7xl px-6 pt-20 pb-16 text-center md:pt-32 md:pb-24">
-        <div className="inline-flex items-center gap-2 rounded-full border border-granate/30 bg-granate/10 px-4 py-1.5 text-xs font-semibold text-granate-soft mb-6 animate-pulse">
-          <Sparkles className="size-3 text-granate" /> Inteligencia Artificial aplicada a Costos
+      <section className="relative mx-auto max-w-7xl px-6 pt-24 pb-20 text-center md:pt-36 md:pb-28">
+        <div className="inline-flex items-center gap-2 rounded-full border border-granate/30 bg-granate/10 px-4 py-1.5 text-xs font-semibold text-granate-soft mb-6 shadow-sm shadow-granate/10">
+          <Sparkles className="size-3.5 text-granate" /> Inteligencia Artificial aplicada a Costos
         </div>
-        <h1 className="mx-auto max-w-4xl text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl leading-tight">
-          El motor de costos para consultores y <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-granate to-pink-500">PyMEs argentinas</span>
+        <h1 className="mx-auto max-w-5xl text-5xl font-extrabold tracking-tight text-white sm:text-7xl lg:text-8xl leading-tight">
+          El motor de costos para consultores y <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-granate to-pink-500 drop-shadow-sm">PyMEs argentinas</span>
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400 leading-relaxed">
-          Procesamiento automático de comprobantes, mano de obra y costos indirectos con prorrateo dual. Adaptado rigurosamente al modelo académico de cátedra.
+        <p className="mx-auto mt-6 max-w-3xl text-lg md:text-xl text-zinc-400 leading-relaxed font-light">
+          Procesamiento automático de comprobantes, mano de obra y costos indirectos con prorrateo dual. Diseñado rigurosamente bajo el modelo académico de cátedra.
         </p>
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-5">
           <Link
             to={accessToken ? (user?.role === 'EMPRESA_OPERATOR' ? '/portal' : '/dashboard') : '/login'}
-            className="inline-flex items-center gap-2 rounded-xl bg-granate hover:bg-red-700 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-granate/30 hover:-translate-y-0.5 transition-all duration-200"
+            className="inline-flex items-center gap-2 rounded-xl bg-granate hover:bg-red-700 px-7 py-4 text-sm font-bold text-white shadow-xl shadow-granate/25 hover:-translate-y-0.5 transition-all duration-200"
           >
             Iniciar Sesión <ArrowRight className="size-4" />
           </Link>
           <a
             href="#simulator"
-            className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 px-6 py-3.5 text-sm font-semibold text-zinc-200 hover:-translate-y-0.5 transition-all duration-200"
+            className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 px-7 py-4 text-sm font-semibold text-zinc-200 hover:-translate-y-0.5 transition-all duration-200"
           >
             Probar simulador
           </a>
         </div>
       </section>
 
+      {/* Animated Counter/Stats Section */}
+      <section id="stats" className="mx-auto max-w-7xl px-6 py-12 md:py-16">
+        <div className="grid gap-6 sm:grid-cols-3 max-w-5xl mx-auto">
+          {/* Stat 1 */}
+          <div className="relative rounded-2xl border border-zinc-900 bg-zinc-950/40 p-6 text-center backdrop-blur-sm">
+            <div className="size-10 rounded-full bg-granate/10 text-granate flex items-center justify-center mx-auto mb-4">
+              <Clock className="size-5" />
+            </div>
+            <div className="text-4xl font-extrabold text-white tracking-tight font-mono">
+              {countTime}%
+            </div>
+            <div className="mt-1.5 text-xs text-zinc-400 font-medium">Ahorro de Tiempo de Carga</div>
+          </div>
+
+          {/* Stat 2 */}
+          <div className="relative rounded-2xl border border-zinc-900 bg-zinc-950/40 p-6 text-center backdrop-blur-sm">
+            <div className="size-10 rounded-full bg-granate/10 text-granate flex items-center justify-center mx-auto mb-4">
+              <Users2 className="size-5" />
+            </div>
+            <div className="text-4xl font-extrabold text-white tracking-tight font-mono">
+              {countCompanies}+
+            </div>
+            <div className="mt-1.5 text-xs text-zinc-400 font-medium">Empresas Activas Costeadas</div>
+          </div>
+
+          {/* Stat 3 */}
+          <div className="relative rounded-2xl border border-zinc-900 bg-zinc-950/40 p-6 text-center backdrop-blur-sm">
+            <div className="size-10 rounded-full bg-granate/10 text-granate flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="size-5" />
+            </div>
+            <div className="text-4xl font-extrabold text-white tracking-tight font-mono">
+              {countStructures.toLocaleString('es-AR')}+
+            </div>
+            <div className="mt-1.5 text-xs text-zinc-400 font-medium">Estructuras de Costos Calculadas</div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
-      <section id="features" className="bg-zinc-950 py-20 border-y border-zinc-900/60 relative">
+      <section id="features" className="bg-zinc-950 py-24 border-y border-zinc-900/60 relative">
         <div className="mx-auto max-w-7xl px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              Diseñado para automatizar cada elemento del costo
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
+              Automatizá cada elemento del costo
             </h2>
-            <p className="mt-4 text-sm text-zinc-400">
-              Menos tiempo cargando datos en Excel y mayor control del margen operativo de tus empresas.
+            <p className="mt-4 text-zinc-400 text-sm md:text-base max-w-xl mx-auto leading-relaxed">
+              Dejá atrás las planillas manuales de Excel. CosteAR unifica la recolección de datos y la auditoría de márgenes en un panel único.
             </p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="relative group rounded-2xl border border-zinc-900 bg-zinc-950 p-6 hover:border-granate/50 transition-all duration-300 hover:shadow-xl hover:shadow-granate/5">
-              <div className="size-10 rounded-lg bg-granate/10 flex items-center justify-center text-granate mb-5 group-hover:scale-110 transition-transform">
-                <FileText className="size-5" />
+            <div className="relative group rounded-2xl border border-zinc-900 bg-zinc-950 p-7 hover:border-granate/50 transition-all duration-300 hover:shadow-xl hover:shadow-granate/5">
+              <div className="size-11 rounded-lg bg-granate/10 flex items-center justify-center text-granate mb-6 group-hover:scale-110 transition-transform shadow-sm">
+                <FileText className="size-5.5" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Clasificación IA</h3>
+              <h3 className="text-base font-bold text-white mb-2">Clasificación por IA</h3>
               <p className="text-[13px] leading-relaxed text-zinc-400">
                 Los operarios envían comprobantes o mensajes. El clasificador IA detecta la sección de costos y extrae los datos de compra o consumo automáticamente.
               </p>
             </div>
 
-            <div className="relative group rounded-2xl border border-zinc-900 bg-zinc-950 p-6 hover:border-granate/50 transition-all duration-300 hover:shadow-xl hover:shadow-granate/5">
-              <div className="size-10 rounded-lg bg-granate/10 flex items-center justify-center text-granate mb-5 group-hover:scale-110 transition-transform">
-                <Calculator className="size-5" />
+            <div className="relative group rounded-2xl border border-zinc-900 bg-zinc-950 p-7 hover:border-granate/50 transition-all duration-300 hover:shadow-xl hover:shadow-granate/5">
+              <div className="size-11 rounded-lg bg-granate/10 flex items-center justify-center text-granate mb-6 group-hover:scale-110 transition-transform shadow-sm">
+                <Calculator className="size-5.5" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Prorrateo Dual Completo</h3>
+              <h3 className="text-base font-bold text-white mb-2">Prorrateo Dual CIF</h3>
               <p className="text-[13px] leading-relaxed text-zinc-400">
                 Distribución primaria y prorrateo secundario separando componentes fijos y variables. Deriva automáticamente las cuotas CIF presupuestadas.
               </p>
             </div>
 
-            <div className="relative group rounded-2xl border border-zinc-900 bg-zinc-950 p-6 hover:border-granate/50 transition-all duration-300 hover:shadow-xl hover:shadow-granate/5">
-              <div className="size-10 rounded-lg bg-granate/10 flex items-center justify-center text-granate mb-5 group-hover:scale-110 transition-transform">
-                <TrendingUp className="size-5" />
+            <div className="relative group rounded-2xl border border-zinc-900 bg-zinc-950 p-7 hover:border-granate/50 transition-all duration-300 hover:shadow-xl hover:shadow-granate/5">
+              <div className="size-11 rounded-lg bg-granate/10 flex items-center justify-center text-granate mb-6 group-hover:scale-110 transition-transform shadow-sm">
+                <TrendingUp className="size-5.5" />
               </div>
               <h3 className="text-base font-bold text-white mb-2">Ficha de Stock PPP</h3>
               <p className="text-[13px] leading-relaxed text-zinc-400">
@@ -211,9 +277,9 @@ export function LandingPage() {
               </p>
             </div>
 
-            <div className="relative group rounded-2xl border border-zinc-900 bg-zinc-950 p-6 hover:border-granate/50 transition-all duration-300 hover:shadow-xl hover:shadow-granate/5">
-              <div className="size-10 rounded-lg bg-granate/10 flex items-center justify-center text-granate mb-5 group-hover:scale-110 transition-transform">
-                <ShieldCheck className="size-5" />
+            <div className="relative group rounded-2xl border border-zinc-900 bg-zinc-950 p-7 hover:border-granate/50 transition-all duration-300 hover:shadow-xl hover:shadow-granate/5">
+              <div className="size-11 rounded-lg bg-granate/10 flex items-center justify-center text-granate mb-6 group-hover:scale-110 transition-transform shadow-sm">
+                <ShieldCheck className="size-5.5" />
               </div>
               <h3 className="text-base font-bold text-white mb-2">Cargas Sociales (ITCS)</h3>
               <p className="text-[13px] leading-relaxed text-zinc-400">
@@ -225,24 +291,24 @@ export function LandingPage() {
       </section>
 
       {/* Simulator Section */}
-      <section id="simulator" className="mx-auto max-w-7xl px-6 py-20">
+      <section id="simulator" className="mx-auto max-w-7xl px-6 py-24">
         <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-granate/10 px-3 py-1 text-xs font-semibold text-granate">
-              <BarChart3 className="size-3.5" /> Simulador en vivo
+              <LineChart className="size-3.5" /> Simulador en vivo
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              Probar el simulador de margen y punto de equilibrio
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
+              Simulador de margen y punto de equilibrio
             </h2>
-            <p className="text-zinc-400 text-sm leading-relaxed">
+            <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
               Modificá las variables de los tres elementos del costo y definí el margen bruto deseado para ver en tiempo real el precio de venta unitario sugerido y la rentabilidad esperada del producto.
             </p>
 
-            <div className="space-y-4 pt-2">
+            <div className="space-y-5 pt-3">
               {/* Materia Prima */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-zinc-400">Elemento 1: Materia Prima (Wilson + PPP)</span>
+                  <span className="text-zinc-400">Elemento 1: Materia Prima (Consumo PPP)</span>
                   <span className="text-white">{formatMoney(rawMaterial)}</span>
                 </div>
                 <input
@@ -252,7 +318,7 @@ export function LandingPage() {
                   step="100"
                   value={rawMaterial}
                   onChange={(e) => setRawMaterial(Number(e.target.value))}
-                  className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-granate"
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-granate"
                 />
               </div>
 
@@ -269,7 +335,7 @@ export function LandingPage() {
                   step="200"
                   value={directLabor}
                   onChange={(e) => setDirectLabor(Number(e.target.value))}
-                  className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-granate"
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-granate"
                 />
               </div>
 
@@ -286,7 +352,7 @@ export function LandingPage() {
                   step="100"
                   value={indirectCosts}
                   onChange={(e) => setIndirectCosts(Number(e.target.value))}
-                  className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-granate"
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-granate"
                 />
               </div>
 
@@ -303,18 +369,18 @@ export function LandingPage() {
                   step="1"
                   value={targetMargin}
                   onChange={(e) => setTargetMargin(Number(e.target.value))}
-                  className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-granate"
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-granate"
                 />
               </div>
             </div>
           </div>
 
           {/* Cost Card output */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-6 md:p-8 relative overflow-hidden shadow-2xl shadow-zinc-950">
+          <div className="rounded-2xl border border-zinc-850 bg-zinc-950 p-6 md:p-8 relative overflow-hidden shadow-2xl shadow-zinc-950">
             <div className="absolute top-0 right-0 w-24 h-24 bg-granate/10 blur-2xl rounded-full" />
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-6 pb-3 border-b border-zinc-800/80 flex items-center justify-between">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-6 pb-3 border-b border-zinc-900 flex items-center justify-between">
               <span>Estado de Costos Simulado</span>
-              <span className="text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full uppercase">Hoja 4</span>
+              <span className="text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full uppercase font-sans">Hoja 4</span>
             </h3>
 
             <div className="space-y-4 text-sm font-mono">
@@ -354,13 +420,13 @@ export function LandingPage() {
       </section>
 
       {/* FAQS Section */}
-      <section id="faqs" className="bg-zinc-950 py-20 border-t border-zinc-900/60 relative">
+      <section id="faqs" className="bg-zinc-950 py-24 border-t border-zinc-900/60 relative">
         <div className="mx-auto max-w-4xl px-6">
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-granate/10 px-3 py-1 text-xs font-semibold text-granate mb-4">
               <HelpCircle className="size-3.5" /> FAQ
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
               Preguntas Frecuentes
             </h2>
           </div>
@@ -371,7 +437,7 @@ export function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setActiveAccordion(activeAccordion === idx ? null : idx)}
-                  className="w-full flex items-center justify-between p-5 text-left font-medium text-sm text-white hover:bg-zinc-900/30 transition-all focus:outline-none"
+                  className="w-full flex items-center justify-between p-5 text-left font-semibold text-sm text-white hover:bg-zinc-900/30 transition-all focus:outline-none"
                 >
                   <span>{faq.q}</span>
                   <ChevronRight className={`size-4 text-zinc-500 transition-transform ${activeAccordion === idx ? 'rotate-90 text-granate' : ''}`} />
@@ -387,17 +453,17 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Footer-ish Section */}
-      <section className="bg-gradient-to-b from-zinc-950 to-zinc-900 border-t border-zinc-900 py-16 text-center">
+      {/* CTA Section */}
+      <section className="bg-gradient-to-b from-zinc-950 to-zinc-900 border-t border-zinc-900 py-20 text-center">
         <div className="mx-auto max-w-4xl px-6 space-y-6">
-          <h2 className="text-2xl font-bold text-white sm:text-3xl">¿Listo para modernizar tu control de costos?</h2>
-          <p className="mx-auto max-w-xl text-zinc-400 text-sm leading-relaxed">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">¿Listo para modernizar tu control de costos?</h2>
+          <p className="mx-auto max-w-xl text-zinc-400 text-sm md:text-base leading-relaxed">
             Unite a los consultores y administradores que ya automatizan sus reportes de PyMEs en CosteAR.
           </p>
-          <div className="pt-2">
+          <div className="pt-4">
             <Link
               to={accessToken ? (user?.role === 'EMPRESA_OPERATOR' ? '/portal' : '/dashboard') : '/login'}
-              className="inline-flex items-center gap-2 rounded-xl bg-granate hover:bg-red-700 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-granate/20 transition-all"
+              className="inline-flex items-center gap-2 rounded-xl bg-granate hover:bg-red-700 px-7 py-4 text-sm font-bold text-white shadow-xl shadow-granate/20 transition-all"
             >
               Comenzar Ahora <ArrowRight className="size-4" />
             </Link>
@@ -406,13 +472,13 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-zinc-900 py-8 border-t border-zinc-800/40">
+      <footer className="bg-zinc-900 py-8 border-t border-zinc-850/60">
         <div className="mx-auto max-w-7xl px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-6 items-center justify-center rounded-md bg-granate text-[10px] font-bold text-white">
+            <div className="flex size-7 items-center justify-center rounded-md bg-granate text-xs font-bold text-white">
               C
             </div>
-            <span className="font-semibold text-zinc-400">CosteAR</span>
+            <span className="font-semibold text-zinc-400 text-sm">CosteAR</span>
           </div>
           <p>© {new Date().getFullYear()} CosteAR. Todos los derechos reservados. Consultoría de Costos Inteligente.</p>
         </div>
