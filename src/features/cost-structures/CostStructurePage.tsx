@@ -3,7 +3,7 @@ import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Calculator, Package, Users, Factory,
-  TrendingUp, BarChart2, CheckCircle2, Zap, History,
+  TrendingUp, BarChart2, CheckCircle2, History,
   Download, Loader2,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
@@ -19,7 +19,6 @@ import {
   useUpdateSales,
   useCalculate,
   useLatestCalculation,
-  useSimulate,
   useCalculationHistory,
 } from './cost-structure-hooks';
 import { useLedger } from '@/features/libro/libro-hooks';
@@ -35,8 +34,7 @@ import type { CalculationResult, CostCalculation } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result';
-type ResultView  = 'result' | 'simulator' | 'history';
+type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -142,6 +140,7 @@ export function CostStructurePage() {
             { id: 'indirect-costs'  as SectionTab, label: 'Costos Indirectos',     icon: Factory,    configKey: 'cip'   as const },
             { id: 'sales'           as SectionTab, label: 'Venta',                 icon: TrendingUp, configKey: 'sales' as const },
             { id: 'result'          as SectionTab, label: 'Resultado',             icon: BarChart2,  configKey: undefined },
+            { id: 'history'         as SectionTab, label: 'Historial',             icon: History,    configKey: undefined },
           ] as { id: SectionTab; label: string; icon: typeof Package; configKey: keyof typeof configured | undefined }[]
         ).map(({ id: tabId, label, icon: Icon, configKey }) => {
           const isDone = configKey ? configured[configKey] : !!shown;
@@ -228,7 +227,13 @@ export function CostStructurePage() {
       )}
 
       {activeTab === 'result' && (
-        <ResultTab result={shown} structureId={id} companyId={structure?.companyId} period={structure?.period} />
+        shown
+          ? <ResultPanel result={shown} companyId={structure?.companyId} period={structure?.period} />
+          : <EmptyResult />
+      )}
+
+      {activeTab === 'history' && (
+        <HistoryPanel structureId={id} />
       )}
     </AppShell>
   );
@@ -404,34 +409,6 @@ function FullScreenCalculatorLoader({ active }: { active: boolean }) {
   );
 }
 
-// ── Result Tab ────────────────────────────────────────────────────────────────
-
-function ResultTab({ result, structureId, companyId, period }: { result: CalculationResult | null; structureId: string; companyId?: string; period?: string }) {
-  const [view, setView] = useState<ResultView>('result');
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-1 border-b border-line">
-        {([
-          { id: 'result'    as ResultView, label: 'Resultado', icon: BarChart2 },
-          { id: 'simulator' as ResultView, label: 'Simulador', icon: Zap },
-          { id: 'history'   as ResultView, label: 'Historial', icon: History },
-        ] as { id: ResultView; label: string; icon: typeof BarChart2 }[]).map(({ id, label, icon: Icon }) => (
-          <button key={id} type="button" onClick={() => setView(id)}
-            className={cn(
-              'flex items-center gap-1.5 border-b-2 px-4 pb-2.5 text-[13px] font-medium transition-colors',
-              view === id ? 'border-granate text-granate' : 'border-transparent text-ink-soft hover:text-ink',
-            )}>
-            <Icon className="size-4" /> {label}
-          </button>
-        ))}
-      </div>
-      {view === 'result'    && (result ? <ResultPanel result={result} companyId={companyId} period={period} /> : <EmptyResult />)}
-      {view === 'simulator' && <SimulatorPanel structureId={structureId} baseResult={result} />}
-      {view === 'history'   && <HistoryPanel structureId={structureId} />}
-    </div>
-  );
-}
-
 // ── Result Panel ──────────────────────────────────────────────────────────────
 
 function ResultPanel({ result, companyId, period }: { result: CalculationResult; companyId?: string; period?: string }) {
@@ -446,7 +423,7 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
       <div className="space-y-4">
         <AdvisorPanel
           kind="cost_result"
-          label="Analizar el resultado con IA"
+          label="Analizar el resultado"
           context={{
             materiaPrima: result.rawMaterialConsumed,
             manoDeObra: result.directLaborTotal,
@@ -607,93 +584,6 @@ function EmptyResult() {
   );
 }
 
-// ── Simulator ─────────────────────────────────────────────────────────────────
-
-function SimulatorPanel({ structureId, baseResult }: { structureId: string; baseResult: CalculationResult | null }) {
-  const simulate = useSimulate(structureId);
-  const [simResult, setSimResult] = useState<CalculationResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit } = useForm<{ salesUnitPrice: string; salesQuantity: string; macroFactor: string }>({
-    defaultValues: { macroFactor: '1' },
-  });
-
-  const onSubmit = handleSubmit(async (v) => {
-    setError(null);
-    try {
-      const overrides: Record<string, number> = {};
-      if (v.salesUnitPrice) overrides.salesUnitPrice = Number(v.salesUnitPrice);
-      if (v.salesQuantity)  overrides.salesQuantity  = Number(v.salesQuantity);
-      if (v.macroFactor && Number(v.macroFactor) !== 1) overrides.macroFactor = Number(v.macroFactor);
-      const r = await simulate.mutateAsync(overrides);
-      setSimResult(r);
-    } catch (e) { setError(apiErrorMessage(e)); }
-  });
-
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader title="Simulador what-if" description="Modificá precio, cantidad o factor macro y mirá el impacto sin guardar nada." />
-        <CardBody>
-          <form onSubmit={onSubmit} className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Input label="Precio unitario $" type="number" step="0.01" numeric placeholder="Sin cambio" {...register('salesUnitPrice')} />
-              <Input label="Cantidad" type="number" step="1" numeric placeholder="Sin cambio" {...register('salesQuantity')} />
-              <Input label="Factor macro (1.15 = +15%)" type="number" step="0.01" numeric {...register('macroFactor')} />
-            </div>
-            {error && <p className="text-[12px] text-danger">{error}</p>}
-            <Button type="submit" loading={simulate.isPending}><Zap className="size-4" /> Simular</Button>
-          </form>
-        </CardBody>
-      </Card>
-
-      {simResult && baseResult && (
-        <Card>
-          <CardHeader
-            title="Antes vs. después"
-            action={
-              <span className={cn('rounded-full px-3 py-1 text-[13px] font-semibold',
-                simResult.grossMarginPct >= baseResult.grossMarginPct ? 'bg-green-50 text-green-700' : 'bg-danger/10 text-danger')}>
-                {baseResult.grossMarginPct.toFixed(1)}% → {simResult.grossMarginPct.toFixed(1)}%
-                {' '}({simResult.grossMarginPct - baseResult.grossMarginPct > 0 ? '+' : ''}{(simResult.grossMarginPct - baseResult.grossMarginPct).toFixed(1)} pts)
-              </span>
-            }
-          />
-          <CardBody className="p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
-                  {['Concepto','Base','Simulado','Δ'].map((h, i) => (
-                    <th key={h} className={cn('px-6 py-3 font-semibold', i === 0 ? 'text-left' : 'text-right')}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {[
-                  { label: 'Costo de producción', base: baseResult.productionCost,  sim: simResult.productionCost },
-                  { label: 'COGS',                base: baseResult.costOfGoodsSold, sim: simResult.costOfGoodsSold },
-                  { label: 'Margen bruto $',      base: baseResult.grossMargin,     sim: simResult.grossMargin },
-                ].map((r) => {
-                  const d = r.sim - r.base;
-                  return (
-                    <tr key={r.label} className="hover:bg-surface-alt/40">
-                      <td className="px-6 py-3 text-ink-soft">{r.label}</td>
-                      <td className="px-6 py-3 text-right"><Money value={r.base} /></td>
-                      <td className="px-6 py-3 text-right font-medium"><Money value={r.sim} /></td>
-                      <td className={cn('px-6 py-3 text-right text-[12px]', d > 0 ? 'text-ok' : d < 0 ? 'text-danger' : 'text-ink-soft')}>
-                        {d > 0 ? '+' : ''}<Money value={d} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </CardBody>
-        </Card>
-      )}
-    </div>
-  );
-}
-
 // ── History ───────────────────────────────────────────────────────────────────
 
 function HistoryPanel({ structureId }: { structureId: string }) {
@@ -831,7 +721,7 @@ function ReconciliationCard({ companyId, period, structureCosts }: {
           </p>
           <AdvisorPanel
             kind="reconciliation"
-            label="Explicar los desvíos con IA"
+            label="Explicar los desvíos"
             context={{
               structureCosts,
               ledgerCosts: {

@@ -211,7 +211,7 @@ export function AutomatizacionPage() {
           <KpiCard label="Total procesados" value={total} sub="en el historial" color="text-gray-800" icon={Zap} />
           <KpiCard label="Pendientes" value={pending} sub="requieren revisión" color="text-amber-600" icon={Clock} urgent={pending > 0} />
           <KpiCard label="Aprobados" value={approved} sub="registrados ok" color="text-emerald-600" icon={CheckCircle2} />
-          <KpiCard label="Con IA" value={withAI} sub={`${autoRate}% auto-clasificados`} color="text-violet-600" icon={Cpu} />
+          <KpiCard label="Auto-clasificados" value={withAI} sub={`${autoRate}% auto-clasificados`} color="text-violet-600" icon={Cpu} />
         </div>
 
         {/* ── Feed ──────────────────────────────────────────────────────────── */}
@@ -361,7 +361,7 @@ function FeedRow({ entry }: { entry: DataEntry }) {
             {/* IA usada */}
             {audit.aiUsed && (
               <span className="flex items-center gap-0.5 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
-                <Cpu className="size-2.5" /> IA
+                <Cpu className="size-2.5" /> Auto
               </span>
             )}
 

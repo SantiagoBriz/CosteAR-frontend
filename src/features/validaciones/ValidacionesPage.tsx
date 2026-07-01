@@ -146,7 +146,7 @@ export function ValidacionesPage() {
             hint={`${accuracy.rules.total} casos`}
           />
           <AccuracyCard
-            label="Con IA"
+            label="Auto-clasificados"
             value={accuracy.ai.accuracy != null ? `${accuracy.ai.accuracy}%` : '—'}
             hint={`${accuracy.ai.total} casos`}
           />

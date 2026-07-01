@@ -1,9 +1,16 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState, useRef, Fragment } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { IndirectCostConfig } from './cost-structure-types';
+
+/** Formatea un importe derivado (presupuesto del prorrateo) para mostrarlo. */
+function fmtBudget(value: unknown): string {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!isFinite(n) || n === 0) return '—';
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
 
 interface Props {
   defaultValues?: IndirectCostConfig;
@@ -13,7 +20,7 @@ interface Props {
 
 function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
   const base = cfg ?? emptyIndirectCosts();
-  
+
   const cleanRecord = (rec?: Record<string, number>) => {
     if (!rec) return {};
     const res: Record<string, any> = {};
@@ -95,12 +102,17 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
 }
 
 export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
-  const { register, control, handleSubmit, reset, formState: { isDirty } } = useForm<IndirectCostConfig>({
+  const { register, control, handleSubmit, reset, getValues, formState: { isDirty } } = useForm<IndirectCostConfig>({
     defaultValues: cleanIndirectCostsForForm(defaultValues) as any,
   });
 
+  const loadedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (defaultValues) reset(cleanIndirectCostsForForm(defaultValues));
+    if (!defaultValues) return;
+    const snapshot = JSON.stringify(defaultValues);
+    if (snapshot === loadedRef.current) return;
+    loadedRef.current = snapshot;
+    reset(cleanIndirectCostsForForm(defaultValues));
   }, [defaultValues, reset]);
 
   const [pending, setPending] = useState<IndirectCostConfig | null>(null);
@@ -110,10 +122,57 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   const { fields: serviceDists, append: addServiceDist, remove: removeServiceDist } = useFieldArray({ control, name: 'serviceDistributions' });
   const { fields: prodSettings, append: addProdSetting, remove: removeProdSetting } = useFieldArray({ control, name: 'productiveSettings' });
 
-  // Watch centers to generate distribution columns
   const watchedCenters = useWatch({ control, name: 'centers' });
+  const watchedProdSettings = useWatch({ control, name: 'productiveSettings' });
+  const watchedServiceDists = useWatch({ control, name: 'serviceDistributions' });
   const productiveCenters = watchedCenters?.filter((c) => c.type === 'productive') ?? [];
   const serviceCenters = watchedCenters?.filter((c) => c.type === 'service') ?? [];
+
+  // Auto-sync serviceDistributions when service centers change
+  const prevServiceKey = useRef('');
+  const serviceIdKey = serviceCenters.map(c => c.id).join(',');
+  useEffect(() => {
+    if (serviceIdKey === prevServiceKey.current) return;
+    prevServiceKey.current = serviceIdKey;
+
+    const currentDists: any[] = getValues('serviceDistributions') ?? [];
+    const existingIds = new Set(currentDists.map((d) => d.serviceCenterId));
+    const targetIds = new Set(serviceCenters.map(c => c.id));
+
+    for (const center of serviceCenters) {
+      if (!existingIds.has(center.id)) {
+        addServiceDist({ serviceCenterId: center.id, toProductiveFixed: {}, toProductiveVariable: {} });
+      }
+    }
+    for (let i = currentDists.length - 1; i >= 0; i--) {
+      if (currentDists[i]?.serviceCenterId && !targetIds.has(currentDists[i].serviceCenterId)) {
+        removeServiceDist(i);
+      }
+    }
+  }, [serviceIdKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-sync productiveSettings when productive centers change
+  const prevProductiveKey = useRef('');
+  const productiveIdKey = productiveCenters.map(c => c.id).join(',');
+  useEffect(() => {
+    if (productiveIdKey === prevProductiveKey.current) return;
+    prevProductiveKey.current = productiveIdKey;
+
+    const currentSettings: any[] = getValues('productiveSettings') ?? [];
+    const existingIds = new Set(currentSettings.map((p) => p.centerId));
+    const targetIds = new Set(productiveCenters.map(c => c.id));
+
+    for (const center of productiveCenters) {
+      if (!existingIds.has(center.id)) {
+        addProdSetting({ centerId: center.id, budget: { fixed: 0, variable: 0 }, normalCapacity: 0, actualActivity: 0, actualCip: 0 });
+      }
+    }
+    for (let i = currentSettings.length - 1; i >= 0; i--) {
+      if (currentSettings[i]?.centerId && !targetIds.has(currentSettings[i].centerId)) {
+        removeProdSetting(i);
+      }
+    }
+  }, [productiveIdKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -185,7 +244,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 <th className="px-3 py-2 text-right font-medium">Fijo $</th>
                 <th className="px-3 py-2 text-right font-medium">Variable $</th>
                 {watchedCenters?.map((c) => (
-                  <th key={c.id} className="px-3 py-2 text-right font-medium">{c.name || c.id} %</th>
+                  <th key={c.id} className="w-20 px-3 py-2 text-right font-medium">{c.name || c.id} %</th>
                 ))}
                 <th className="px-3 py-2" />
               </tr>
@@ -204,7 +263,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                   </td>
                   {watchedCenters?.map((c) => (
                     <td key={c.id} className="px-2 py-1.5">
-                      <input type="number" step="0.1" min="0" max="100" className="w-16 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
+                      <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
                     </td>
                   ))}
                   <td className="px-2 py-1.5 text-center">
@@ -228,25 +287,22 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
               Prorrateo secundario — distribución de servicios (%)
             </h4>
-            <Button type="button" size="sm" variant="secondary" onClick={() => addServiceDist({ serviceCenterId: '', toProductiveFixed: {}, toProductiveVariable: {} })}>
-              <Plus className="size-3" /> Agregar
-            </Button>
           </div>
           <div className="overflow-x-auto rounded-md border border-line">
             <table className="w-full text-sm">
               <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium border-b border-line" rowSpan={2}>Centro de servicio</th>
+                  <th className="w-40 px-3 py-2 text-left font-medium" rowSpan={2}>Centro de servicio</th>
                   {productiveCenters.map((c) => (
-                    <th key={c.id} className="px-3 py-2 text-center font-medium border-b border-line" colSpan={2}>{c.name || c.id}</th>
+                    <th key={c.id} className="px-3 py-2 text-center font-medium" colSpan={2}>{c.name || c.id}</th>
                   ))}
-                  <th className="px-3 py-2 border-b border-line" rowSpan={2} />
+                  <th className="w-8 px-3 py-2" rowSpan={2} />
                 </tr>
                 <tr>
                   {productiveCenters.map((c) => (
                     <Fragment key={c.id}>
-                      <th className="px-3 py-1 text-right font-medium text-[10px] text-ink-soft border-b border-line">Fijo %</th>
-                      <th className="px-3 py-1 text-right font-medium text-[10px] text-ink-soft border-b border-line">Var %</th>
+                      <th className="w-20 px-3 py-1 text-center font-medium text-[10px] text-ink-soft border-t border-line">Fijo %</th>
+                      <th className="w-20 px-3 py-1 text-center font-medium text-[10px] text-ink-soft border-t border-line">Var %</th>
                     </Fragment>
                   ))}
                 </tr>
@@ -255,20 +311,26 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 {serviceDists.map((f, i) => (
                   <tr key={f.id}>
                     <td className="px-2 py-1.5">
-                      <select className="rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`serviceDistributions.${i}.serviceCenterId`)}>
+                      <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`serviceDistributions.${i}.serviceCenterId`)}>
                         <option value="">Elegir…</option>
-                        {serviceCenters.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name || c.id}</option>
-                        ))}
+                        {serviceCenters
+                          .filter(c => {
+                            const usedInOtherRows = (watchedServiceDists ?? [])
+                              .some((d, j) => j !== i && d.serviceCenterId === c.id);
+                            return !usedInOtherRows;
+                          })
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>{c.name || c.id}</option>
+                          ))}
                       </select>
                     </td>
                     {productiveCenters.map((c) => (
                       <Fragment key={c.id}>
-                        <td className="px-1 py-1.5">
-                          <input type="number" step="0.1" min="0" max="100" className="w-16 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />
+                        <td className="px-1 py-1.5 text-center">
+                          <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />
                         </td>
-                        <td className="px-1 py-1.5">
-                          <input type="number" step="0.1" min="0" max="100" className="w-16 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />
+                        <td className="px-1 py-1.5 text-center">
+                          <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />
                         </td>
                       </Fragment>
                     ))}
@@ -277,6 +339,9 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                     </td>
                   </tr>
                 ))}
+                {serviceDists.length === 0 && (
+                  <tr><td colSpan={1 + productiveCenters.length * 2 + 1} className="px-4 py-6 text-center text-[13px] text-ink-soft">Cargando distribuciones…</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -286,16 +351,34 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
       {/* Configuración por centro productivo */}
       {productiveCenters.length > 0 && (
         <section>
-          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
-            Cuotas y variaciones por centro productivo
-          </h4>
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+              Cuotas y variaciones por centro productivo
+            </h4>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => addProdSetting({ centerId: '', budget: { fixed: 0, variable: 0 }, normalCapacity: 0, actualActivity: 0, actualCip: 0 })}
+            >
+              <Plus className="size-3" /> Agregar
+            </Button>
+          </div>
           <div className="overflow-x-auto rounded-md border border-line">
             <table className="w-full text-sm">
               <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Centro</th>
-                  <th className="px-3 py-2 text-right font-medium">Presup. fijo $</th>
-                  <th className="px-3 py-2 text-right font-medium">Presup. variable $</th>
+                  <th className="bg-surface-alt/60 px-3 py-2 text-right font-medium text-action">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <Lock className="size-3" /> Presup. fijo $
+                    </span>
+                  </th>
+                  <th className="bg-surface-alt/60 px-3 py-2 text-right font-medium text-action">
+                    <span className="inline-flex items-center justify-end gap-1">
+                      <Lock className="size-3" /> Presup. variable $
+                    </span>
+                  </th>
                   <th className="px-3 py-2 text-right font-medium">Cap. normal (hs)</th>
                   <th className="px-3 py-2 text-right font-medium">Actividad real (hs)</th>
                   <th className="px-3 py-2 text-right font-medium">CIP real $</th>
@@ -308,13 +391,31 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                     <td className="px-2 py-1.5">
                       <select className="rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.centerId`)}>
                         <option value="">Elegir…</option>
-                        {productiveCenters.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name || c.id}</option>
-                        ))}
+                        {productiveCenters
+                          .filter(c => {
+                            const usedInOtherRows = (watchedProdSettings ?? [])
+                              .some((p, j) => j !== i && p.centerId === c.id);
+                            return !usedInOtherRows;
+                          })
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>{c.name || c.id}</option>
+                          ))}
                       </select>
                     </td>
-                    <td className="px-2 py-1.5"><input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.budget.fixed`, { valueAsNumber: true })} /></td>
-                    <td className="px-2 py-1.5"><input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.budget.variable`, { valueAsNumber: true })} /></td>
+                    <td className="bg-surface-alt/40 px-2 py-1.5">
+                      <div className="flex w-28 items-center justify-end gap-1 rounded border border-dashed border-action/30 bg-surface-alt px-2 py-1 text-right font-mono text-sm text-ink-soft" title="Calculado automáticamente por el prorrateo (no editable)">
+                        <Lock className="size-3 shrink-0 text-action/50" />
+                        <span>{fmtBudget(watchedProdSettings?.[i]?.budget?.fixed)}</span>
+                      </div>
+                      <input type="hidden" {...register(`productiveSettings.${i}.budget.fixed`, { valueAsNumber: true })} />
+                    </td>
+                    <td className="bg-surface-alt/40 px-2 py-1.5">
+                      <div className="flex w-28 items-center justify-end gap-1 rounded border border-dashed border-action/30 bg-surface-alt px-2 py-1 text-right font-mono text-sm text-ink-soft" title="Calculado automáticamente por el prorrateo (no editable)">
+                        <Lock className="size-3 shrink-0 text-action/50" />
+                        <span>{fmtBudget(watchedProdSettings?.[i]?.budget?.variable)}</span>
+                      </div>
+                      <input type="hidden" {...register(`productiveSettings.${i}.budget.variable`, { valueAsNumber: true })} />
+                    </td>
                     <td className="px-2 py-1.5"><input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.normalCapacity`, { valueAsNumber: true })} /></td>
                     <td className="px-2 py-1.5"><input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.actualActivity`, { valueAsNumber: true })} /></td>
                     <td className="px-2 py-1.5"><input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.actualCip`, { valueAsNumber: true })} /></td>
@@ -324,20 +425,15 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                   </tr>
                 ))}
                 {prodSettings.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-6 text-center text-[13px] text-ink-soft">Agregá una fila por cada centro productivo.</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-6 text-center text-[13px] text-ink-soft">Cargando centros…</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="mt-2"
-            onClick={() => addProdSetting({ centerId: '', budget: { fixed: 0, variable: 0 }, normalCapacity: 0, actualActivity: 0, actualCip: 0 })}
-          >
-            <Plus className="size-3" /> Agregar centro
-          </Button>
+          <p className="mt-1.5 flex items-center gap-1 text-[11px] text-ink-soft">
+            <Lock className="size-3 text-action/60" />
+            El <strong className="font-medium text-action">presupuesto fijo/variable</strong> se calcula automáticamente con el prorrateo (primario + cierre del secundario) al guardar. Solo cargás capacidad normal, actividad real y CIP real.
+          </p>
         </section>
       )}
 

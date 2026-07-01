@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -128,10 +128,16 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
     defaultValues: cleanDirectLaborForForm(defaultValues) as any,
   });
 
+  // Recargar el form solo si el contenido persistido cambió de verdad, para no
+  // pisar la edición en curso cuando la estructura se re-fetchea por invalidación
+  // de la query (BUG-05).
+  const loadedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (defaultValues) {
-      reset(cleanDirectLaborForForm(defaultValues));
-    }
+    if (!defaultValues) return;
+    const snapshot = JSON.stringify(defaultValues);
+    if (snapshot === loadedRef.current) return;
+    loadedRef.current = snapshot;
+    reset(cleanDirectLaborForForm(defaultValues));
   }, [defaultValues, reset]);
 
   const { fields: remFields, append: appendRem, remove: removeRem } = useFieldArray({ control, name: 'itcs.uncertainRemunerative' });
