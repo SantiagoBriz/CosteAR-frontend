@@ -1,7 +1,8 @@
-import { useEffect, useRef, Fragment } from 'react';
+import { useEffect, useState, useRef, Fragment } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Plus, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { IndirectCostConfig } from './cost-structure-types';
 
 /** Formatea un importe derivado (presupuesto del prorrateo) para mostrarlo. */
@@ -101,7 +102,7 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
 }
 
 export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
-  const { register, control, handleSubmit, reset, getValues } = useForm<IndirectCostConfig>({
+  const { register, control, handleSubmit, reset, getValues, formState: { isDirty } } = useForm<IndirectCostConfig>({
     defaultValues: cleanIndirectCostsForForm(defaultValues) as any,
   });
 
@@ -113,6 +114,8 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
     loadedRef.current = snapshot;
     reset(cleanIndirectCostsForForm(defaultValues));
   }, [defaultValues, reset]);
+
+  const [pending, setPending] = useState<IndirectCostConfig | null>(null);
 
   const { fields: centers, append: addCenter, remove: removeCenter } = useFieldArray({ control, name: 'centers' });
   const { fields: concepts, append: addConcept, remove: removeConcept } = useFieldArray({ control, name: 'concepts' });
@@ -172,7 +175,8 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   }, [productiveIdKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave(cleanIndirectCostsForSubmit(data)))} className="space-y-6 pt-3">
+    <>
+    <form onSubmit={handleSubmit((data) => setPending(cleanIndirectCostsForSubmit(data)))} className="space-y-6 pt-3">
       {/* Centros de costo */}
       <section>
         <div className="mb-2 flex items-center justify-between">
@@ -433,10 +437,32 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
         </section>
       )}
 
-      <Button type="submit" loading={saving} className="w-full">
-        Guardar Costos Indirectos
-      </Button>
+      <div className="space-y-2">
+        {isDirty && (
+          <p className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-warn">
+            <span className="size-1.5 rounded-full bg-warn" /> Tenés cambios sin guardar
+          </p>
+        )}
+        <Button type="submit" loading={saving} className="w-full">
+          Guardar Costos Indirectos
+        </Button>
+      </div>
     </form>
+
+    <ConfirmDialog
+      open={!!pending}
+      title="Actualizar Costos Indirectos"
+      message="¿Querés actualizar los datos de Costos Indirectos de Producción?"
+      confirmLabel="Guardar"
+      loading={saving}
+      onConfirm={async () => {
+        if (!pending) return;
+        await onSave(pending);
+        setPending(null);
+      }}
+      onCancel={() => setPending(null)}
+    />
+    </>
   );
 }
 

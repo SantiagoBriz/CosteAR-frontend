@@ -23,6 +23,7 @@ export interface CostStructure {
   salesUnitPrice: string | null;
   salesQuantity: string | null;
   createdAt: string;
+  deletedAt?: string | null;
 }
 
 export interface CalculationResult {

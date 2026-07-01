@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { fractionToPercentInput, percentInputToFraction } from '@/lib/utils';
 import type { DirectLaborConfig } from './cost-structure-types';
 
 interface Props {
@@ -56,15 +58,16 @@ function cleanDirectLaborForForm(cfg?: DirectLaborConfig): any {
       },
     },
     itcs: {
-      derivationBase: base.itcs?.derivationBase === 0 ? '' : (base.itcs?.derivationBase ?? ''),
-      fixedArt: base.itcs?.fixedArt === 0 ? '' : (base.itcs?.fixedArt ?? ''),
+      // Tasas en %: se guardan como fracción (0.27) y se muestran como porcentaje (27).
+      derivationBase: fractionToPercentInput(base.itcs?.derivationBase),
+      fixedArt: fractionToPercentInput(base.itcs?.fixedArt),
       uncertainRemunerative: (base.itcs?.uncertainRemunerative ?? []).map((r) => ({
         ...r,
-        coefficient: r.coefficient === 0 ? '' : (r.coefficient ?? ''),
+        coefficient: fractionToPercentInput(r.coefficient),
       })),
       uncertainNonRemunerative: (base.itcs?.uncertainNonRemunerative ?? []).map((r) => ({
         ...r,
-        coefficient: r.coefficient === 0 ? '' : (r.coefficient ?? ''),
+        coefficient: fractionToPercentInput(r.coefficient),
       })),
     },
     departments: (base.departments ?? []).map((d) => ({
@@ -79,9 +82,6 @@ function cleanDirectLaborForSubmit(data: any): DirectLaborConfig {
   const fallbackNum = (val: any, def = 0) => {
     if (val === '' || val === null || val === undefined || isNaN(Number(val))) return def;
     return Number(val);
-  };
-  const normPercent = (val: number) => {
-    return val > 1 ? val / 100 : val;
   };
   return {
     workingDays: {
@@ -101,15 +101,18 @@ function cleanDirectLaborForSubmit(data: any): DirectLaborConfig {
       },
     },
     itcs: {
-      derivationBase: normPercent(fallbackNum(data.itcs?.derivationBase, 0.27)),
-      fixedArt: normPercent(fallbackNum(data.itcs?.fixedArt, 0.015)),
+      // % tipeado → fracción para el motor. Si se deja vacío, valores estándar de cátedra.
+      derivationBase: data.itcs?.derivationBase === '' || data.itcs?.derivationBase == null
+        ? 0.27 : percentInputToFraction(data.itcs.derivationBase),
+      fixedArt: data.itcs?.fixedArt === '' || data.itcs?.fixedArt == null
+        ? 0.015 : percentInputToFraction(data.itcs.fixedArt),
       uncertainRemunerative: (data.itcs?.uncertainRemunerative ?? []).map((r: any) => ({
         ...r,
-        coefficient: normPercent(fallbackNum(r.coefficient)),
+        coefficient: percentInputToFraction(r.coefficient),
       })),
       uncertainNonRemunerative: (data.itcs?.uncertainNonRemunerative ?? []).map((r: any) => ({
         ...r,
-        coefficient: normPercent(fallbackNum(r.coefficient)),
+        coefficient: percentInputToFraction(r.coefficient),
       })),
     },
     departments: (data.departments ?? []).map((d: any) => ({
@@ -121,7 +124,7 @@ function cleanDirectLaborForSubmit(data: any): DirectLaborConfig {
 }
 
 export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
-  const { register, control, handleSubmit, reset } = useForm<DirectLaborConfig>({
+  const { register, control, handleSubmit, reset, formState: { isDirty } } = useForm<DirectLaborConfig>({
     defaultValues: cleanDirectLaborForForm(defaultValues) as any,
   });
 
@@ -141,15 +144,18 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
   const { fields: nonRemFields, append: appendNonRem, remove: removeNonRem } = useFieldArray({ control, name: 'itcs.uncertainNonRemunerative' });
   const { fields: deptFields, append: appendDept, remove: removeDept } = useFieldArray({ control, name: 'departments' });
 
+  const [pending, setPending] = useState<DirectLaborConfig | null>(null);
+
   return (
-    <form onSubmit={handleSubmit((data) => onSave(cleanDirectLaborForSubmit(data)))} className="space-y-5 pt-3">
+    <>
+    <form onSubmit={handleSubmit((data) => setPending(cleanDirectLaborForSubmit(data)))} className="space-y-5 pt-3">
       {/* Distribución del año */}
       <section>
         <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
           Distribución del año
         </h4>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Input label="Total días/año" type="number" step="1" numeric {...register('workingDays.totalDaysPerYear', { valueAsNumber: true })} />
+          <Input label="Total días/año" type="number" step="1" numeric placeholder="Ej: 365" info="Días totales del año (normalmente 365). Número entero. De acá se descuentan las ausencias." {...register('workingDays.totalDaysPerYear', { valueAsNumber: true })} />
         </div>
         <p className="mt-2 mb-1 text-[11px] text-ink-soft font-medium">Ausencias no remuneradas</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -174,8 +180,8 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
           ITCS — Índice Total de Cargas Sociales
         </h4>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Base de derivación (ej: 0.27)" type="number" step="0.001" numeric {...register('itcs.derivationBase', { valueAsNumber: true })} />
-          <Input label="ART fija (ej: 0.015)" type="number" step="0.001" numeric {...register('itcs.fixedArt', { valueAsNumber: true })} />
+          <Input label="Base de derivación" type="number" step="0.1" numeric suffix="%" placeholder="Ej: 27" info="Contribuciones patronales + ART variable, base para derivar cargas. En porcentaje (ej: 27 = 27%)." {...register('itcs.derivationBase', { valueAsNumber: true })} />
+          <Input label="ART fija" type="number" step="0.01" numeric suffix="%" placeholder="Ej: 1.5" info="Alícuota fija de ART. En porcentaje (ej: 1.5 = 1,5%)." {...register('itcs.fixedArt', { valueAsNumber: true })} />
         </div>
 
         <div className="mt-3">
@@ -188,7 +194,10 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
           {remFields.map((f, i) => (
             <div key={f.id} className="mb-2 flex items-center gap-2">
               <input className="flex-1 rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Nombre (ej: Antigüedad)" {...register(`itcs.uncertainRemunerative.${i}.name`)} />
-              <input type="number" step="0.001" className="w-28 rounded border border-line bg-surface px-2 py-1.5 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Coef." {...register(`itcs.uncertainRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+              <div className="relative w-28">
+                <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 5" title="Coeficiente en porcentaje (ej: 5 = 5%)" {...register(`itcs.uncertainRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+              </div>
               <button type="button" onClick={() => removeRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
             </div>
           ))}
@@ -204,7 +213,10 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
           {nonRemFields.map((f, i) => (
             <div key={f.id} className="mb-2 flex items-center gap-2">
               <input className="flex-1 rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Nombre (ej: Viandas)" {...register(`itcs.uncertainNonRemunerative.${i}.name`)} />
-              <input type="number" step="0.001" className="w-28 rounded border border-line bg-surface px-2 py-1.5 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Coef." {...register(`itcs.uncertainNonRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+              <div className="relative w-28">
+                <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 2" title="Coeficiente en porcentaje (ej: 2 = 2%)" {...register(`itcs.uncertainNonRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+              </div>
               <button type="button" onClick={() => removeNonRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
             </div>
           ))}
@@ -254,10 +266,32 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
         </div>
       </section>
 
-      <Button type="submit" loading={saving} className="w-full">
-        Guardar Mano de Obra Directa
-      </Button>
+      <div className="space-y-2">
+        {isDirty && (
+          <p className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-warn">
+            <span className="size-1.5 rounded-full bg-warn" /> Tenés cambios sin guardar
+          </p>
+        )}
+        <Button type="submit" loading={saving} className="w-full">
+          Guardar Mano de Obra Directa
+        </Button>
+      </div>
     </form>
+
+    <ConfirmDialog
+      open={!!pending}
+      title="Actualizar Mano de Obra"
+      message="¿Querés actualizar los datos de Mano de Obra Directa?"
+      confirmLabel="Guardar"
+      loading={saving}
+      onConfirm={async () => {
+        if (!pending) return;
+        await onSave(pending);
+        setPending(null);
+      }}
+      onCancel={() => setPending(null)}
+    />
+    </>
   );
 }
 

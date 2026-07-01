@@ -14,7 +14,7 @@ const NAV = [
   { to: '/alerts', label: 'Alertas', icon: Bell },
 ] as const;
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
   const { location } = useRouterState();
@@ -106,7 +106,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Contenido */}
       <main className={cn("flex-1 transition-all duration-200", collapsed ? "ml-16" : "ml-60")}>
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+        <div className={cn('mx-auto px-8 py-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
       </main>
     </div>
   );

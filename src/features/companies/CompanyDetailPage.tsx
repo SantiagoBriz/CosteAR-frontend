@@ -3,14 +3,15 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   Plus, FileSpreadsheet, ChevronRight, ArrowLeft, Users, Copy, Trash2, Eye, EyeOff, KeyRound,
-  Edit2, Mic, MicOff, Sparkles, BookOpen, History, Table, FileDown, PenLine, Pencil, ImageIcon
+  Edit2, Mic, MicOff, Sparkles, BookOpen, History, Table, FileDown, PenLine, Pencil, ImageIcon, RotateCcw
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { useCompany, useCostStructures, useUpdateCompany, useDeleteCompany } from './company-hooks';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useCompany, useCostStructures, useUpdateCompany, useDeleteCompany, useDeleteCostStructure, useRestoreCostStructure } from './company-hooks';
 import { useCreateCostStructure } from '@/features/cost-structures/cost-structure-hooks';
 import { useOperators, useGenerateOperatorAccess, useRevokeOperator, useResetOperatorPassword, type GeneratedAccess } from '@/features/empresa-portal/empresa-portal-hooks';
 import { useLedger, useDeleteLedgerEntry } from '@/features/libro/libro-hooks';
@@ -29,12 +30,32 @@ export function CompanyDetailPage() {
   const { id } = useParams({ from: '/companies/$id' });
   const navigate = useNavigate();
   const { data: company } = useCompany(id);
-  const { data: structures } = useCostStructures(id);
+  const { data: structures } = useCostStructures(id, true); // incluye las borradas (papelera)
   const delCompany = useDeleteCompany();
-  
+  const delStructure = useDeleteCostStructure(id);
+  const restoreStructure = useRestoreCostStructure(id);
+
   const [showForm, setShowForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'structures' | 'ledger' | 'history' | 'operators'>('structures');
+  // Confirmación de borrar / recuperar estructura.
+  const [confirmStructure, setConfirmStructure] = useState<
+    { id: string; productName: string; action: 'delete' | 'restore' } | null
+  >(null);
+
+  const runConfirmStructure = async () => {
+    if (!confirmStructure) return;
+    try {
+      if (confirmStructure.action === 'delete') {
+        await delStructure.mutateAsync(confirmStructure.id);
+      } else {
+        await restoreStructure.mutateAsync(confirmStructure.id);
+      }
+      setConfirmStructure(null);
+    } catch {
+      /* el error queda visible; el modal no se cierra */
+    }
+  };
 
   const handleDeleteCompany = async () => {
     if (window.confirm(`¿Estás seguro de eliminar a ${company?.name}? Esta acción eliminará permanentemente la empresa, todas sus estructuras de costos, libro de costos, firmas y operadores vinculados.`)) {
@@ -130,26 +151,59 @@ export function CompanyDetailPage() {
                 </div>
               ) : (
                 <ul className="divide-y divide-zinc-100">
-                  {structures.map((s) => (
-                    <li key={s.id}>
-                      <Link
-                        to="/cost-structures/$id"
-                        params={{ id: s.id }}
-                        className="flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-zinc-50"
-                      >
-                        <div>
-                          <div className="font-medium text-zinc-800">{s.productName}</div>
-                          <div className="text-[13px] text-zinc-400">Período {s.period}</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <StatusBadge status={STATUS[s.status]?.status ?? 'idle'}>
-                            {STATUS[s.status]?.label ?? s.status}
-                          </StatusBadge>
-                          <ChevronRight className="size-5 text-zinc-300" />
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
+                  {structures.map((s) => {
+                    const isDeleted = !!s.deletedAt;
+                    return (
+                      <li key={s.id} className={cn('flex items-center justify-between gap-2 pr-4', isDeleted && 'bg-zinc-50/60')}>
+                        {isDeleted ? (
+                          <div className="flex flex-1 items-center justify-between gap-4 px-6 py-4">
+                            <div>
+                              <div className="font-medium text-zinc-400 line-through">{s.productName}</div>
+                              <div className="text-[13px] text-zinc-400">Período {s.period}</div>
+                            </div>
+                            <StatusBadge status="idle">En papelera</StatusBadge>
+                          </div>
+                        ) : (
+                          <Link
+                            to="/cost-structures/$id"
+                            params={{ id: s.id }}
+                            className="flex flex-1 items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-zinc-50"
+                          >
+                            <div>
+                              <div className="font-medium text-zinc-800">{s.productName}</div>
+                              <div className="text-[13px] text-zinc-400">Período {s.period}</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <StatusBadge status={STATUS[s.status]?.status ?? 'idle'}>
+                                {STATUS[s.status]?.label ?? s.status}
+                              </StatusBadge>
+                              <ChevronRight className="size-5 text-zinc-300" />
+                            </div>
+                          </Link>
+                        )}
+                        {/* Acciones: borrar (activa) / recuperar (papelera) — con confirmación */}
+                        {isDeleted ? (
+                          <button
+                            type="button"
+                            title="Recuperar estructura"
+                            onClick={() => setConfirmStructure({ id: s.id, productName: s.productName, action: 'restore' })}
+                            className="flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-action/10 hover:text-action"
+                          >
+                            <RotateCcw className="size-4" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            title="Borrar estructura"
+                            onClick={() => setConfirmStructure({ id: s.id, productName: s.productName, action: 'delete' })}
+                            className="flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-danger/10 hover:text-danger"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </CardBody>
@@ -173,6 +227,23 @@ export function CompanyDetailPage() {
       {showEditModal && company && (
         <EditCompanyModal company={company} onClose={() => setShowEditModal(false)} />
       )}
+
+      <ConfirmDialog
+        open={!!confirmStructure}
+        tone={confirmStructure?.action === 'delete' ? 'danger' : 'default'}
+        title={confirmStructure?.action === 'delete' ? 'Borrar estructura' : 'Recuperar estructura'}
+        message={
+          confirmStructure?.action === 'delete' ? (
+            <>Vas a mandar a la papelera <strong className="text-ink">{confirmStructure?.productName}</strong>. Podés recuperarla después desde esta misma lista.</>
+          ) : (
+            <>Vas a recuperar <strong className="text-ink">{confirmStructure?.productName}</strong> de la papelera. Volverá a estar activa.</>
+          )
+        }
+        confirmLabel={confirmStructure?.action === 'delete' ? 'Borrar' : 'Recuperar'}
+        loading={delStructure.isPending || restoreStructure.isPending}
+        onConfirm={runConfirmStructure}
+        onCancel={() => setConfirmStructure(null)}
+      />
     </AppShell>
   );
 }
