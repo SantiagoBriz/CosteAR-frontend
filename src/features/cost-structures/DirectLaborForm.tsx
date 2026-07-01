@@ -174,8 +174,8 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
           ITCS — Índice Total de Cargas Sociales
         </h4>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Base de derivación %" type="number" step="0.1" numeric placeholder="Ej: 27 (%)" info="Contribuciones patronales + ART variable, base para derivar cargas. En porcentaje (ej: 27 = 27%)." {...register('itcs.derivationBase', { valueAsNumber: true })} />
-          <Input label="ART fija %" type="number" step="0.01" numeric placeholder="Ej: 1.5 (%)" info="Alícuota fija de ART. En porcentaje (ej: 1.5 = 1,5%)." {...register('itcs.fixedArt', { valueAsNumber: true })} />
+          <Input label="Base de derivación" type="number" step="0.1" numeric suffix="%" placeholder="Ej: 27" info="Contribuciones patronales + ART variable, base para derivar cargas. En porcentaje (ej: 27 = 27%)." {...register('itcs.derivationBase', { valueAsNumber: true })} />
+          <Input label="ART fija" type="number" step="0.01" numeric suffix="%" placeholder="Ej: 1.5" info="Alícuota fija de ART. En porcentaje (ej: 1.5 = 1,5%)." {...register('itcs.fixedArt', { valueAsNumber: true })} />
         </div>
 
         <div className="mt-3">
@@ -188,7 +188,10 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
           {remFields.map((f, i) => (
             <div key={f.id} className="mb-2 flex items-center gap-2">
               <input className="flex-1 rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Nombre (ej: Antigüedad)" {...register(`itcs.uncertainRemunerative.${i}.name`)} />
-              <input type="number" step="0.1" className="w-28 rounded border border-line bg-surface px-2 py-1.5 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 5 (%)" title="Coeficiente en porcentaje (ej: 5 = 5%)" {...register(`itcs.uncertainRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+              <div className="relative w-28">
+                <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 5" title="Coeficiente en porcentaje (ej: 5 = 5%)" {...register(`itcs.uncertainRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+              </div>
               <button type="button" onClick={() => removeRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
             </div>
           ))}
@@ -204,7 +207,10 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
           {nonRemFields.map((f, i) => (
             <div key={f.id} className="mb-2 flex items-center gap-2">
               <input className="flex-1 rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Nombre (ej: Viandas)" {...register(`itcs.uncertainNonRemunerative.${i}.name`)} />
-              <input type="number" step="0.1" className="w-28 rounded border border-line bg-surface px-2 py-1.5 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 2 (%)" title="Coeficiente en porcentaje (ej: 2 = 2%)" {...register(`itcs.uncertainNonRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+              <div className="relative w-28">
+                <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 2" title="Coeficiente en porcentaje (ej: 2 = 2%)" {...register(`itcs.uncertainNonRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+              </div>
               <button type="button" onClick={() => removeNonRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
             </div>
           ))}

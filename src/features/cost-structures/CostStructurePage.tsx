@@ -93,7 +93,7 @@ export function CostStructurePage() {
   }
 
   return (
-    <AppShell>
+    <AppShell wide>
       <FullScreenCalculatorLoader active={calculate.isPending} />
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">

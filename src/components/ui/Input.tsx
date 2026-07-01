@@ -8,12 +8,14 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   hint?: string;
   /** Texto explicativo: se muestra en un tooltip al pasar el mouse por el ícono ℹ️. */
   info?: string;
+  /** Sufijo fijo dentro del campo (ej: "%"). Visible siempre, no editable. */
+  suffix?: string;
   /** Para montos: aplica tipografía monoespaciada alineada a la derecha. */
   numeric?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, hint, info, numeric, id, ...props }, ref) => {
+  ({ className, label, error, hint, info, suffix, numeric, id, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id ?? generatedId;
 
@@ -44,25 +46,33 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             )}
           </label>
         )}
-        <input
-          ref={ref}
-          id={inputId}
-          className={cn(
-            'h-11 rounded-sm border bg-surface px-3 text-sm text-ink transition-colors',
-            'placeholder:text-idle focus:border-granate',
-            numeric && 'tabular text-right',
-            error ? 'border-danger' : 'border-line',
-            className,
+        <div className="relative">
+          <input
+            ref={ref}
+            id={inputId}
+            className={cn(
+              'h-11 w-full rounded-sm border bg-surface px-3 text-sm text-ink transition-colors',
+              'placeholder:text-idle focus:border-granate',
+              numeric && 'tabular text-right',
+              suffix && 'pr-8',
+              error ? 'border-danger' : 'border-line',
+              className,
+            )}
+            aria-invalid={!!error}
+            onFocus={(e) => {
+              e.target.select();
+              if (props.onFocus) props.onFocus(e);
+            }}
+            {...props}
+            value={value}
+            placeholder={placeholder}
+          />
+          {suffix && (
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-medium text-ink-soft">
+              {suffix}
+            </span>
           )}
-          aria-invalid={!!error}
-          onFocus={(e) => {
-            e.target.select();
-            if (props.onFocus) props.onFocus(e);
-          }}
-          {...props}
-          value={value}
-          placeholder={placeholder}
-        />
+        </div>
         {error ? (
           <span className="text-[12px] text-danger">{error}</span>
         ) : hint ? (
