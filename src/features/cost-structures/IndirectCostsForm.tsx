@@ -351,10 +351,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
       {/* Configuración por centro productivo */}
       {productiveCenters.length > 0 && (
         <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
-              Cuotas y variaciones por centro productivo
-            </h4>
+          <div className="mb-2 flex items-center gap-3">
             <Button
               type="button"
               size="sm"
@@ -363,6 +360,9 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             >
               <Plus className="size-3" /> Agregar
             </Button>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+              Cuotas y variaciones por centro productivo
+            </h4>
           </div>
           <div className="overflow-x-auto rounded-md border border-line">
             <table className="w-full text-sm">
