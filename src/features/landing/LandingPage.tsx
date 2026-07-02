@@ -91,21 +91,17 @@ export function LandingPage() {
       });
     };
 
-    // 2. Cosmos: campo de estrellas en canvas 2D (3 capas) + nebulosa con parallax + fugaces
+    // 2. Cosmos & Nebulae: Programmatic Canvas Drawing
     let cosmosResizeHandler: (() => void) | null = null;
     let animationFrameId: number | null = null;
     let cosmosCleanup: (() => void) | null = null;
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
 
     const buildCosmos = (el: HTMLElement) => {
       const canvas = el.querySelector('#cosmos') as HTMLCanvasElement | null;
-      const nebula = el.querySelector('#nebula') as HTMLElement | null;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       const rand = (a: number, b: number) => a + Math.random() * (b - a);
-      const warm = ['rgba(229,176,150', 'rgba(206,120,118', 'rgba(181,37,58'];
 
       interface Star {
         x: number;
@@ -114,158 +110,78 @@ export function LandingPage() {
         a: number;
         ph: number;
         sp: number;
-        halo: boolean;
-        warm: string | null;
       }
-
-      interface Layer {
-        px: number;
-        density: number;
-        rMin: number;
-        rMax: number;
-        aMin: number;
-        aMax: number;
-        tw: number;
-        halo: boolean;
-        stars: Star[];
-      }
-
-      const layers: Layer[] = [
-        { px: 4,  density: 8200,  rMin: 0.4, rMax: 0.8, aMin: 0.22, aMax: 0.62, tw: 0.7, halo: false, stars: [] },
-        { px: 10, density: 13000, rMin: 0.5, rMax: 1.1, aMin: 0.28, aMax: 0.82, tw: 1.0, halo: false, stars: [] },
-        { px: 20, density: 30000, rMin: 0.8, rMax: 1.9, aMin: 0.4,  aMax: 1.0,  tw: 1.4, halo: true,  stars: [] }
-      ];
-
+      const stars: Star[] = [];
       let W = 0, H = 0, DPR = 1;
+
       const gen = () => {
         W = window.innerWidth; H = window.innerHeight;
         DPR = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
         canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
         ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-        const area = W * H;
-        layers.forEach((L, li) => {
-          if (!L) return;
-          const n = Math.round(area / L.density);
-          L.stars = [];
-          for (let i = 0; i < n; i++) {
-            const r = rand(L.rMin, L.rMax);
-            const isWarm = li === 2 && Math.random() < 0.16;
-            const warmColor = isWarm ? (warm[Math.floor(Math.random() * warm.length)] ?? null) : null;
-            L.stars.push({
-              x: Math.random() * W, y: Math.random() * H, r,
-              a: rand(L.aMin, L.aMax),
-              ph: Math.random() * Math.PI * 2,
-              sp: rand(0.5, 1.1) * L.tw,
-              halo: L.halo && r > 1.3 && Math.random() < 0.5,
-              warm: warmColor
-            });
-          }
-        });
+
+        stars.length = 0;
+        const n = Math.round((W * H) / 10000);
+        for (let i = 0; i < n; i++) {
+          stars.push({
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: rand(0.5, 1.2),
+            a: rand(0.2, 0.7),
+            ph: Math.random() * Math.PI * 2,
+            sp: rand(0.3, 0.8)
+          });
+        }
       };
       gen();
       cosmosResizeHandler = gen;
       window.addEventListener('resize', gen);
 
-      let pxC = 0, pyC = 0;
-      interface ShootingStar {
-        x: number;
-        y: number;
-        vx: number;
-        vy: number;
-        len: number;
-        start: number;
-        dur: number;
-      }
-      let shoot: ShootingStar | null = null;
-      let nextShoot = performance.now() + rand(4000, 8000);
-
-      const spawnShoot = (now: number) => {
-        const dir = Math.random() < 0.5 ? 1 : -1;
-        const ang = rand(0.18, 0.34);
-        const speed = rand(0.95, 1.5);
-        shoot = {
-          x: dir > 0 ? -60 : W + 60,
-          y: rand(0.06, 0.5) * H,
-          vx: dir * Math.cos(ang) * speed,
-          vy: Math.sin(ang) * speed,
-          len: rand(150, 250),
-          start: now, dur: rand(700, 1000)
-        };
-      };
+      // Programmatic glowing nebulae that drift slowly (no divs, no hard borders)
+      const nebulae = [
+        { x: W * 0.4, y: H * 0.5, targetX: W * 0.4, targetY: H * 0.5, r: 420, col: 'rgba(114, 18, 31, 0.16)', angle: 0, speed: 0.001 },
+        { x: W * 0.6, y: H * 0.4, targetX: W * 0.6, targetY: H * 0.4, r: 350, col: 'rgba(162, 28, 47, 0.11)', angle: Math.PI, speed: 0.0008 },
+        { x: W * 0.5, y: H * 0.6, targetX: W * 0.5, targetY: H * 0.6, r: 260, col: 'rgba(201, 162, 75, 0.03)', angle: Math.PI / 2, speed: 0.0012 }
+      ];
 
       const start = performance.now();
       const draw = (now: number) => {
         const t = (now - start) / 1000;
-        const mx = mouseX;
-        const my = mouseY;
-        const tnx = (mx / W) * 2 - 1, tny = (my / H) * 2 - 1;
-        const interactive = fine && !reduce;
-        pxC += ((interactive ? tnx : 0) - pxC) * 0.06;
-        pyC += ((interactive ? tny : 0) - pyC) * 0.06;
+        ctx.fillStyle = '#0B0607';
+        ctx.fillRect(0, 0, W, H);
 
-        const driftX = reduce ? 0 : t * 11;
-        const driftY = reduce ? 0 : t * 4.5;
-
-        ctx.clearRect(0, 0, W, H);
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = Math.min(1, t / 1.3);
 
-        for (let li = 0; li < layers.length; li++) {
-          const L = layers[li];
-          if (!L) continue;
-          const ox = -pxC * L.px + driftX;
-          const oy = -pyC * L.px + driftY;
-          for (let i = 0; i < L.stars.length; i++) {
-            const s = L.stars[i];
-            if (!s) continue;
-            let x = ((s.x + ox) % W + W) % W;
-            let y = ((s.y + oy) % H + H) % H;
-            const tw = reduce ? 0.8 : (0.62 + 0.38 * Math.sin(t * s.sp + s.ph));
-            const alpha = s.a * tw;
-            const col = s.warm || 'rgba(255,255,255';
-            if (s.halo) {
-              const g = ctx.createRadialGradient(x, y, 0, x, y, s.r * 4.5);
-              g.addColorStop(0, col + ',' + (alpha * 0.85) + ')');
-              g.addColorStop(1, col + ',0)');
-              ctx.fillStyle = g;
-              ctx.beginPath(); ctx.arc(x, y, s.r * 4.5, 0, 6.283); ctx.fill();
-            }
-            ctx.fillStyle = col + ',' + alpha + ')';
-            ctx.beginPath(); ctx.arc(x, y, s.r, 0, 6.283); ctx.fill();
-          }
-        }
+        // 1. Draw Nebulae
+        nebulae.forEach((neb) => {
+          neb.angle += neb.speed;
+          const dx = Math.sin(neb.angle) * 45;
+          const dy = Math.cos(neb.angle) * 35;
+          const cx = neb.targetX + dx;
+          const cy = neb.targetY + dy;
 
-        if (!reduce) {
-          if (!shoot && now >= nextShoot) spawnShoot(now);
-          if (shoot) {
-            const e = (now - shoot.start) / shoot.dur;
-            if (e >= 1) { shoot = null; nextShoot = now + rand(8000, 14000); }
-            else {
-              const hx = shoot.x + shoot.vx * (now - shoot.start);
-              const hy = shoot.y + shoot.vy * (now - shoot.start);
-              const op = Math.sin(Math.min(1, e) * Math.PI);
-              const vlen = Math.hypot(shoot.vx, shoot.vy) || 1;
-              const ux = shoot.vx / vlen, uy = shoot.vy / vlen;
-              const tx = hx - ux * shoot.len, ty = hy - uy * shoot.len;
-              const gr = ctx.createLinearGradient(tx, ty, hx, hy);
-              gr.addColorStop(0, 'rgba(255,248,242,0)');
-              gr.addColorStop(1, 'rgba(255,248,242,' + (op * 0.9) + ')');
-              ctx.strokeStyle = gr; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
-              ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
-              const hg = ctx.createRadialGradient(hx, hy, 0, hx, hy, 3.2);
-              hg.addColorStop(0, 'rgba(255,244,236,' + op + ')');
-              hg.addColorStop(1, 'rgba(255,244,236,0)');
-              ctx.fillStyle = hg;
-              ctx.beginPath(); ctx.arc(hx, hy, 3.2, 0, 6.283); ctx.fill();
-            }
-          }
-        }
+          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, neb.r);
+          g.addColorStop(0, neb.col);
+          g.addColorStop(0.5, neb.col.replace(/[\d.]+\)$/, '0.04)'));
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(cx, cy, neb.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // 2. Draw Twinkling Stars
+        stars.forEach((s) => {
+          const tw = 0.55 + 0.45 * Math.sin(t * s.sp + s.ph);
+          ctx.fillStyle = 'rgba(255, 255, 255,' + (s.a * tw) + ')';
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
 
         ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 1;
-        if (nebula && interactive) nebula.style.transform = 'translate(' + (-pxC * 4) + 'px,' + (-pyC * 4) + 'px)';
-
         animationFrameId = requestAnimationFrame(draw);
       };
       animationFrameId = requestAnimationFrame(draw);
@@ -354,27 +270,20 @@ export function LandingPage() {
       countdownTimer = setInterval(tick, 1000);
     };
 
-    // 5. FX cursor glow + card tilt parallax + magnetic buttons
+    // 5. Card tilt parallax + magnetic buttons
     const startPointerFX = (el: HTMLElement) => {
-      const glow = el.querySelector('#cursorGlow') as HTMLElement | null;
       const tilt = el.querySelector('#tiltBlock') as HTMLElement | null;
 
       let mx = window.innerWidth / 2, my = window.innerHeight / 2;
-      let gx = mx, gy = my, cnx = 0, cny = 0;
+      let cnx = 0, cny = 0;
 
       const onMove = (e: MouseEvent) => {
         mx = e.clientX; my = e.clientY;
-        mouseX = mx; mouseY = my;
-        if (glow) glow.style.opacity = '1';
       };
       window.addEventListener('mousemove', onMove);
 
       let pointerRafId: number | null = null;
       const loop = () => {
-        gx += (mx - gx) * 0.12;
-        gy += (my - gy) * 0.12;
-        if (glow) glow.style.transform = 'translate(' + gx + 'px,' + gy + 'px) translate(-50%,-50%)';
-
         const nx = (mx / window.innerWidth) * 2 - 1;
         const ny = (my / window.innerHeight) * 2 - 1;
         cnx += (nx - cnx) * 0.08;
@@ -472,6 +381,7 @@ export function LandingPage() {
           100%{transform:translateX(135%);opacity:0}
         }
         @keyframes pulseDot{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+        @keyframes bgGlowBreath{0%{transform:translate(-50%,-50%) scale(0.92);opacity:0.7}100%{transform:translate(-50%,-50%) scale(1.08);opacity:0.9}}
         @media (prefers-reduced-motion: reduce){
           *{animation-duration:.01ms !important;animation-iteration-count:1 !important;animation-delay:0ms !important;transition-duration:.01ms !important}
         }
@@ -510,7 +420,7 @@ export function LandingPage() {
         height: '100vh',
         width: '100vw',
         overflow: 'hidden',
-        background: 'linear-gradient(160deg,#0E0708 0%,#140A0C 100%)',
+        background: '#0B0607',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -518,85 +428,29 @@ export function LandingPage() {
         perspective: '1400px',
         fontFamily: "'Space Grotesk', sans-serif"
       }}>
-        {/* Capa 0: nebulosa granate muy difusa (parallax lejano) */}
-        <div id="nebula" style={{
-          position: 'absolute',
-          inset: '-12%',
-          zIndex: 0,
-          pointerEvents: 'none',
-          opacity: 0.95,
-          willChange: 'transform',
-          animation: 'nebIn 2s ease both'
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: '42%',
-            left: '48%',
-            width: '60vw',
-            height: '60vw',
-            maxWidth: '780px',
-            maxHeight: '780px',
-            borderRadius: '50%',
-            background: 'radial-gradient(closest-side, rgba(80,16,26,0.30), transparent 70%)',
-            filter: 'blur(82px)',
-            animation: 'nebDrift1 26s ease-in-out infinite'
-          }}></div>
-          <div style={{
-            position: 'absolute',
-            top: '28%',
-            left: '22%',
-            width: '44vw',
-            height: '44vw',
-            maxWidth: '540px',
-            maxHeight: '540px',
-            borderRadius: '50%',
-            background: 'radial-gradient(closest-side, rgba(42,10,18,0.34), transparent 72%)',
-            filter: 'blur(74px)',
-            animation: 'nebDrift2 30s ease-in-out infinite'
-          }}></div>
-          <div style={{
-            position: 'absolute',
-            top: '72%',
-            left: '74%',
-            width: '40vw',
-            height: '40vw',
-            maxWidth: '480px',
-            maxHeight: '480px',
-            borderRadius: '50%',
-            background: 'radial-gradient(closest-side, rgba(142,27,45,0.20), transparent 72%)',
-            filter: 'blur(88px)',
-            animation: 'nebDrift3 22s ease-in-out infinite'
-          }}></div>
-        </div>
+        {/* Capa 0: Canvas Cosmos (Estrellas titilantes y Nebulosas fluidas dibujadas programáticamente) */}
+        <canvas id="cosmos" style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}></canvas>
 
-        {/* Capa 1: campo de estrellas (canvas 2D, 3 capas de profundidad + fugaces) */}
-        <canvas id="cosmos" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}></canvas>
-
-        {/* Capa 3: luz reactiva al mouse */}
-        <div id="cursorGlow" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '380px',
-          height: '380px',
-          borderRadius: '50%',
-          background: 'radial-gradient(closest-side, rgba(142,27,45,0.32), transparent 70%)',
-          pointerEvents: 'none',
-          zIndex: 2,
-          opacity: 0,
-          transition: 'opacity .5s ease',
-          filter: 'blur(8px)',
-          mixBlendMode: 'screen',
-          willChange: 'transform'
-        }}></div>
-
-        {/* Viñeta superior */}
+        {/* Capa 1: Rejilla Geométrica (Grid) superpuesta sobre el Cosmos */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          zIndex: 3,
+          zIndex: 1,
           pointerEvents: 'none',
-          background: 'radial-gradient(120% 120% at 50% 50%, transparent 50%, rgba(0,0,0,0.62) 100%)'
+          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px)',
+          backgroundSize: '54px 54px',
+          maskImage: 'radial-gradient(circle at 50% 50%, black 30%, transparent 80%)',
+          WebkitMaskImage: 'radial-gradient(circle at 50% 50%, black 30%, transparent 80%)',
+          opacity: 0.9
+        }}></div>
+
+        {/* Capa 2: Viñeta para difuminar bordes del viewport */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 2,
+          pointerEvents: 'none',
+          background: 'radial-gradient(130% 130% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%)'
         }}></div>
 
         {/* Contenido (bloque con tilt) */}
@@ -636,17 +490,7 @@ export function LandingPage() {
                 height: 'clamp(92px, 11.4vw, 134px)',
                 color: 'var(--ink)'
               }}></div>
-              <div id="logoSweep" style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 2,
-                pointerEvents: 'none',
-                opacity: 0,
-                background: 'linear-gradient(100deg, transparent 42%, rgba(246,238,239,0.55) 50%, transparent 58%)',
-                mixBlendMode: 'screen',
-                animation: 'logoShimmer 8.5s ease-in-out 2.2s infinite',
-                willChange: 'transform, opacity'
-              }}></div>
+
             </div>
             <div id="wordmark" style={{
               fontFamily: "'Space Grotesk', sans-serif",
@@ -695,15 +539,7 @@ export function LandingPage() {
               <span style={{ display: 'inline-block', fontStyle: 'italic', fontWeight: 500, animation: 'wordIn .6s cubic-bezier(0.16,1,0.3,1) both', animationDelay: '1.17s' }}>por</span>
               <span style={{ display: 'inline-block', animation: 'wordIn .6s cubic-bezier(0.16,1,0.3,1) both', animationDelay: '1.26s' }}>llegar.</span>
             </h1>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              background: 'linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.14) 50%, transparent 58%)',
-              mixBlendMode: 'screen',
-              animation: 'sheenSweep 6s ease-in-out 3s infinite',
-              willChange: 'transform'
-            }}></div>
+
           </div>
 
           {/* Contador */}
