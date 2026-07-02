@@ -5,6 +5,7 @@ export interface AuthUser {
   email: string;
   name: string;
   role: string;
+  avatarUrl?: string | null;
   mustChangePassword?: boolean;
 }
 
@@ -17,6 +18,7 @@ interface AuthState {
   initializing: boolean;
   setAuth: (token: string, user: AuthUser, refreshToken?: string) => void;
   setAccessToken: (token: string) => void;
+  patchUser: (patch: Partial<AuthUser>) => void;
   setInitialized: () => void;
   clear: () => void;
 }
@@ -47,6 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ accessToken, user });
   },
   setAccessToken: (accessToken) => set({ accessToken }),
+  patchUser: (patch) => set((s) => (s.user ? { user: { ...s.user, ...patch } } : {})),
   setInitialized: () => set({ initializing: false }),
   clear: () => {
     clearStoredRefreshToken();

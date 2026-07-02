@@ -87,7 +87,11 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
             )}
             title="Mi perfil"
           >
-            <User className="size-[18px] shrink-0" />
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="size-[22px] shrink-0 rounded-full object-cover" />
+            ) : (
+              <User className="size-[18px] shrink-0" />
+            )}
             {!collapsed && <span className="truncate text-[13px]">{user?.name ?? 'Mi perfil'}</span>}
           </Link>
           <button

@@ -157,7 +157,7 @@ export function DashboardPage() {
 
   return (
     <AppShell>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');`}</style>
 
       <div style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }} className="pb-8">
 
@@ -167,7 +167,7 @@ export function DashboardPage() {
             <p className="text-[13px] font-medium capitalize text-gray-400">{today}</p>
             <h1
               className="mt-0.5 text-[30px] leading-tight text-gray-900"
-              style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
+              style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}
             >
               {greet(user?.name)}
             </h1>
@@ -629,7 +629,7 @@ function StatCard({
         </div>
         <p
           className={cn('text-[34px] leading-none tabular-nums', styles.num)}
-          style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}
         >
           {value}
         </p>
