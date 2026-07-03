@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { fractionToPercentInput, percentInputToFraction } from '@/lib/utils';
 import type { RawMaterialConfig } from './cost-structure-types';
 
 interface Props {
@@ -18,7 +20,8 @@ function cleanRawMaterialForForm(cfg?: RawMaterialConfig): any {
     wilson: {
       annualDemand: base.wilson?.annualDemand === 0 ? '' : (base.wilson?.annualDemand ?? ''),
       orderCost: base.wilson?.orderCost === 0 ? '' : (base.wilson?.orderCost ?? ''),
-      holdingRate: base.wilson?.holdingRate === 0 ? '' : (base.wilson?.holdingRate ?? ''),
+      // Tasa: se guarda como fracción (0.30) pero se muestra/tipea en % (30).
+      holdingRate: fractionToPercentInput(base.wilson?.holdingRate),
       unitCost: base.wilson?.unitCost === 0 ? '' : (base.wilson?.unitCost ?? ''),
     },
     stockPolicy: {
@@ -49,7 +52,8 @@ function cleanRawMaterialForSubmit(data: any): RawMaterialConfig {
     wilson: {
       annualDemand: fallbackNum(data.wilson?.annualDemand),
       orderCost: fallbackNum(data.wilson?.orderCost),
-      holdingRate: fallbackNum(data.wilson?.holdingRate),
+      // % tipeado (30) → fracción guardada (0.30) para el motor de cálculo.
+      holdingRate: percentInputToFraction(data.wilson?.holdingRate),
       unitCost: fallbackNum(data.wilson?.unitCost),
     },
     stockPolicy: {
@@ -72,7 +76,7 @@ function cleanRawMaterialForSubmit(data: any): RawMaterialConfig {
 }
 
 export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: Props) {
-  const { register, control, handleSubmit, reset, watch } = useForm<RawMaterialConfig>({
+  const { register, control, handleSubmit, reset, watch, formState: { isDirty } } = useForm<RawMaterialConfig>({
     defaultValues: cleanRawMaterialForForm(defaultValues) as any,
   });
 
@@ -91,8 +95,12 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
 
   const { fields: movements, append, remove } = useFieldArray({ control, name: 'movements' });
 
+  // Confirmación previa al guardado (paso explícito).
+  const [pending, setPending] = useState<RawMaterialConfig | null>(null);
+
   return (
-    <form onSubmit={handleSubmit((data) => onSave(cleanRawMaterialForSubmit(data)))} className="space-y-5 pt-3">
+    <>
+    <form onSubmit={handleSubmit((data) => setPending(cleanRawMaterialForSubmit(data)))} className="space-y-5 pt-3">
       {/* Wilson */}
       {!isProcesses && (
         <section>
@@ -100,10 +108,10 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
             Lote óptimo de Wilson
           </h4>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Demanda anual (R)" type="number" step="1" numeric {...register('wilson.annualDemand', { valueAsNumber: true })} />
-            <Input label="Costo de pedido (S) $" type="number" step="0.01" numeric {...register('wilson.orderCost', { valueAsNumber: true })} />
-            <Input label="Tasa de mantenimiento (K) ej: 0.30" type="number" step="0.01" numeric {...register('wilson.holdingRate', { valueAsNumber: true })} />
-            <Input label="Costo unitario (C) $" type="number" step="0.01" numeric {...register('wilson.unitCost', { valueAsNumber: true })} />
+            <Input label="Demanda anual (R)" type="number" step="1" numeric placeholder="Ej: 15000" info="Unidades totales de materia prima que consumís en el año. Número entero." {...register('wilson.annualDemand', { valueAsNumber: true })} />
+            <Input label="Costo de pedido (S) $" type="number" step="0.01" numeric placeholder="Ej: 8500" info="Costo fijo de emitir una orden de compra (gestión, flete fijo, etc.). En pesos." {...register('wilson.orderCost', { valueAsNumber: true })} />
+            <Input label="Tasa de mantenimiento (K)" type="number" step="0.1" numeric suffix="%" placeholder="Ej: 30" info="Costo anual de mantener stock como porcentaje del valor del inventario. Se escribe en porcentaje (ej: 30 = 30%)." {...register('wilson.holdingRate', { valueAsNumber: true })} />
+            <Input label="Costo unitario (C) $" type="number" step="0.01" numeric placeholder="Ej: 1200" info="Costo de una unidad de materia prima. En pesos." {...register('wilson.unitCost', { valueAsNumber: true })} />
           </div>
         </section>
       )}
@@ -114,11 +122,11 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
           Política de stock
         </h4>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Input label="Consumo mínimo/día (Cm)" type="number" step="0.1" numeric {...register('stockPolicy.minConsumption', { valueAsNumber: true })} />
-          <Input label="Consumo máximo/día (CM)" type="number" step="0.1" numeric {...register('stockPolicy.maxConsumption', { valueAsNumber: true })} />
-          <Input label="Plazo mín. reposición (días)" type="number" step="1" numeric {...register('stockPolicy.minLeadTime', { valueAsNumber: true })} />
-          <Input label="Plazo máx. reposición (días)" type="number" step="1" numeric {...register('stockPolicy.maxLeadTime', { valueAsNumber: true })} />
-          <Input label="Stock de reserva (Sr)" type="number" step="1" numeric {...register('stockPolicy.safetyStock', { valueAsNumber: true })} />
+          <Input label="Consumo mínimo/día (Cm)" type="number" step="0.1" numeric placeholder="Ej: 30" info="Consumo más bajo esperado por día. Sirve para el cálculo del stock de seguridad." {...register('stockPolicy.minConsumption', { valueAsNumber: true })} />
+          <Input label="Consumo máximo/día (CM)" type="number" step="0.1" numeric placeholder="Ej: 60" info="Consumo más alto esperado por día." {...register('stockPolicy.maxConsumption', { valueAsNumber: true })} />
+          <Input label="Plazo mín. reposición (días)" type="number" step="1" numeric placeholder="Ej: 4" info="Días mínimos que tarda en llegar un pedido. Número entero." {...register('stockPolicy.minLeadTime', { valueAsNumber: true })} />
+          <Input label="Plazo máx. reposición (días)" type="number" step="1" numeric placeholder="Ej: 10" info="Días máximos que tarda en llegar un pedido. Número entero." {...register('stockPolicy.maxLeadTime', { valueAsNumber: true })} />
+          <Input label="Stock de reserva (Sr)" type="number" step="1" numeric placeholder="Ej: 150" info="Stock de seguridad mínimo que querés mantener siempre. Número entero." {...register('stockPolicy.safetyStock', { valueAsNumber: true })} />
         </div>
       </section>
 
@@ -128,8 +136,8 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
           Existencia inicial
         </h4>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Cantidad inicial" type="number" step="1" numeric {...register('initialStock.quantity', { valueAsNumber: true })} />
-          <Input label="Costo unitario inicial $" type="number" step="0.01" numeric {...register('initialStock.unitCost', { valueAsNumber: true })} />
+          <Input label="Cantidad inicial" type="number" step="1" numeric placeholder="Ej: 400" info="Unidades de materia prima en stock al inicio del período. Número entero." {...register('initialStock.quantity', { valueAsNumber: true })} />
+          <Input label="Costo unitario inicial $" type="number" step="0.01" numeric placeholder="Ej: 1150" info="Costo por unidad de la existencia inicial. En pesos." {...register('initialStock.unitCost', { valueAsNumber: true })} />
         </div>
       </section>
 
@@ -206,16 +214,38 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
         </div>
       </section>
 
-      <Button type="submit" loading={saving} className="w-full">
-        Guardar Materia Prima
-      </Button>
+      <div className="space-y-2">
+        {isDirty && (
+          <p className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-warn">
+            <span className="size-1.5 rounded-full bg-warn" /> Tenés cambios sin guardar
+          </p>
+        )}
+        <Button type="submit" loading={saving} className="w-full">
+          Guardar Materia Prima
+        </Button>
+      </div>
     </form>
+
+    <ConfirmDialog
+      open={!!pending}
+      title="Actualizar Materia Prima"
+      message="¿Querés actualizar los datos de Materia Prima?"
+      confirmLabel="Guardar"
+      loading={saving}
+      onConfirm={async () => {
+        if (!pending) return;
+        await onSave(pending);
+        setPending(null);
+      }}
+      onCancel={() => setPending(null)}
+    />
+    </>
   );
 }
 
 export function emptyRawMaterial(): RawMaterialConfig {
   return {
-    wilson: { annualDemand: 0, orderCost: 0, holdingRate: 0.3, unitCost: 0 },
+    wilson: { annualDemand: 0, orderCost: 0, holdingRate: 0, unitCost: 0 },
     stockPolicy: { minConsumption: 0, maxConsumption: 0, minLeadTime: 0, maxLeadTime: 0, safetyStock: 0 },
     initialStock: { quantity: 0, unitCost: 0 },
     movements: [],

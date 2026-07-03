@@ -157,7 +157,7 @@ export function DashboardPage() {
 
   return (
     <AppShell>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');`}</style>
 
       <div style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }} className="pb-8">
 
@@ -166,8 +166,8 @@ export function DashboardPage() {
           <div>
             <p className="text-[13px] font-medium capitalize text-gray-400">{today}</p>
             <h1
-              className="mt-0.5 text-[30px] font-extrabold leading-tight text-gray-900"
-              style={{ fontFamily: "'Syne', sans-serif" }}
+              className="mt-0.5 text-[30px] leading-tight text-gray-900"
+              style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}
             >
               {greet(user?.name)}
             </h1>
@@ -628,8 +628,8 @@ function StatCard({
           <Icon className="size-4" />
         </div>
         <p
-          className={cn('text-[32px] font-extrabold leading-none tabular-nums', styles.num)}
-          style={{ fontFamily: "'Syne', sans-serif" }}
+          className={cn('text-[34px] leading-none tabular-nums', styles.num)}
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}
         >
           {value}
         </p>

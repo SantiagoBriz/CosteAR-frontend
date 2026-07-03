@@ -14,7 +14,7 @@ const NAV = [
   { to: '/alerts', label: 'Alertas', icon: Bell },
 ] as const;
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
   const { location } = useRouterState();
@@ -87,7 +87,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
             title="Mi perfil"
           >
-            <User className="size-[18px] shrink-0" />
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="size-[22px] shrink-0 rounded-full object-cover" />
+            ) : (
+              <User className="size-[18px] shrink-0" />
+            )}
             {!collapsed && <span className="truncate text-[13px]">{user?.name ?? 'Mi perfil'}</span>}
           </Link>
           <button
@@ -106,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Contenido */}
       <main className={cn("flex-1 transition-all duration-200", collapsed ? "ml-16" : "ml-60")}>
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+        <div className={cn('mx-auto px-8 py-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
       </main>
     </div>
   );

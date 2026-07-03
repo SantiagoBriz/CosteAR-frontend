@@ -10,6 +10,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { StatusBadge, marginStatus } from '@/components/ui/StatusBadge';
 import { Money, Percent } from '@/components/ui/Money';
 import {
@@ -65,12 +66,8 @@ export function CostStructurePage() {
     setError(null);
     try {
       await updateSection.mutateAsync({ section, config });
-      const next: Record<string, SectionTab> = {
-        'raw-material':   'direct-labor',
-        'direct-labor':   'indirect-costs',
-        'indirect-costs': 'sales',
-      };
-      setActiveTab(next[section] ?? 'result');
+      // No se auto-avanza a la siguiente sección: el usuario se queda en la
+      // pestaña actual para seguir revisando lo que cargó.
     } catch (e) { setError(apiErrorMessage(e)); }
   };
 
@@ -94,7 +91,7 @@ export function CostStructurePage() {
   }
 
   return (
-    <AppShell>
+    <AppShell wide>
       <FullScreenCalculatorLoader active={calculate.isPending} />
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -135,7 +132,7 @@ export function CostStructurePage() {
       )}
 
       {/* Tab bar */}
-      <div className="mb-4 flex gap-0 overflow-x-auto border-b border-line">
+      <div className="mb-8 flex gap-0 overflow-x-auto border-b border-line">
         {(
           [
             { id: 'raw-material'    as SectionTab, label: 'Materia Prima',        icon: Package,    configKey: 'mp'    as const },
@@ -219,7 +216,7 @@ export function CostStructurePage() {
             setError(null);
             try {
               await updateSales.mutateAsync({ salesUnitPrice: p, salesQuantity: q });
-              setActiveTab('result');
+              // Se queda en Venta tras guardar (no salta a Resultado).
             } catch (e) { setError(apiErrorMessage(e)); }
           }}
           saving={updateSales.isPending}
@@ -285,7 +282,7 @@ function SalesTab({
   onCalculate: () => void;
   calculating: boolean;
 }) {
-  const { register, handleSubmit, reset } = useForm<{ unitPrice: any; quantity: any }>({
+  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ unitPrice: any; quantity: any }>({
     defaultValues: {
       unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
       quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
@@ -299,12 +296,14 @@ function SalesTab({
     });
   }, [defaultPrice, defaultQty, reset]);
 
+  const [pending, setPending] = useState<{ p: number; q: number } | null>(null);
+
   const onSubmit = (v: any) => {
     const fallbackNum = (val: any) => {
       if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
       return Number(val);
     };
-    onSave(fallbackNum(v.unitPrice), fallbackNum(v.quantity));
+    setPending({ p: fallbackNum(v.unitPrice), q: fallbackNum(v.quantity) });
   };
 
   return (
@@ -316,9 +315,16 @@ function SalesTab({
       <CardBody>
         <form onSubmit={handleSubmit(onSubmit)} className="max-w-sm space-y-4">
           <Input label="Precio de venta unitario $" type="number" step="0.01" numeric
+            placeholder="Ej: 25000" info="Precio al que vendés una unidad del producto. En pesos."
             {...register('unitPrice', { required: true })} />
           <Input label="Cantidad producida / vendida" type="number" step="1" numeric
+            placeholder="Ej: 100" info="Unidades producidas/vendidas en el período. Número entero."
             {...register('quantity', { required: true })} />
+          {isDirty && (
+            <p className="flex items-center gap-1.5 text-[12px] font-medium text-warn">
+              <span className="size-1.5 rounded-full bg-warn" /> Tenés cambios sin guardar
+            </p>
+          )}
           <div className="flex gap-3 pt-1">
             <Button type="submit" variant="secondary" loading={saving}>Guardar precio</Button>
             {allReady && (
@@ -329,6 +335,20 @@ function SalesTab({
           </div>
         </form>
       </CardBody>
+
+      <ConfirmDialog
+        open={!!pending}
+        title="Actualizar Venta"
+        message="¿Querés actualizar los datos de Venta?"
+        confirmLabel="Guardar"
+        loading={saving}
+        onConfirm={async () => {
+          if (!pending) return;
+          await onSave(pending.p, pending.q);
+          setPending(null);
+        }}
+        onCancel={() => setPending(null)}
+      />
     </Card>
   );
 }

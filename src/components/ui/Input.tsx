@@ -1,16 +1,21 @@
 import { forwardRef, type InputHTMLAttributes, useId } from 'react';
+import { Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
+  /** Texto explicativo: se muestra en un tooltip al pasar el mouse por el ícono ℹ️. */
+  info?: string;
+  /** Sufijo fijo dentro del campo (ej: "%"). Visible siempre, no editable. */
+  suffix?: string;
   /** Para montos: aplica tipografía monoespaciada alineada a la derecha. */
   numeric?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, hint, numeric, id, ...props }, ref) => {
+  ({ className, label, error, hint, info, suffix, numeric, id, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id ?? generatedId;
 
@@ -28,30 +33,46 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-[12px] font-medium uppercase tracking-wide text-ink-soft"
+            className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-wide text-ink-soft"
           >
             {label}
+            {info && (
+              <span className="group relative inline-flex">
+                <Info className="size-3 cursor-help text-idle hover:text-action" />
+                <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-52 -translate-x-1/2 rounded-md bg-ink px-2.5 py-1.5 text-[11px] font-normal normal-case leading-snug text-white shadow-lg group-hover:block">
+                  {info}
+                </span>
+              </span>
+            )}
           </label>
         )}
-        <input
-          ref={ref}
-          id={inputId}
-          className={cn(
-            'h-11 rounded-sm border bg-surface px-3 text-sm text-ink transition-colors',
-            'placeholder:text-idle focus:border-granate',
-            numeric && 'tabular text-right',
-            error ? 'border-danger' : 'border-line',
-            className,
+        <div className="relative">
+          <input
+            ref={ref}
+            id={inputId}
+            className={cn(
+              'h-11 w-full rounded-sm border bg-surface px-3 text-sm text-ink transition-colors',
+              'placeholder:text-idle focus:border-granate',
+              numeric && 'tabular text-right',
+              suffix && 'pr-8',
+              error ? 'border-danger' : 'border-line',
+              className,
+            )}
+            aria-invalid={!!error}
+            onFocus={(e) => {
+              e.target.select();
+              if (props.onFocus) props.onFocus(e);
+            }}
+            {...props}
+            value={value}
+            placeholder={placeholder}
+          />
+          {suffix && (
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-medium text-ink-soft">
+              {suffix}
+            </span>
           )}
-          aria-invalid={!!error}
-          onFocus={(e) => {
-            e.target.select();
-            if (props.onFocus) props.onFocus(e);
-          }}
-          {...props}
-          value={value}
-          placeholder={placeholder}
-        />
+        </div>
         {error ? (
           <span className="text-[12px] text-danger">{error}</span>
         ) : hint ? (

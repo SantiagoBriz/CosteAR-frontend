@@ -11,13 +11,6 @@ import { cn } from '@/lib/utils';
 import { usePendingEntries, useReviewEntry, useAccuracyStats, useBulkApprove, type DataEntry } from './validaciones-hooks';
 import { formatDate } from '@/lib/utils';
 
-const SOURCE_LABELS: Record<string, string> = {
-  TEXT: 'Texto',
-  PDF: 'PDF',
-  IMAGE: 'Imagen',
-  WHATSAPP: 'WhatsApp',
-};
-
 // Intentar parsear el reviewNote como análisis de IA
 interface AIAnalysis {
   documentType?: string;
@@ -40,25 +33,6 @@ function parseAIAnalysis(reviewNote: string | null): AIAnalysis | null {
     return null;
   }
 }
-
-const DOC_TYPE_LABELS: Record<string, string> = {
-  factura_compra: 'Factura de compra',
-  factura_venta: 'Factura de venta',
-  remito: 'Remito',
-  liquidacion_sueldos: 'Liquidación de sueldos',
-  planilla_horas: 'Planilla de horas',
-  nota_debito: 'Nota de débito',
-  recibo: 'Recibo',
-  otro: 'Otro documento',
-  FACTURA_COMPRA: 'Factura de compra',
-  FACTURA_VENTA: 'Factura de venta',
-  REMITO: 'Remito',
-  LIQUIDACION_MOD: 'Liquidación de sueldos',
-  PLANILLA_HORAS: 'Planilla de horas',
-  NOTA_DEBITO: 'Nota de débito',
-  NOTA_CREDITO: 'Nota de crédito',
-  DESCONOCIDO: 'Sin clasificar',
-};
 
 const SECTION_LABELS: Record<string, string> = {
   MATERIA_PRIMA: 'Materia Prima',
@@ -550,14 +524,6 @@ function EntryRow({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-              <span className="rounded-sm bg-surface-alt px-1.5 py-0.5 text-[11px] text-ink-soft">
-                {SOURCE_LABELS[entry.sourceType] ?? entry.sourceType}
-              </span>
-              {aiAnalysis?.documentType && (
-                <span className="rounded-sm bg-indigo-50 px-1.5 py-0.5 text-[11px] text-indigo-700">
-                  {DOC_TYPE_LABELS[aiAnalysis.documentType] ?? aiAnalysis.documentType}
-                </span>
-              )}
               {aiAnalysis?.costSection && aiAnalysis.costSection !== 'DESCONOCIDO' && (
                 <span className="rounded-sm bg-indigo-50 px-1.5 py-0.5 text-[11px] text-indigo-700">
                   {SECTION_LABELS[aiAnalysis.costSection] ?? aiAnalysis.costSection}
@@ -689,22 +655,14 @@ function EntryRow({
                 <div className="rounded border border-indigo-200 bg-white p-3 space-y-1.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">Por qué se clasificó así</p>
                   {entry.classificationAudits[0].explanation && (
-                    <p className="text-[12px] text-ink-soft leading-relaxed">{entry.classificationAudits[0].explanation}</p>
+                    <p className="text-[12px] text-ink-soft leading-relaxed">
+                      {entry.classificationAudits[0].explanation.replace(/\.?\s*Confianza:\s*\d+(?:[.,]\d+)?\s*%\.?/i, '').trim()}
+                    </p>
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {entry.classificationAudits[0].confidence != null && (
-                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700">
-                        {Math.round(entry.classificationAudits[0].confidence ?? 0)}% confianza
-                      </span>
-                    )}
                     {entry.classificationAudits[0].definitiveSignal && (
                       <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700 font-mono">
                         señal: {entry.classificationAudits[0].definitiveSignal}
-                      </span>
-                    )}
-                    {entry.classificationAudits[0].aiUsed && (
-                      <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 text-[11px] text-purple-700">
-                        Auto-procesado
                       </span>
                     )}
                     {entry.classificationAudits[0].requiresReview && (

@@ -34,16 +34,37 @@ export function useCreateCompany() {
   });
 }
 
-export function useCostStructures(companyId: string) {
+export function useCostStructures(companyId: string, includeDeleted = false) {
   return useQuery({
-    queryKey: ['companies', companyId, 'cost-structures'],
+    queryKey: ['companies', companyId, 'cost-structures', { includeDeleted }],
     queryFn: async () => {
       const res = await api.get<{ data: CostStructure[] }>(
         `/companies/${companyId}/cost-structures`,
+        { params: includeDeleted ? { includeDeleted: true } : undefined },
       );
       return res.data.data;
     },
     enabled: !!companyId,
+  });
+}
+
+export function useDeleteCostStructure(companyId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/cost-structures/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies', companyId, 'cost-structures'] }),
+  });
+}
+
+export function useRestoreCostStructure(companyId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.post(`/cost-structures/${id}/restore`, {});
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies', companyId, 'cost-structures'] }),
   });
 }
 
