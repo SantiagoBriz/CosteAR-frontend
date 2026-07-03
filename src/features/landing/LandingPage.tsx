@@ -1,10 +1,13 @@
-import { useEffect, useRef } from 'react';
-import { Link } from '@tanstack/react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@/stores/auth-store';
 import { ArrowRight, LogIn } from 'lucide-react';
+import { AccessGateModal } from './AccessGateModal';
 
 export function LandingPage() {
   const { accessToken, user } = useAuthStore();
+  const navigate = useNavigate();
+  const [showGate, setShowGate] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Configuración de la landing (equivalente a las props del Devcard)
@@ -487,12 +490,13 @@ export function LandingPage() {
             Ir al Panel <ArrowRight className="size-3.5" />
           </Link>
         ) : (
-          <Link
-            to="/login"
+          <button
+            type="button"
+            onClick={() => setShowGate(true)}
             className="magnetic inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/80 backdrop-blur-md hover:bg-zinc-900 text-xs font-semibold text-zinc-100 hover:text-white px-4 py-2.5 transition-all duration-200"
           >
             Ingresar <LogIn className="size-3.5" />
-          </Link>
+          </button>
         )}
       </div>
 
@@ -1078,6 +1082,13 @@ export function LandingPage() {
           }}>CosteAR · 2026 · Hecho en Tucumán 🇦🇷</footer>
         </div>
       </div>
+
+      {showGate && (
+        <AccessGateModal
+          onClose={() => setShowGate(false)}
+          onSuccess={() => navigate({ to: '/login' })}
+        />
+      )}
     </div>
   );
 }
