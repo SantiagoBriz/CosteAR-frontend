@@ -1046,7 +1046,7 @@ export function LandingPage() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
               Email
             </a>
-            <a className="magnetic" href="https://www.instagram.com/coste_ar?igsh=MW05ZXF4ODZmNm5ycQ%3D%3D&utm_source=qr" target="_blank" rel="noopener" style={{
+            <a className="magnetic" href="https://www.instagram.com/coste_ar?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener" style={{
               minHeight: '48px',
               padding: '0 22px',
               display: 'inline-flex',
