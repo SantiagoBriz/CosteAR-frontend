@@ -16,7 +16,7 @@
 
   /* Neutros y superficies */
   --color-surface: #ffffff;
-  --color-surface-alt: #fcfbfa;
+  --color-surface-alt: #f4f5f8;
   --color-ink: #111215;
   --color-ink-soft: #525860;
   --color-line: #e6e4e3;
@@ -32,10 +32,11 @@
   --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
-  /* Radios (4 inputs, 6 botones, 8 tarjetas) */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Radios estilo Salesforce/Hubspot premium (8px inputs, 12px sub-tarjetas, 24px tarjetas) */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
 }
 
 * {

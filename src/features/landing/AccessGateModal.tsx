@@ -43,12 +43,11 @@ export function AccessGateModal({ onClose, onSuccess }: Props) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
-      style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}
       onClick={onClose}
     >
       <style>{`@keyframes gateShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}`}</style>
       <div
-        className="relative w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-7 text-zinc-100"
+        className="relative w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-950 p-7 text-zinc-100"
         style={{ boxShadow: '0 0 70px -12px rgba(80,16,26,0.75)', animation: shake ? 'gateShake .4s' : undefined }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -61,11 +60,11 @@ export function AccessGateModal({ onClose, onSuccess }: Props) {
           <X className="size-5" />
         </button>
 
-        <div className="mb-4 flex size-11 items-center justify-center rounded-xl" style={{ background: 'rgba(80,16,26,0.35)' }}>
+        <div className="mb-4 flex size-11 items-center justify-center rounded-md" style={{ background: 'rgba(80,16,26,0.35)' }}>
           <Lock className="size-5" style={{ color: '#e0919b' }} />
         </div>
 
-        <h2 className="mb-2 text-[23px] leading-tight text-white" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
+        <h2 className="mb-2 text-[23px] font-semibold leading-tight text-white">
           Muchas gracias por su interés
         </h2>
         <p className="mb-6 text-[14px] leading-relaxed text-zinc-400">
@@ -82,7 +81,7 @@ export function AccessGateModal({ onClose, onSuccess }: Props) {
           onChange={(e) => { setPassword(e.target.value); setError(null); }}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
           placeholder="Ingresá la clave del equipo"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-[15px] text-zinc-100 placeholder-zinc-600 outline-none transition-colors focus:border-[#7a2230]"
+          className="w-full rounded-md border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-[15px] text-zinc-100 placeholder-zinc-600 outline-none transition-colors focus:border-[#7a2230]"
         />
         {error && <p className="mt-2 text-[13px] text-red-400">{error}</p>}
 
@@ -90,7 +89,7 @@ export function AccessGateModal({ onClose, onSuccess }: Props) {
           type="button"
           onClick={submit}
           disabled={password.trim().length === 0 || loading}
-          className="mt-5 w-full rounded-xl py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50"
+          className="mt-5 w-full rounded-md py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50"
           style={{ background: 'linear-gradient(120deg,#50101A,#7a1a28)' }}
         >
           {loading ? 'Verificando…' : 'Acceder'}

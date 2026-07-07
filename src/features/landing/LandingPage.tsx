@@ -1,923 +1,415 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '@/stores/auth-store';
-import { ArrowRight, LogIn } from 'lucide-react';
+import {
+  ArrowRight, LogIn, DollarSign, AlertTriangle, Sparkles, Percent,
+  GraduationCap, FileSpreadsheet, Building2, UploadCloud, Radar, BellRing,
+} from 'lucide-react';
 import { AccessGateModal } from './AccessGateModal';
+import iPhoneFrame from '@/assets/iphone-frame.svg';
+
+/* Inset de la pantalla real dentro del frame SVG (calculado desde su viewBox 1296x2592). */
+const SCREEN_INSET = { top: '3.02%', right: '6.54%', bottom: '2.98%', left: '6.66%' };
 
 export function LandingPage() {
   const { accessToken, user } = useAuthStore();
   const navigate = useNavigate();
   const [showGate, setShowGate] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
 
-  // Configuración de la landing (equivalente a las props del Devcard)
-  const P = {
-    phrase: 'A',
-    targetDate: '2026-08-13T09:00:00-03:00',
-    glow: '#50101A'
+  const handleAccessClick = () => {
+    if (accessToken) {
+      navigate({ to: user?.role === 'EMPRESA_OPERATOR' ? '/portal' : '/dashboard' });
+    } else {
+      setShowGate(true);
+    }
   };
 
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    let reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const fine = window.matchMedia('(pointer:fine)').matches;
-
-    if (P.glow) root.style.setProperty('--granate', P.glow);
-
-    // 1. Isotipo "ecualizador": C de barras horizontales
-    const buildLogo = (el: HTMLElement) => {
-      const mark = el.querySelector('#logoMark');
-      if (!mark) return;
-      mark.innerHTML = ''; // Limpiar previo
-      const ns = 'http://www.w3.org/2000/svg';
-      const W = 210, H = 200, cx = 105, cy = 100, Ro = 86, Ri = 45, step = 7, barH = 3, mouthH = 22;
-      const svg = document.createElementNS(ns, 'svg');
-      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-      svg.setAttribute('width', '100%');
-      svg.setAttribute('height', '100%');
-      svg.style.overflow = 'visible';
-
-      const segs: [number, number, number, number][] = [];
-      for (let y = cy - Ro + barH; y <= cy + Ro - barH; y += step) {
-        const dy = y - cy, ady = Math.abs(dy);
-        if (ady >= Ro) continue;
-        const xo = Math.sqrt(Ro * Ro - dy * dy);
-        if (ady >= Ri) {
-          segs.push([cx - xo, cx + xo, y, ady]);
-        } else {
-          const xi = Math.sqrt(Ri * Ri - dy * dy);
-          segs.push([cx - xo, cx - xi, y, ady]); // izquierda (espina)
-          if (ady >= mouthH) segs.push([cx + xi, cx + xo, y, ady]); // derecha salvo la boca
-        }
-      }
-
-      const bars: { el: SVGElement; ady: number }[] = [];
-      segs.forEach(([x1, x2, y, ady]) => {
-        const r = document.createElementNS(ns, 'rect');
-        const w = Math.max(2.4, x2 - x1);
-        r.setAttribute('x', x1.toFixed(1));
-        r.setAttribute('y', (y - barH / 2).toFixed(1));
-        r.setAttribute('width', w.toFixed(1));
-        r.setAttribute('height', barH.toString());
-        r.setAttribute('rx', (barH / 2).toFixed(1));
-        r.setAttribute('fill', 'currentColor');
-        r.style.transformBox = 'fill-box';
-        r.style.transformOrigin = 'center';
-        bars.push({ el: r, ady });
-        svg.appendChild(r);
-      });
-      mark.appendChild(svg);
-
-      if (!document.getElementById('eqPulseKF')) {
-        const st = document.createElement('style');
-        st.id = 'eqPulseKF';
-        st.textContent = '@keyframes eqPulseBar{0%{transform:scaleX(.80)}100%{transform:scaleX(1)}}';
-        document.head.appendChild(st);
-      }
-
-      const maxAdy = Ro;
-      bars.forEach((b) => {
-        if (reduce) {
-          b.el.style.opacity = '1';
-          return;
-        }
-        const dur = (2.4 + Math.random() * 1.8).toFixed(2);
-        const ph = (-(Math.random() * 4)).toFixed(2);
-        b.el.style.animation = 'eqPulseBar ' + dur + 's ease-in-out ' + ph + 's infinite alternate';
-        b.el.style.opacity = '0';
-        b.el.animate(
-          [{ opacity: 0 }, { opacity: 1 }],
-          { duration: 460, delay: (b.ady / maxAdy) * 380 + 120, easing: 'ease-out', fill: 'forwards' }
-        );
-      });
-    };
-
-    // 2. Cosmos & Nebulae: Programmatic Canvas Drawing
-    let cosmosResizeHandler: (() => void) | null = null;
-    let animationFrameId: number | null = null;
-    let cosmosCleanup: (() => void) | null = null;
-
-    const buildCosmos = (el: HTMLElement) => {
-      const canvas = el.querySelector('#cosmos') as HTMLCanvasElement | null;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      const rand = (a: number, b: number) => a + Math.random() * (b - a);
-
-      interface Star {
-        x: number;
-        y: number;
-        r: number;
-        a: number;
-        ph: number;
-        sp: number;
-      }
-      const stars: Star[] = [];
-      let W = 0, H = 0, DPR = 1;
-
-      const gen = () => {
-        W = window.innerWidth; H = window.innerHeight;
-        DPR = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-        canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-
-        stars.length = 0;
-        const n = Math.round((W * H) / 10000);
-        for (let i = 0; i < n; i++) {
-          stars.push({
-            x: Math.random() * W,
-            y: Math.random() * H,
-            r: rand(0.5, 1.2),
-            a: rand(0.2, 0.7),
-            ph: Math.random() * Math.PI * 2,
-            sp: rand(0.3, 0.8)
-          });
-        }
-      };
-      gen();
-      cosmosResizeHandler = gen;
-      window.addEventListener('resize', gen);
-
-      // Programmatic glowing nebulae that drift slowly (no divs, no hard borders)
-      const nebulae = [
-        { x: W * 0.4, y: H * 0.5, targetX: W * 0.4, targetY: H * 0.5, r: 420, col: 'rgba(114, 18, 31, 0.16)', angle: 0, speed: 0.001 },
-        { x: W * 0.6, y: H * 0.4, targetX: W * 0.6, targetY: H * 0.4, r: 350, col: 'rgba(162, 28, 47, 0.11)', angle: Math.PI, speed: 0.0008 },
-        { x: W * 0.5, y: H * 0.6, targetX: W * 0.5, targetY: H * 0.6, r: 260, col: 'rgba(201, 162, 75, 0.03)', angle: Math.PI / 2, speed: 0.0012 }
-      ];
-
-      const start = performance.now();
-      const draw = (now: number) => {
-        const t = (now - start) / 1000;
-        ctx.fillStyle = '#0B0607';
-        ctx.fillRect(0, 0, W, H);
-
-        ctx.globalCompositeOperation = 'lighter';
-
-        // 1. Draw Nebulae
-        nebulae.forEach((neb) => {
-          neb.angle += neb.speed;
-          const dx = Math.sin(neb.angle) * 45;
-          const dy = Math.cos(neb.angle) * 35;
-          const cx = neb.targetX + dx;
-          const cy = neb.targetY + dy;
-
-          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, neb.r);
-          g.addColorStop(0, neb.col);
-          g.addColorStop(0.5, neb.col.replace(/[\d.]+\)$/, '0.04)'));
-          g.addColorStop(1, 'rgba(0,0,0,0)');
-
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(cx, cy, neb.r, 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-        // 2. Draw Twinkling Stars
-        stars.forEach((s) => {
-          const tw = 0.55 + 0.45 * Math.sin(t * s.sp + s.ph);
-          ctx.fillStyle = 'rgba(255, 255, 255,' + (s.a * tw) + ')';
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-        ctx.globalCompositeOperation = 'source-over';
-        animationFrameId = requestAnimationFrame(draw);
-      };
-      animationFrameId = requestAnimationFrame(draw);
-    };
-
-    // 3. Frase central: swap A/B/C
-    const maybeSwapPhrase = (el: HTMLElement) => {
-      const variant = P.phrase || 'A';
-      if (variant === 'A') return;
-      const map: Record<string, [string, boolean?, boolean?][]> = {
-        B: [['El'], ['futuro', true], ['de'], ['tus'], ['costos,'], ['a'], ['punto', false, true], ['de'], ['empezar.']],
-        C: [['Falta'], ['muy'], ['poco'], ['para'], ['cambiarlo', true], ['todo.']]
-      };
-      const tokens = map[variant];
-      if (!tokens) return;
-      const hEl = el.querySelector('#phraseWords');
-      if (!hEl) return;
-      hEl.innerHTML = '';
-      tokens.forEach((tk, i) => {
-        const [word, tech, ital] = tk;
-        const s = document.createElement('span');
-        s.textContent = word;
-        let css = 'display:inline-block;animation:wordIn .6s cubic-bezier(0.16,1,0.3,1) both;animation-delay:' + (0.9 + i * 0.09).toFixed(2) + 's;';
-        if (tech) css += "font-family:'Space Grotesk',sans-serif;font-weight:700;text-transform:uppercase;font-size:.86em;background:linear-gradient(120deg,var(--accent-a),var(--accent-b));-webkit-background-clip:text;background-clip:text;color:transparent;";
-        if (ital) css += 'font-style:italic;font-weight:500;';
-        s.style.cssText = css;
-        hEl.appendChild(s);
-      });
-    };
-
-    // 4. Contador con flip por dígito
-    let countdownTimer: any = null;
-    const startCountdown = (el: HTMLElement) => {
-      const TARGET = new Date(P.targetDate).getTime();
-      const pad = (n: number) => String(n).padStart(2, '0');
-
-      const counter = el.querySelector('#counter') as HTMLElement | null;
-      const arrived = el.querySelector('#arrived') as HTMLElement | null;
-      const label = el.querySelector('#cntLabel') as HTMLElement | null;
-
-      const get = (u: string) => ({
-        digs: el.querySelector('[data-unit="' + u + '"] .digs') as HTMLElement | null,
-        fill: el.querySelector('[data-fill="' + u + '"]') as HTMLElement | null
-      });
-      const units = { days: get('days'), hours: get('hours'), minutes: get('minutes'), seconds: get('seconds') };
-
-      const setDig = (slot: Element | null | undefined, ch: string) => {
-        if (!slot || slot.textContent === ch) return;
-        slot.textContent = ch;
-        if (reduce || !slot.animate) return;
-        slot.animate(
-          [{ transform: 'translateY(-100%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }],
-          { duration: 280, easing: 'cubic-bezier(0.16,1,0.3,1)' }
-        );
-      };
-      const setUnit = (U: ReturnType<typeof get>, val: number, frac: number) => {
-        if (U.digs) {
-          const s = pad(val), slots = U.digs.querySelectorAll('.dig');
-          setDig(slots[0], s[s.length - 2] || '0');
-          setDig(slots[1], s[s.length - 1] || '0');
-        }
-        if (U.fill && frac != null) U.fill.style.transform = 'scaleX(' + Math.max(0, Math.min(1, frac)) + ')';
-      };
-
-      let daysMax: number | null = null;
-      const tick = () => {
-        let diff = TARGET - Date.now();
-        if (diff <= 0) {
-          if (counter) counter.style.display = 'none';
-          if (label) label.style.display = 'none';
-          if (arrived) arrived.style.display = 'flex';
-          if (countdownTimer) clearInterval(countdownTimer);
-          return;
-        }
-        const d = Math.floor(diff / 86400000); diff -= d * 86400000;
-        const h = Math.floor(diff / 3600000); diff -= h * 3600000;
-        const m = Math.floor(diff / 60000); diff -= m * 60000;
-        const s = Math.floor(diff / 1000);
-        if (daysMax == null) daysMax = Math.max(d, 1);
-        setUnit(units.days, d, d / daysMax);
-        setUnit(units.hours, h, h / 24);
-        setUnit(units.minutes, m, m / 60);
-        setUnit(units.seconds, s, s / 60);
-      };
-      tick();
-      countdownTimer = setInterval(tick, 1000);
-    };
-
-    // 5. Card tilt parallax + magnetic buttons
-    const startPointerFX = (el: HTMLElement) => {
-      const tilt = el.querySelector('#tiltBlock') as HTMLElement | null;
-
-      let mx = window.innerWidth / 2, my = window.innerHeight / 2;
-      let cnx = 0, cny = 0;
-
-      const onMove = (e: MouseEvent) => {
-        mx = e.clientX; my = e.clientY;
-      };
-      window.addEventListener('mousemove', onMove);
-
-      let pointerRafId: number | null = null;
-      const loop = () => {
-        const nx = (mx / window.innerWidth) * 2 - 1;
-        const ny = (my / window.innerHeight) * 2 - 1;
-        cnx += (nx - cnx) * 0.08;
-        cny += (ny - cny) * 0.08;
-        if (tilt) tilt.style.transform = 'rotateY(' + (cnx * 3.2) + 'deg) rotateX(' + (-cny * 3.2) + 'deg)';
-
-        pointerRafId = requestAnimationFrame(loop);
-      };
-      pointerRafId = requestAnimationFrame(loop);
-
-      // Botones magnéticos
-      const mags = el.querySelectorAll('.magnetic');
-      const magHandlers: [Element, (e: any) => void, () => void, () => void][] = [];
-      mags.forEach((btn: any) => {
-        const onEnterMove = (e: MouseEvent) => {
-          const r = btn.getBoundingClientRect();
-          const dx = e.clientX - (r.left + r.width / 2);
-          const dy = e.clientY - (r.top + r.height / 2);
-          btn.style.transform = 'translate(' + Math.max(-6, Math.min(6, dx * 0.3)) + 'px,' + Math.max(-6, Math.min(6, dy * 0.3)) + 'px) scale(1.05)';
-        };
-        const onLeave = () => { btn.style.transform = ''; };
-        const onDown = () => { btn.style.transform = 'scale(0.97)'; };
-        btn.style.transition = 'transform .2s cubic-bezier(0.16,1,0.3,1), box-shadow .2s ease, border-color .2s ease, background .2s ease';
-        btn.addEventListener('mousemove', onEnterMove);
-        btn.addEventListener('mouseleave', onLeave);
-        btn.addEventListener('mousedown', onDown);
-        btn.addEventListener('mouseup', onEnterMove);
-        magHandlers.push([btn, onEnterMove, onLeave, onDown]);
-      });
-
-      cosmosCleanup = () => {
-        window.removeEventListener('mousemove', onMove);
-        if (pointerRafId) cancelAnimationFrame(pointerRafId);
-        magHandlers.forEach(([b, mv, lv, dn]) => {
-          b.removeEventListener('mousemove', mv);
-          b.removeEventListener('mouseleave', lv);
-          b.removeEventListener('mousedown', dn);
-          b.removeEventListener('mouseup', mv);
-        });
-      };
-    };
-
-    buildLogo(root);
-    buildCosmos(root);
-    maybeSwapPhrase(root);
-    startCountdown(root);
-    if (fine && !reduce) startPointerFX(root);
-
-    // Wordmark reveal animation
-    const wm = root.querySelector('#wordmark') as HTMLElement | null;
-    if (wm) {
-      if (reduce) {
-        wm.style.opacity = '1';
-      } else {
-        wm.animate(
-          [{ opacity: 0, letterSpacing: '0.62em' }, { opacity: 1, letterSpacing: '0.42em' }],
-          { duration: 700, delay: 1100, easing: 'cubic-bezier(0.16,1,0.3,1)', fill: 'forwards' }
-        );
-      }
-    }
-
-    return () => {
-      if (countdownTimer) clearInterval(countdownTimer);
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      if (cosmosResizeHandler) window.removeEventListener('resize', cosmosResizeHandler);
-      if (cosmosCleanup) cosmosCleanup();
-    };
-  }, []);
-
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-zinc-950 text-zinc-100 selection:bg-granate selection:text-white select-none">
-      {/* Cargar fuentes desde Google Fonts e inyectar animaciones clave del diseño de Claude */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=JetBrains+Mono:wght@500;700&display=swap');
+    <div className="min-h-screen overflow-x-hidden bg-surface text-ink antialiased selection:bg-granate selection:text-white">
+      {/* --- HEADER --- */}
+      <header className="relative z-40 border-b border-line/60 bg-surface">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
+          <span className="text-lg font-bold tracking-tight text-ink">CosteAR</span>
 
-        *{box-sizing:border-box}
-        html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#0E0708;font-family:'Space Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-        @keyframes nebDrift1{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(calc(-50% + 36px),calc(-50% - 26px))}}
-        @keyframes nebDrift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,24px)}}
-        @keyframes nebDrift3{0%,100%{transform:translate(0,0)}50%{transform:translate(26px,30px)}}
-        @keyframes nebIn{0%{opacity:0}100%{opacity:1}}
-        @keyframes fadeUp{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
-        @keyframes wordIn{0%{opacity:0;transform:translateY(20px);filter:blur(8px)}100%{opacity:1;transform:translateY(0);filter:blur(0)}}
-        @keyframes cardIn{0%{opacity:0;transform:translateY(30px) scale(.92)}100%{opacity:1;transform:translateY(0) scale(1)}}
-        @keyframes ctaIn{0%{opacity:0;transform:translateY(22px)}62%{opacity:1;transform:translateY(-3px)}100%{transform:translateY(0)}}
-        @keyframes glowBreath{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
-        @keyframes logoGlow{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.85;transform:translate(-50%,-50%) scale(1.08)}}
-        @keyframes sheenSweep{0%{transform:translateX(-130%)}42%,100%{transform:translateX(130%)}}
-        @keyframes logoShimmer{
-          0%{transform:translateX(-135%);opacity:0}
-          3%{opacity:0}
-          6%{opacity:.9}
-          11%{opacity:.9}
-          16%{transform:translateX(135%);opacity:0}
-          100%{transform:translateX(135%);opacity:0}
-        }
-        @keyframes pulseDot{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
-        @keyframes bgGlowBreath{0%{transform:translate(-50%,-50%) scale(0.92);opacity:0.7}100%{transform:translate(-50%,-50%) scale(1.08);opacity:0.9}}
-        @media (prefers-reduced-motion: reduce){
-          *{animation-duration:.01ms !important;animation-iteration-count:1 !important;animation-delay:0ms !important;transition-duration:.01ms !important}
-        }
-      ` }} />
+          <nav className="hidden items-center gap-8 text-sm font-medium text-ink-soft md:flex">
+            <a href="#features" className="transition-colors hover:text-ink">Características</a>
+            <a href="#como-funciona" className="transition-colors hover:text-ink">Cómo funciona</a>
+            <a href="mailto:proyectocostear@gmail.com" className="transition-colors hover:text-ink">Contacto</a>
+          </nav>
 
-      {/* Floating Panel Access button in the top right corner */}
-      <div className="absolute top-6 right-6 z-50 animate-[fadeUp_0.5s_cubic-bezier(0.16,1,0.3,1)_both] delay-[2.4s]">
-        {accessToken ? (
-          <Link
-            to={user?.role === 'EMPRESA_OPERATOR' ? '/portal' : '/dashboard'}
-            className="magnetic inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/80 backdrop-blur-md hover:bg-zinc-900 text-xs font-semibold text-zinc-100 hover:text-white px-4 py-2.5 transition-all duration-200"
-          >
-            Ir al Panel <ArrowRight className="size-3.5" />
-          </Link>
-        ) : (
           <button
             type="button"
-            onClick={() => setShowGate(true)}
-            className="magnetic inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/80 backdrop-blur-md hover:bg-zinc-900 text-xs font-semibold text-zinc-100 hover:text-white px-4 py-2.5 transition-all duration-200"
+            onClick={handleAccessClick}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-xs font-semibold text-ink transition-all duration-200 hover:border-granate hover:text-granate"
           >
-            Ingresar <LogIn className="size-3.5" />
+            {accessToken ? 'Ir al Panel' : 'Acceso Equipo'}
+            <LogIn className="size-3.5" />
           </button>
-        )}
-      </div>
+        </div>
+      </header>
 
-      <div ref={rootRef} style={{
-        // Variables CSS inyectadas en línea de la landing
-        // @ts-ignore
-        '--granate': '#50101A',
-        '--accent-a': '#8E1B2D',
-        '--accent-b': '#B5253A',
-        '--ink': '#F6EEEF',
-        '--muted': '#B9A9AC',
-        '--line': 'rgba(246,238,239,0.10)',
-        '--gold': '#C9A24B',
-        position: 'relative',
-        height: '100vh',
-        width: '100vw',
-        overflow: 'hidden',
-        background: '#0B0607',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'clamp(16px,3.5vh,44px) 16px',
-        perspective: '1400px',
-        fontFamily: "'Space Grotesk', sans-serif"
-      }}>
-        {/* Capa 0: Canvas Cosmos (Estrellas titilantes y Nebulosas fluidas dibujadas programáticamente) */}
-        <canvas id="cosmos" style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}></canvas>
+      {/* --- HERO --- */}
+      <section className="relative bg-surface pb-20 pt-16 lg:pt-20">
+        {/* Máscara: apaga cualquier resto de color del destello a blanco puro ANTES de que termine la sección, para que nunca se vea un corte contra las cards de abajo.
+            Sin z-index propio a propósito: así el teléfono (que viene después en el DOM) pinta encima donde se solapan, y la máscara solo se ve en el espacio vacío alrededor. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-surface via-surface/95 to-transparent" />
 
-        {/* Capa 1: Rejilla Geométrica (Grid) superpuesta sobre el Cosmos */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px)',
-          backgroundSize: '54px 54px',
-          maskImage: 'radial-gradient(circle at 50% 50%, black 30%, transparent 80%)',
-          WebkitMaskImage: 'radial-gradient(circle at 50% 50%, black 30%, transparent 80%)',
-          opacity: 0.9
-        }}></div>
-
-        {/* Capa 2: Viñeta para difuminar bordes del viewport */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 2,
-          pointerEvents: 'none',
-          background: 'radial-gradient(130% 130% at 50% 50%, transparent 40%, rgba(0,0,0,0.8) 100%)'
-        }}></div>
-
-        {/* Contenido (bloque con tilt) */}
-        <div id="tiltBlock" style={{
-          position: 'relative',
-          zIndex: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 'clamp(18px, 3.2vh, 38px)',
-          width: '100%',
-          maxWidth: '1120px',
-          textAlign: 'center',
-          transformStyle: 'preserve-3d',
-          willChange: 'transform'
-        }}>
-          {/* Logo CosteAR */}
-          <header style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: '150%',
-                height: '150%',
-                transform: 'translate(-50%,-50%)',
-                background: 'radial-gradient(closest-side, rgba(142,27,45,0.55), transparent 70%)',
-                filter: 'blur(20px)',
-                zIndex: 0,
-                animation: 'logoGlow 5s ease-in-out infinite',
-                pointerEvents: 'none'
-              }}></div>
-              <div id="logoMark" role="img" aria-label="CosteAR" style={{
-                position: 'relative',
-                zIndex: 1,
-                width: 'clamp(96px, 12vw, 140px)',
-                height: 'clamp(92px, 11.4vw, 134px)',
-                color: 'var(--ink)'
-              }}></div>
-
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-6 lg:grid-cols-2 lg:gap-8">
+          {/* --- Columna de texto --- */}
+          <div className="relative z-10 text-center lg:text-left">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-granate/15 bg-granate-tenue px-4 py-1.5 text-xs font-semibold text-granate">
+              <GraduationCap className="size-3.5" />
+              Aval académico · Cátedra de Costos, FCE — UNT
             </div>
-            <div id="wordmark" style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 600,
-              fontSize: 'clamp(15px, 1.5vw, 19px)',
-              letterSpacing: '.42em',
-              textTransform: 'uppercase',
-              color: 'var(--ink)',
-              paddingLeft: '.42em',
-              opacity: 0
-            }}>CosteAR</div>
-          </header>
 
-          {/* Frase central */}
-          <div style={{ position: 'relative', maxWidth: '1000px' }}>
-            <h1 id="phraseWords" style={{
-              margin: 0,
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              alignItems: 'baseline',
-              gap: '0 .22em',
-              fontFamily: "'Playfair Display', serif",
-              fontWeight: 600,
-              fontSize: 'clamp(48px, 8vw, 116px)',
-              lineHeight: .98,
-              letterSpacing: '-0.01em',
-              color: 'var(--ink)'
-            }}>
-              <span style={{ display: 'inline-block', animation: 'wordIn .6s cubic-bezier(0.16,1,0.3,1) both', animationDelay: '.90s' }}>Algo</span>
-              <span style={{
-                display: 'inline-block',
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                fontSize: '.86em',
-                letterSpacing: '-0.01em',
-                background: 'linear-gradient(120deg, var(--accent-a), var(--accent-b))',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                color: 'transparent',
-                animation: 'wordIn .6s cubic-bezier(0.16,1,0.3,1) both',
-                animationDelay: '.99s'
-              }}>grande</span>
-              <span style={{ display: 'inline-block', animation: 'wordIn .6s cubic-bezier(0.16,1,0.3,1) both', animationDelay: '1.08s' }}>está</span>
-              <span style={{ display: 'inline-block', fontStyle: 'italic', fontWeight: 500, animation: 'wordIn .6s cubic-bezier(0.16,1,0.3,1) both', animationDelay: '1.17s' }}>por</span>
-              <span style={{ display: 'inline-block', animation: 'wordIn .6s cubic-bezier(0.16,1,0.3,1) both', animationDelay: '1.26s' }}>llegar.</span>
+            <p className="mb-2 text-sm italic text-ink-soft">Costeo profesional, sin fricción.</p>
+
+            <h1 className="mx-auto max-w-xl text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl lg:mx-0">
+              Tus estructuras de costos, siempre al día
             </h1>
 
+            <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-ink-soft sm:text-lg lg:mx-0">
+              Automatizá la actualización de tus costeos ante la inflación, el dólar y las paritarias.
+              CosteAR sincroniza el BCRA y el INDEC en tiempo real y te avisa antes de que el margen de un cliente se te escape.
+            </p>
+
+            <div className="mt-10 flex items-center justify-center lg:justify-start">
+              <button
+                onClick={handleAccessClick}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-action px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-action/20 transition-all hover:bg-action-soft hover:shadow-xl"
+              >
+                {accessToken ? 'Ir al Panel' : 'Acceder al Panel'}
+                <ArrowRight className="size-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Contador */}
-          <section aria-label="Cuenta regresiva al lanzamiento" style={{
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '14px'
-          }}>
-            <div id="cntLabel" style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 600,
-              fontSize: 'clamp(11px, 1.1vw, 13px)',
-              letterSpacing: '.34em',
-              textTransform: 'uppercase',
-              color: 'var(--muted)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '10px',
-              animation: 'fadeUp .5s cubic-bezier(0.16,1,0.3,1) both',
-              animationDelay: '2.0s'
-            }}>
-              <span style={{
-                width: '5px',
-                height: '5px',
-                borderRadius: '50%',
-                background: 'var(--gold)',
-                boxShadow: '0 0 8px 1px rgba(201,162,75,.7)',
-                animation: 'pulseDot 2.6s ease-in-out infinite'
-              }}></span>
-              Lanzamiento · El gran día
-            </div>
+          {/* --- Columna del mockup --- */}
+          <div className="relative flex select-none items-center justify-center py-4" style={{ perspective: '1400px' }}>
+            {/* Destello de luz difuminado, estilo "glow" — sin fondo bordó completo, y chico/contenido para que no llegue con color a la sección de abajo */}
+            <div
+              className="pointer-events-none absolute left-1/2 top-[38%] -z-10 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60 blur-[90px]"
+              style={{ background: 'radial-gradient(circle, #d13042 0%, #b31929 20%, #e8925a 42%, transparent 60%)' }}
+            />
 
-            <div style={{ position: 'relative' }}>
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: 'min(84vw,660px)',
-                height: '230px',
-                background: 'radial-gradient(closest-side, rgba(142,27,45,0.55), transparent 76%)',
-                filter: 'blur(44px)',
-                transform: 'translate(-50%,-50%)',
-                animation: 'glowBreath 4s ease-in-out infinite',
-                zIndex: 0,
-                pointerEvents: 'none'
-              }}></div>
+            {/* Teléfono: silueta vectorial real de un iPhone (frame CC0), no dibujada a mano */}
+            <div
+              className="relative h-[580px] w-[290px] scale-[0.82] transition-all duration-300 sm:scale-100"
+              style={{
+                transform: 'rotateX(8deg) rotateY(-14deg) rotateZ(2deg)',
+                transformStyle: 'preserve-3d',
+              }}
+            >
+              {/* Contenido de pantalla — vive DEBAJO del frame, recortado por el hueco real del SVG */}
+              <div
+                className="absolute overflow-hidden bg-[#0b0c10] text-left text-white"
+                style={{
+                  ...SCREEN_INSET,
+                  borderRadius: '15px',
+                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 2px 4px rgba(0,0,0,0.6)',
+                }}
+              >
+                <div className="flex h-full w-full flex-col px-3.5 pb-3 pt-7">
+                  <div className="absolute left-3.5 right-3.5 top-2 flex justify-between text-[8px] font-semibold text-zinc-400">
+                    <span className="font-mono">9:41</span>
+                    <div className="flex items-center gap-1 font-mono">
+                      <span>5G</span>
+                      <div className="flex h-1.5 w-4 items-center rounded-xs border border-zinc-500 p-0.5">
+                        <div className="h-full w-full rounded-xs bg-zinc-400" />
+                      </div>
+                    </div>
+                  </div>
 
-              <div id="counter" style={{
-                position: 'relative',
-                zIndex: 1,
-                display: 'flex',
-                gap: 'clamp(8px,1.6vw,18px)',
-                alignItems: 'stretch'
-              }}>
-                {/* Días */}
-                <div data-unit="days" style={{
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '9px',
-                  padding: 'clamp(13px, 2vh, 20px) clamp(13px, 2.2vw, 26px) clamp(15px, 2.2vh, 22px)',
-                  borderRadius: '22px',
-                  background: 'rgba(246,238,239,0.04)',
-                  border: '1px solid var(--line)',
-                  backdropFilter: 'blur(14px)',
-                  WebkitBackdropFilter: 'blur(14px)',
-                  boxShadow: '0 16px 48px -16px rgba(142,27,45,0.6), inset 0 1px 0 rgba(246,238,239,0.07)',
-                  minWidth: 'clamp(70px,15vw,138px)',
-                  overflow: 'hidden',
-                  animation: 'cardIn .6s cubic-bezier(0.16,1,0.3,1) both',
-                  animationDelay: '1.5s'
-                }}>
-                  <div className="digs" style={{
-                    display: 'flex',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 700,
-                    fontSize: 'clamp(46px, 8vw, 104px)',
-                    lineHeight: 1,
-                    color: 'var(--ink)',
-                    fontVariantNumeric: 'tabular-nums'
-                  }}>
-                    <span className="dig" style={{ display: 'inline-block', width: '.62em', textAlign: 'center', willChange: 'transform' }}>0</span>
-                    <span className="dig" style={{ display: 'inline-block', width: '.62em', textAlign: 'center', willChange: 'transform' }}>0</span>
-                  </div>
-                  <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontWeight: 600,
-                    fontSize: 'clamp(10px, 1vw, 12px)',
-                    letterSpacing: '.26em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted)'
-                  }}>Días</div>
-                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '2px', background: 'rgba(246,238,239,0.08)' }}>
-                    <div className="fill" data-fill="days" style={{
-                      height: '100%',
-                      transformOrigin: 'left center',
-                      transform: 'scaleX(0)',
-                      background: 'linear-gradient(90deg,var(--accent-a),var(--accent-b))',
-                      transition: 'transform .35s cubic-bezier(0.4,0,0.2,1)'
-                    }}></div>
-                  </div>
-                </div>
+                  <div className="flex flex-1 flex-col space-y-4 pt-2">
+                    <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                      <span className="text-xs font-bold text-white">CosteAR</span>
+                      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[8px] font-medium text-zinc-400">Metalúrgica</span>
+                    </div>
 
-                {/* Horas */}
-                <div data-unit="hours" style={{
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '9px',
-                  padding: 'clamp(13px, 2vh, 20px) clamp(13px, 2.2vw, 26px) clamp(15px, 2.2vh, 22px)',
-                  borderRadius: '22px',
-                  background: 'rgba(246,238,239,0.04)',
-                  border: '1px solid var(--line)',
-                  backdropFilter: 'blur(14px)',
-                  WebkitBackdropFilter: 'blur(14px)',
-                  boxShadow: '0 16px 48px -16px rgba(142,27,45,0.6), inset 0 1px 0 rgba(246,238,239,0.07)',
-                  minWidth: 'clamp(70px,15vw,138px)',
-                  overflow: 'hidden',
-                  animation: 'cardIn .6s cubic-bezier(0.16,1,0.3,1) both',
-                  animationDelay: '1.59s'
-                }}>
-                  <div className="digs" style={{
-                    display: 'flex',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 700,
-                    fontSize: 'clamp(46px, 8vw, 104px)',
-                    lineHeight: 1,
-                    color: 'var(--ink)',
-                    fontVariantNumeric: 'tabular-nums'
-                  }}>
-                    <span className="dig" style={{ display: 'inline-block', width: '.62em', textAlign: 'center', willChange: 'transform' }}>0</span>
-                    <span className="dig" style={{ display: 'inline-block', width: '.62em', textAlign: 'center', willChange: 'transform' }}>0</span>
-                  </div>
-                  <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontWeight: 600,
-                    fontSize: 'clamp(10px, 1vw, 12px)',
-                    letterSpacing: '.26em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted)'
-                  }}>Horas</div>
-                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '2px', background: 'rgba(246,238,239,0.08)' }}>
-                    <div className="fill" data-fill="hours" style={{
-                      height: '100%',
-                      transformOrigin: 'left center',
-                      transform: 'scaleX(0)',
-                      background: 'linear-gradient(90deg,var(--accent-a),var(--accent-b))',
-                      transition: 'transform .35s cubic-bezier(0.4,0,0.2,1)'
-                    }}></div>
-                  </div>
-                </div>
+                    <div className="space-y-1 rounded-lg border border-red-950 border-l-2 border-l-red-500 bg-red-950/20 p-3">
+                      <div className="flex items-center gap-1 text-[9px] font-bold text-red-400">
+                        <AlertTriangle className="size-3" />
+                        ALERTA DE MARGEN
+                      </div>
+                      <p className="text-[10px] leading-snug text-zinc-300">
+                        La paritaria UOM reducirá el margen al <strong>12%</strong>.
+                      </p>
+                    </div>
 
-                {/* Minutos */}
-                <div data-unit="minutes" style={{
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '9px',
-                  padding: 'clamp(13px, 2vh, 20px) clamp(13px, 2.2vw, 26px) clamp(15px, 2.2vh, 22px)',
-                  borderRadius: '22px',
-                  background: 'rgba(246,238,239,0.04)',
-                  border: '1px solid var(--line)',
-                  backdropFilter: 'blur(14px)',
-                  WebkitBackdropFilter: 'blur(14px)',
-                  boxShadow: '0 16px 48px -16px rgba(142,27,45,0.6), inset 0 1px 0 rgba(246,238,239,0.07)',
-                  minWidth: 'clamp(70px,15vw,138px)',
-                  overflow: 'hidden',
-                  animation: 'cardIn .6s cubic-bezier(0.16,1,0.3,1) both',
-                  animationDelay: '1.68s'
-                }}>
-                  <div className="digs" style={{
-                    display: 'flex',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 700,
-                    fontSize: 'clamp(46px, 8vw, 104px)',
-                    lineHeight: 1,
-                    color: 'var(--ink)',
-                    fontVariantNumeric: 'tabular-nums'
-                  }}>
-                    <span className="dig" style={{ display: 'inline-block', width: '.62em', textAlign: 'center', willChange: 'transform' }}>0</span>
-                    <span className="dig" style={{ display: 'inline-block', width: '.62em', textAlign: 'center', willChange: 'transform' }}>0</span>
-                  </div>
-                  <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontWeight: 600,
-                    fontSize: 'clamp(10px, 1vw, 12px)',
-                    letterSpacing: '.26em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted)'
-                  }}>Min</div>
-                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '2px', background: 'rgba(246,238,239,0.08)' }}>
-                    <div className="fill" data-fill="minutes" style={{
-                      height: '100%',
-                      transformOrigin: 'left center',
-                      transform: 'scaleX(0)',
-                      background: 'linear-gradient(90deg,var(--accent-a),var(--accent-b))',
-                      transition: 'transform .35s cubic-bezier(0.4,0,0.2,1)'
-                    }}></div>
-                  </div>
-                </div>
+                    {/* Foco principal: margen bruto en grande, sin planilla apretada al lado */}
+                    <div className="flex-1 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+                      <span className="block text-[9px] font-semibold uppercase tracking-wider text-zinc-500">Margen Bruto</span>
+                      <div className="mt-2 flex items-end justify-between">
+                        <span className="font-mono text-2xl font-bold text-white">$1.050.000</span>
+                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 font-mono text-xs font-bold text-emerald-400">
+                          34.2%
+                        </span>
+                      </div>
+                      <div className="mt-4 border-t border-zinc-800/60 pt-3 font-mono text-[9px] text-zinc-500">
+                        Costo Total Prod. <span className="text-zinc-300">$2.018.750</span>
+                      </div>
+                    </div>
 
-                {/* Segundos */}
-                <div data-unit="seconds" style={{
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '9px',
-                  padding: 'clamp(13px, 2vh, 20px) clamp(13px, 2.2vw, 26px) clamp(15px, 2.2vh, 22px)',
-                  borderRadius: '22px',
-                  background: 'rgba(246,238,239,0.04)',
-                  border: '1px solid var(--line)',
-                  backdropFilter: 'blur(14px)',
-                  WebkitBackdropFilter: 'blur(14px)',
-                  boxShadow: '0 16px 48px -16px rgba(142,27,45,0.6), inset 0 1px 0 rgba(246,238,239,0.07)',
-                  minWidth: 'clamp(70px,15vw,138px)',
-                  overflow: 'hidden',
-                  animation: 'cardIn .6s cubic-bezier(0.16,1,0.3,1) both',
-                  animationDelay: '1.77s'
-                }}>
-                  <div className="digs" style={{
-                    display: 'flex',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 700,
-                    fontSize: 'clamp(46px, 8vw, 104px)',
-                    lineHeight: 1,
-                    fontVariantNumeric: 'tabular-nums'
-                  }}>
-                    <span className="dig" style={{
-                      display: 'inline-block',
-                      width: '.62em',
-                      textAlign: 'center',
-                      willChange: 'transform',
-                      background: 'linear-gradient(150deg,var(--accent-b),var(--accent-a))',
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      color: 'transparent'
-                    }}>0</span>
-                    <span className="dig" style={{
-                      display: 'inline-block',
-                      width: '.62em',
-                      textAlign: 'center',
-                      willChange: 'transform',
-                      background: 'linear-gradient(150deg,var(--accent-b),var(--accent-a))',
-                      WebkitBackgroundClip: 'text',
-                      backgroundClip: 'text',
-                      color: 'transparent'
-                    }}>0</span>
-                  </div>
-                  <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    fontWeight: 600,
-                    fontSize: 'clamp(10px, 1vw, 12px)',
-                    letterSpacing: '.26em',
-                    textTransform: 'uppercase',
-                    color: 'var(--muted)'
-                  }}>Seg</div>
-                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '2px', background: 'rgba(246,238,239,0.08)' }}>
-                    <div className="fill" data-fill="seconds" style={{
-                      height: '100%',
-                      transformOrigin: 'left center',
-                      transform: 'scaleX(0)',
-                      background: 'linear-gradient(90deg,var(--accent-a),var(--accent-b))',
-                      transition: 'transform .35s cubic-bezier(0.4,0,0.2,1)'
-                    }}></div>
+                    <div className="mt-auto rounded-lg border border-granate/20 bg-granate-deep/35 p-2.5 text-[9px] leading-snug text-zinc-300">
+                      <span className="mb-0.5 block font-bold text-[#e0919b]">Sugerencia IA</span>
+                      Aumentá el precio un 4.5% para mantener el margen.
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Estado "llegó el gran día" */}
-              <div id="arrived" style={{
-                display: 'none',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px',
-                position: 'relative',
-                zIndex: 1,
-                fontFamily: "'Playfair Display', serif",
-                fontWeight: 700,
-                fontSize: 'clamp(38px, 7vw, 92px)',
-                lineHeight: 1,
-                color: 'var(--ink)'
-              }}>¡Llegó el gran día! 🚀</div>
-            </div>
-          </section>
+              {/* Reflejo de vidrio sutil sobre la pantalla */}
+              <div
+                className="pointer-events-none absolute"
+                style={{ ...SCREEN_INSET, borderRadius: '15px', background: 'linear-gradient(135deg, rgba(255,255,255,0.14) 0%, transparent 35%)' }}
+              />
 
-          {/* CTAs de contacto */}
-          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <a className="magnetic" href="https://wa.me/5493816580360" target="_blank" rel="noopener" style={{
-              minHeight: '48px',
-              padding: '0 22px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '10px',
-              borderRadius: '999px',
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 600,
-              fontSize: '15px',
-              textDecoration: 'none',
-              color: '#fff',
-              background: 'linear-gradient(135deg,var(--accent-a),var(--accent-b))',
-              border: '1px solid rgba(246,238,239,0.14)',
-              boxShadow: '0 12px 32px -10px rgba(181,37,58,0.7)',
-              cursor: 'pointer',
-              transition: 'box-shadow .2s ease, border-color .2s ease',
-              animation: 'ctaIn .55s cubic-bezier(0.16,1,0.3,1) both',
-              animationDelay: '2.2s'
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"></path></svg>
-              WhatsApp
-            </a>
-            <a className="magnetic" href="mailto:proyectocostear@gmail.com" style={{
-              minHeight: '48px',
-              padding: '0 22px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '10px',
-              borderRadius: '999px',
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 600,
-              fontSize: '15px',
-              textDecoration: 'none',
-              color: 'var(--ink)',
-              background: 'rgba(246,238,239,0.04)',
-              border: '1px solid var(--line)',
-              cursor: 'pointer',
-              transition: 'background .2s ease, border-color .2s ease',
-              animation: 'ctaIn .55s cubic-bezier(0.16,1,0.3,1) both',
-              animationDelay: '2.28s'
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
-              Email
-            </a>
-            <a className="magnetic" href="https://www.instagram.com/coste_ar?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener" style={{
-              minHeight: '48px',
-              padding: '0 22px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '10px',
-              borderRadius: '999px',
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 600,
-              fontSize: '15px',
-              textDecoration: 'none',
-              color: 'var(--ink)',
-              background: 'rgba(246,238,239,0.04)',
-              border: '1px solid var(--line)',
-              cursor: 'pointer',
-              transition: 'background .2s ease, border-color .2s ease',
-              animation: 'ctaIn .55s cubic-bezier(0.16,1,0.3,1) both',
-              animationDelay: '2.36s'
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-              Instagram
-            </a>
+              {/* Frame real del iPhone: la silueta vectorial CC0 se usa como máscara (su alpha),
+                  y encima se pinta un degradé metálico propio con luces y sombras — así la forma
+                  es 100% real y la profundidad 3D la controlamos nosotros, no queda plana. */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  WebkitMaskImage: `url(${iPhoneFrame})`,
+                  maskImage: `url(${iPhoneFrame})`,
+                  WebkitMaskSize: '100% 100%',
+                  maskSize: '100% 100%',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  background:
+                    'linear-gradient(122deg, #f2f2f4 0%, #c7c7cc 5%, #838388 11%, #3a3a3d 19%, #161617 30%, #0a0a0b 46%, #1c1c1e 58%, #313134 70%, #0a0a0b 84%, #48484c 94%, #d8d8db 100%)',
+                  filter: 'drop-shadow(0 45px 80px rgba(74,21,27,0.4)) drop-shadow(0 20px 38px rgba(0,0,0,0.35))',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- MÉTRICAS FLOTANTES --- */}
+      <section className="relative z-30 bg-surface">
+        <div className="mx-auto max-w-4xl px-6">
+          <div className="grid grid-cols-2 justify-center gap-4 md:grid-cols-4">
+            <div className="rounded-lg border border-line bg-surface px-5 py-4 text-center shadow-md">
+              <span className="block font-mono text-2xl font-bold text-granate">34%</span>
+              <span className="mt-1 block text-[9px] font-bold uppercase tracking-widest text-ink-soft/70">Margen Bruto</span>
+            </div>
+            <div className="rounded-lg border border-line bg-surface px-5 py-4 text-center shadow-md">
+              <span className="block font-mono text-2xl font-bold text-ink">90%</span>
+              <span className="mt-1 block text-[9px] font-bold uppercase tracking-widest text-ink-soft/70">Tiempo Ahorrado</span>
+            </div>
+            <div className="rounded-lg border border-line bg-surface px-5 py-4 text-center shadow-md">
+              <span className="block font-mono text-2xl font-bold text-granate">924</span>
+              <span className="mt-1 block text-[9px] font-bold uppercase tracking-widest text-ink-soft/70">Dólar BCRA</span>
+            </div>
+            <div className="rounded-lg border border-line bg-surface px-5 py-4 text-center shadow-md">
+              <span className="block font-mono text-2xl font-bold text-ink">4.2%</span>
+              <span className="mt-1 block text-[9px] font-bold uppercase tracking-widest text-ink-soft/70">IPC INDEC</span>
+            </div>
           </div>
 
-          {/* Footer */}
-          <footer style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 400,
-            fontSize: '13px',
-            letterSpacing: '.06em',
-            color: 'var(--muted)',
-            animation: 'fadeUp .5s cubic-bezier(0.16,1,0.3,1) both',
-            animationDelay: '2.5s'
-          }}>CosteAR · 2026 · Hecho en Tucumán 🇦🇷</footer>
+          <p className="mx-auto mt-10 max-w-lg text-center text-xs italic leading-relaxed text-ink-soft">
+            Metodología validada por la Cátedra de Costos, Facultad de Ciencias Económicas — Universidad Nacional de Tucumán.
+          </p>
         </div>
-      </div>
+      </section>
+
+      {/* --- FEATURES --- */}
+      <section id="features" className="mx-auto max-w-7xl px-6 py-24">
+        <div className="mx-auto mb-16 max-w-3xl text-center">
+          <p className="mb-2 text-xs font-bold uppercase tracking-widest text-granate">Cómo te cuida CosteAR</p>
+          <h2 className="text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
+            Todo lo que un costista necesita, en un solo lugar
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+            Pensado para quienes gestionan varias PyMEs a la vez y no tienen tiempo que perder actualizando planillas a mano.
+          </p>
+        </div>
+
+        <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-2">
+          {/* Card 1: Materia Prima */}
+          <div className="flex flex-col justify-between rounded-lg border border-line bg-surface-alt p-8 shadow-xs transition-all hover:border-line-strong">
+            <div className="space-y-3">
+              <span className="rounded-full border border-granate/20 bg-granate/10 px-3 py-1 text-[10px] font-bold text-granate">
+                PPP + LOTE ÓPTIMO
+              </span>
+              <h3 className="text-xl font-bold text-ink">Gestión de Materia Prima</h3>
+              <p className="text-xs leading-relaxed text-ink-soft">
+                Seguimiento de compras y consumos con el método del Precio Promedio Ponderado, más el indicador de lote óptimo de reposición según la fórmula de Wilson.
+              </p>
+            </div>
+
+            <div className="animate-rise relative mt-8 overflow-hidden rounded-md border border-line bg-surface p-5 shadow-sm">
+              <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
+                <span className="text-[11px] font-bold text-ink">Fórmula de Wilson</span>
+                <span className="font-mono text-[9px] text-ink-soft/60">Noviembre 2026</span>
+              </div>
+              <div className="space-y-2 text-[10px]">
+                <div className="flex justify-between text-ink-soft">
+                  <span>Demanda Anual (R):</span>
+                  <span className="font-mono font-semibold text-ink">15.000 u</span>
+                </div>
+                <div className="flex justify-between text-ink-soft">
+                  <span>Costo Unitario (C):</span>
+                  <span className="font-mono font-semibold text-ink">$1.200</span>
+                </div>
+                <div className="flex items-center justify-between rounded-sm border border-granate/10 bg-granate/5 p-2 font-bold text-ink">
+                  <span className="text-granate">Lote Óptimo de Compra:</span>
+                  <span className="font-mono text-xs text-granate">836 u</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Monitoreo Macro */}
+          <div className="flex flex-col justify-between rounded-lg border border-line bg-surface-alt p-8 shadow-xs transition-all hover:border-line-strong">
+            <div className="space-y-3">
+              <span className="rounded-full border border-granate/20 bg-granate/10 px-3 py-1 text-[10px] font-bold text-granate">
+                INTEGRACIÓN API BCRA/INDEC
+              </span>
+              <h3 className="text-xl font-bold text-ink">Monitoreo Macroeconómico</h3>
+              <p className="text-xs leading-relaxed text-ink-soft">
+                Tu estructura de costos conectada en tiempo real a las cotizaciones del BCRA y a los índices de inflación del INDEC.
+              </p>
+            </div>
+
+            <div className="mt-8 flex justify-center" style={{ perspective: '800px' }}>
+              <div
+                className="relative h-[190px] w-[185px] rounded-t-[32px] border-x-2 border-t-2 border-zinc-700/80 bg-black p-2 shadow-lg"
+                style={{ transform: 'rotateX(15deg) rotateY(-10deg) rotateZ(3deg)', transformStyle: 'preserve-3d' }}
+              >
+                <div className="absolute left-1/2 top-2 z-30 h-3.5 w-16 -translate-x-1/2 rounded-full bg-black" />
+                <div className="h-full w-full overflow-hidden rounded-t-[24px] bg-[#0d0e12] px-3 pt-7 text-left">
+                  <span className="mb-1.5 block text-[8px] font-bold uppercase tracking-wider text-zinc-500">Indicadores Oficiales</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between rounded-sm border border-zinc-800 bg-zinc-900/60 p-1.5">
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="size-3 text-emerald-400" />
+                        <span className="font-mono text-[9px] font-bold text-white">$924</span>
+                      </div>
+                      <span className="text-[7px] text-zinc-500">Dólar BCRA</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-sm border border-zinc-800 bg-zinc-900/60 p-1.5">
+                      <div className="flex items-center gap-1">
+                        <Percent className="size-2.5 text-amber-500" />
+                        <span className="font-mono text-[9px] font-bold text-white">+4.2%</span>
+                      </div>
+                      <span className="text-[7px] text-zinc-500">IPC Nacional</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mini features (3 columnas) */}
+        <div className="mx-auto mt-8 grid max-w-5xl gap-8 border-t border-line pt-12 sm:grid-cols-3">
+          <div className="space-y-2">
+            <div className="flex size-9 items-center justify-center rounded-sm bg-granate/10 text-granate">
+              <BellRing className="size-4" />
+            </div>
+            <h4 className="text-sm font-bold text-ink">Alertas de Margen</h4>
+            <p className="text-xs leading-relaxed text-ink-soft">
+              Te avisamos apenas una paritaria o una devaluación amenaza el margen de un cliente, antes de que sea tarde.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex size-9 items-center justify-center rounded-sm bg-granate/10 text-granate">
+              <FileSpreadsheet className="size-4" />
+            </div>
+            <h4 className="text-sm font-bold text-ink">Exportá a Excel</h4>
+            <p className="text-xs leading-relaxed text-ink-soft">
+              Descargá tu estructura completa en un Excel de 5 hojas, con la identidad de CosteAR, listo para presentar.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex size-9 items-center justify-center rounded-sm bg-granate/10 text-granate">
+              <Building2 className="size-4" />
+            </div>
+            <h4 className="text-sm font-bold text-ink">Multi-empresa</h4>
+            <p className="text-xs leading-relaxed text-ink-soft">
+              Administrá el costeo de todas tus PyMEs desde un mismo panel, sin mezclar planillas ni perder el hilo.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* --- CÓMO FUNCIONA --- */}
+      <section id="como-funciona" className="bg-surface-alt py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mx-auto mb-14 max-w-2xl text-center">
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-granate">Puesta en marcha</p>
+            <h2 className="text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
+              De tu Excel al panel, en tres pasos
+            </h2>
+          </div>
+
+          <div className="grid gap-8 sm:grid-cols-3">
+            <div className="rounded-lg border border-line bg-surface p-6 shadow-xs">
+              <div className="mb-4 flex size-10 items-center justify-center rounded-sm bg-granate/10 text-granate">
+                <UploadCloud className="size-5" />
+              </div>
+              <span className="mb-1 block font-mono text-xs font-bold text-granate">01</span>
+              <h3 className="mb-1.5 text-sm font-bold text-ink">Cargá tu estructura</h3>
+              <p className="text-xs leading-relaxed text-ink-soft">
+                Subís los datos de tu Excel de costos (materia prima, mano de obra, carga fabril) una sola vez.
+              </p>
+            </div>
+            <div className="rounded-lg border border-line bg-surface p-6 shadow-xs">
+              <div className="mb-4 flex size-10 items-center justify-center rounded-sm bg-granate/10 text-granate">
+                <Radar className="size-5" />
+              </div>
+              <span className="mb-1 block font-mono text-xs font-bold text-granate">02</span>
+              <h3 className="mb-1.5 text-sm font-bold text-ink">Sincronizamos los datos macro</h3>
+              <p className="text-xs leading-relaxed text-ink-soft">
+                Actualizamos el dólar BCRA y el IPC INDEC de forma automática, todos los días.
+              </p>
+            </div>
+            <div className="rounded-lg border border-line bg-surface p-6 shadow-xs">
+              <div className="mb-4 flex size-10 items-center justify-center rounded-sm bg-granate/10 text-granate">
+                <Sparkles className="size-5" />
+              </div>
+              <span className="mb-1 block font-mono text-xs font-bold text-granate">03</span>
+              <h3 className="mb-1.5 text-sm font-bold text-ink">Recibís alertas y sugerencias</h3>
+              <p className="text-xs leading-relaxed text-ink-soft">
+                Te avisamos cuando el margen baja del umbral y te sugerimos el ajuste de precio necesario.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- CTA FINAL --- */}
+      <section className="relative mx-auto my-16 max-w-5xl overflow-hidden rounded-xl border border-granate/10 bg-gradient-to-tr from-granate-deep via-granate to-granate-deep px-6 py-20 text-center text-white shadow-xl">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[350px] w-[350px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-[80px]" />
+        <div className="relative z-10 space-y-6">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+            Protegé la rentabilidad de tu cartera hoy mismo
+          </h2>
+          <p className="mx-auto max-w-xl text-sm text-zinc-300">
+            Comenzá a modelar tus estructuras con el motor automatizado. Conectá tus clientes, automatizá la carga de facturas y dejá que el sistema monitoree tus márgenes.
+          </p>
+          <button
+            onClick={handleAccessClick}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-bold text-granate shadow-lg transition-all hover:bg-zinc-100 hover:shadow-xl"
+          >
+            Acceder al Panel de Equipo <ArrowRight className="size-4 text-granate" />
+          </button>
+        </div>
+      </section>
+
+      {/* --- FOOTER --- */}
+      <footer className="border-t border-line bg-surface py-8 text-center">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 text-xs text-ink-soft/70 sm:flex-row">
+          <span>CosteAR · 2026 · Hecho en Tucumán 🇦🇷</span>
+          <div className="flex gap-4">
+            <a href="https://wa.me/5493816580360" target="_blank" rel="noreferrer" className="transition-colors hover:text-granate">WhatsApp</a>
+            <a href="mailto:proyectocostear@gmail.com" className="transition-colors hover:text-granate">Email</a>
+            <a href="https://www.instagram.com/coste_ar" target="_blank" rel="noreferrer" className="transition-colors hover:text-granate">Instagram</a>
+          </div>
+        </div>
+      </footer>
 
       {showGate && (
         <AccessGateModal
