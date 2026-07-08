@@ -3,13 +3,15 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   Plus, FileSpreadsheet, ChevronRight, ArrowLeft, Users, Copy, Trash2, Eye, EyeOff, KeyRound,
-  Edit2, Mic, MicOff, Sparkles, BookOpen, History, Table, FileDown, PenLine, Pencil, ImageIcon, RotateCcw
+  Edit2, Mic, MicOff, Sparkles, BookOpen, History, Table, FileDown, PenLine, Pencil, ImageIcon, RotateCcw,
+  Package, Layers, DollarSign,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatCard } from '@/components/ui/StatCard';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useCompany, useCostStructures, useUpdateCompany, useDeleteCompany, useDeleteCostStructure, useRestoreCostStructure } from './company-hooks';
 import { useCreateCostStructure } from '@/features/cost-structures/cost-structure-hooks';
@@ -70,33 +72,38 @@ export function CompanyDetailPage() {
 
   return (
     <AppShell>
-      <Link to="/companies" className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-granate hover:text-action">
+      <Link to="/companies" className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-granate transition-colors hover:text-action">
         <ArrowLeft className="size-4" /> Volver a clientes
       </Link>
 
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-200 pb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-[28px] font-bold tracking-tight text-zinc-950">{company?.name ?? 'Cliente'}</h1>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-                title="Editar Cliente"
-              >
-                <Edit2 className="size-4" />
-              </button>
-              <button
-                onClick={handleDeleteCompany}
-                className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                title="Eliminar Cliente"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </div>
+      <div className="mb-6 flex flex-col gap-4 rounded-[28px] border border-line bg-surface p-6 shadow-[0_10px_30px_rgba(74,21,27,0.015)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-granate/10 bg-granate-tenue text-lg font-extrabold text-granate shadow-sm">
+            {(company?.name ?? 'C')[0]?.toUpperCase()}
           </div>
-          {company?.industry && <p className="mt-1 text-sm text-zinc-500">{company.industry}</p>}
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[24px] font-extrabold tracking-tight text-ink">{company?.name ?? 'Cliente'}</h1>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="rounded-xl p-1.5 text-ink-soft transition-colors hover:bg-granate-tenue hover:text-granate"
+                  title="Editar Cliente"
+                >
+                  <Edit2 className="size-4" />
+                </button>
+                <button
+                  onClick={handleDeleteCompany}
+                  className="rounded-xl p-1.5 text-ink-soft transition-colors hover:bg-danger/10 hover:text-danger"
+                  title="Eliminar Cliente"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            </div>
+            {company?.industry && <p className="mt-0.5 text-[13px] text-ink-soft">{company.industry}</p>}
+          </div>
         </div>
         {activeTab === 'structures' && (
           <Button onClick={() => setShowForm((v) => !v)}>
@@ -111,7 +118,7 @@ export function CompanyDetailPage() {
       <AiSuggesterSection companyName={company?.name ?? ''} />
 
       {/* Tabs */}
-      <div className="mb-6 flex border-b border-zinc-200">
+      <div className="mb-6 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-line bg-surface p-1.5 shadow-sm">
         {[
           { id: 'structures', label: 'Estructuras de Costos', icon: FileSpreadsheet },
           { id: 'ledger', label: 'Libro de Costos', icon: BookOpen },
@@ -125,10 +132,10 @@ export function CompanyDetailPage() {
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
               className={cn(
-                'flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors border-transparent',
+                'flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-bold transition-colors',
                 active
-                  ? 'border-granate text-granate font-semibold'
-                  : 'text-zinc-500 hover:text-zinc-800'
+                  ? 'bg-granate-tenue text-granate'
+                  : 'text-ink-soft hover:text-ink'
               )}
             >
               <ActiveIcon className="size-4" />
@@ -146,38 +153,50 @@ export function CompanyDetailPage() {
             <CardBody className="p-0">
               {!structures?.length ? (
                 <div className="flex flex-col items-center gap-3 py-14 text-center">
-                  <FileSpreadsheet className="size-8 text-zinc-300" />
-                  <p className="text-sm text-zinc-400">Sin estructuras de costos todavía.</p>
+                  <div className="flex size-12 items-center justify-center rounded-2xl border border-line bg-zinc-50 text-zinc-300">
+                    <FileSpreadsheet className="size-6" />
+                  </div>
+                  <p className="text-[13px] text-ink-soft">Sin estructuras de costos todavía.</p>
                 </div>
               ) : (
-                <ul className="divide-y divide-zinc-100">
+                <ul className="divide-y divide-line">
                   {structures.map((s) => {
                     const isDeleted = !!s.deletedAt;
                     return (
-                      <li key={s.id} className={cn('flex items-center justify-between gap-2 pr-4', isDeleted && 'bg-zinc-50/60')}>
+                      <li key={s.id} className={cn('flex items-center justify-between gap-2 pr-4', isDeleted && 'bg-zinc-50/40')}>
                         {isDeleted ? (
-                          <div className="flex flex-1 items-center justify-between gap-4 px-6 py-4">
-                            <div>
-                              <div className="font-medium text-zinc-400 line-through">{s.productName}</div>
-                              <div className="text-[13px] text-zinc-400">Período {s.period}</div>
+                          <div className="flex flex-1 items-center gap-3.5 px-6 py-4">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-zinc-400">
+                              <FileSpreadsheet className="size-5" />
+                            </span>
+                            <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
+                              <div className="min-w-0">
+                                <div className="truncate font-bold text-ink-soft line-through">{s.productName}</div>
+                                <div className="text-[12px] text-ink-soft/70">Período {s.period}</div>
+                              </div>
+                              <StatusBadge status="idle">En papelera</StatusBadge>
                             </div>
-                            <StatusBadge status="idle">En papelera</StatusBadge>
                           </div>
                         ) : (
                           <Link
                             to="/cost-structures/$id"
                             params={{ id: s.id }}
-                            className="flex flex-1 items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-zinc-50"
+                            className="group flex flex-1 items-center gap-3.5 px-6 py-4 transition-colors hover:bg-zinc-50/15"
                           >
-                            <div>
-                              <div className="font-medium text-zinc-800">{s.productName}</div>
-                              <div className="text-[13px] text-zinc-400">Período {s.period}</div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <StatusBadge status={STATUS[s.status]?.status ?? 'idle'}>
-                                {STATUS[s.status]?.label ?? s.status}
-                              </StatusBadge>
-                              <ChevronRight className="size-5 text-zinc-300" />
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-granate/10 bg-granate-tenue text-granate shadow-sm transition-transform duration-300 group-hover:scale-105">
+                              <FileSpreadsheet className="size-5" />
+                            </span>
+                            <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
+                              <div className="min-w-0">
+                                <div className="truncate font-bold text-ink transition-colors group-hover:text-granate">{s.productName}</div>
+                                <div className="text-[12px] text-ink-soft">Período {s.period}</div>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-3">
+                                <StatusBadge status={STATUS[s.status]?.status ?? 'idle'}>
+                                  {STATUS[s.status]?.label ?? s.status}
+                                </StatusBadge>
+                                <ChevronRight className="size-5 text-zinc-300 transition-transform group-hover:translate-x-0.5" />
+                              </div>
                             </div>
                           </Link>
                         )}
@@ -187,7 +206,7 @@ export function CompanyDetailPage() {
                             type="button"
                             title="Recuperar estructura"
                             onClick={() => setConfirmStructure({ id: s.id, productName: s.productName, action: 'restore' })}
-                            className="flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-action/10 hover:text-action"
+                            className="flex size-9 shrink-0 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-action/10 hover:text-action"
                           >
                             <RotateCcw className="size-4" />
                           </button>
@@ -196,7 +215,7 @@ export function CompanyDetailPage() {
                             type="button"
                             title="Borrar estructura"
                             onClick={() => setConfirmStructure({ id: s.id, productName: s.productName, action: 'delete' })}
-                            className="flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-danger/10 hover:text-danger"
+                            className="flex size-9 shrink-0 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-danger/10 hover:text-danger"
                           >
                             <Trash2 className="size-4" />
                           </button>
@@ -281,8 +300,8 @@ function EditCompanyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-rise border border-zinc-150">
-        <h3 className="text-lg font-bold text-zinc-900 mb-4">Editar Cliente</h3>
+      <div className="w-full max-w-md rounded-[28px] bg-surface p-6 shadow-2xl animate-rise border border-line">
+        <h3 className="text-lg font-extrabold text-ink mb-4">Editar Cliente</h3>
         <form onSubmit={onSubmit} className="space-y-4">
           <Input label="Razón Social" {...register('name', { required: true })} />
           <Input label="Sector / Actividad" {...register('industry')} />
@@ -351,7 +370,7 @@ function AiSuggesterSection({ companyName }: { companyName: string }) {
   };
 
   return (
-    <Card className="mb-6 border-zinc-200 shadow-xs bg-zinc-50/20">
+    <Card className="mb-6">
       <CardHeader
         title="Asistente de Configuración Inicial"
         description="Describí el proceso de la empresa o dictalo por voz para recibir recomendaciones de modelado de costos en base a la cátedra de la UNT."
@@ -362,7 +381,7 @@ function AiSuggesterSection({ companyName }: { companyName: string }) {
             value={promptText}
             onChange={(e) => setPromptText(e.target.value)}
             placeholder="Ej: Es una panificadora familiar. Compran harina, levadura y grasa. Tienen 3 empleados en amasado y horneado, y el alquiler del local se distribuye entre producción y ventas..."
-            className="flex-1 min-h-[80px] rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-850 placeholder-zinc-400 focus:border-granate focus:outline-none"
+            className="flex-1 min-h-[80px] rounded-xl border border-line bg-surface p-3 text-sm text-ink placeholder-idle focus:border-granate focus:outline-none"
           />
           <button
             type="button"
@@ -370,8 +389,8 @@ function AiSuggesterSection({ companyName }: { companyName: string }) {
             className={cn(
               "flex size-11 shrink-0 items-center justify-center rounded-xl border transition-all",
               listening
-                ? "bg-red-50 text-red-600 border-red-200 animate-pulse"
-                : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:bg-zinc-100"
+                ? "bg-danger/10 text-danger border-danger/20 animate-pulse"
+                : "bg-zinc-50 text-ink-soft border-line hover:bg-granate-tenue hover:text-granate"
             )}
             title={listening ? "Detener dictado" : "Dictar por voz"}
           >
@@ -392,8 +411,8 @@ function AiSuggesterSection({ companyName }: { companyName: string }) {
         </div>
 
         {suggs && (
-          <div className="rounded-xl border border-zinc-150 bg-white p-4 animate-rise text-zinc-700 text-sm leading-relaxed whitespace-pre-wrap shadow-xs">
-            <div className="flex items-center gap-2 font-bold text-zinc-800 mb-2">
+          <div className="rounded-2xl border border-line bg-surface p-4 animate-rise text-ink text-sm leading-relaxed whitespace-pre-wrap shadow-sm">
+            <div className="flex items-center gap-2 font-bold text-ink mb-2">
               <Sparkles className="size-4 text-granate" />
               Sugerencia de Configuración
             </div>
@@ -427,6 +446,13 @@ function LedgerTabSection({ companyId, companyName }: { companyId: string; compa
     MANO_DE_OBRA: 'Mano de Obra',
     COSTOS_INDIRECTOS: 'Costos Indirectos',
     VENTAS: 'Ventas',
+  };
+
+  const SECTION_ICON: Record<string, typeof Table> = {
+    MATERIA_PRIMA: Package,
+    MANO_DE_OBRA: Users,
+    COSTOS_INDIRECTOS: Layers,
+    VENTAS: DollarSign,
   };
 
   const grouped = SECTION_ORDER
@@ -466,7 +492,7 @@ function LedgerTabSection({ companyId, companyName }: { companyId: string; compa
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <select
-          className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 focus:border-granate focus:outline-none shadow-xs"
+          className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none shadow-sm"
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
         >
@@ -491,22 +517,28 @@ function LedgerTabSection({ companyId, companyName }: { companyId: string; compa
       {data && Object.keys(data.totalsBySection).length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 animate-rise">
           {SECTION_ORDER.filter((s) => data.totalsBySection[s] != null).map((s) => (
-            <div key={s} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-xs">
-              <p className="text-[11px] uppercase tracking-wide text-zinc-400 font-semibold">{SECTION_LABELS[s]}</p>
-              <p className="mt-1 text-xl font-bold tabular-nums text-zinc-850">{formatMoney(data.totalsBySection[s])}</p>
-            </div>
+            <StatCard
+              key={s}
+              label={SECTION_LABELS[s] ?? s}
+              value={formatMoney(data.totalsBySection[s])}
+              sub="Total del período"
+              icon={SECTION_ICON[s] ?? Table}
+              variant="neutral"
+            />
           ))}
         </div>
       )}
 
       {isLoading ? (
-        <div className="py-8 text-center text-sm text-zinc-400">Cargando…</div>
+        <div className="py-8 text-center text-sm text-ink-soft">Cargando…</div>
       ) : entries.length === 0 ? (
         <Card>
-          <CardBody className="py-12 text-center">
-            <BookOpen className="mx-auto mb-3 size-8 text-zinc-300" />
-            <p className="text-sm font-medium text-zinc-800">Sin costos registrados en este período</p>
-            <p className="mt-1 text-xs text-zinc-400">
+          <CardBody className="flex flex-col items-center gap-3 py-12 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl border border-line bg-zinc-50 text-zinc-300">
+              <BookOpen className="size-6" />
+            </div>
+            <p className="text-sm font-bold text-ink">Sin costos registrados en este período</p>
+            <p className="text-xs text-ink-soft">
               Aprobá documentos desde Validaciones o cargá líneas manualmente.
             </p>
           </CardBody>
@@ -515,13 +547,13 @@ function LedgerTabSection({ companyId, companyName }: { companyId: string; compa
         <div className="space-y-4">
           {grouped.map(({ section, items }) => (
             <Card key={section}>
-              <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3.5 bg-zinc-50/50">
-                <p className="text-[14px] font-bold text-zinc-800">{SECTION_LABELS[section] ?? section}</p>
+              <div className="flex items-center justify-between border-b border-line px-5 py-3.5 bg-zinc-50/15">
+                <p className="text-[13px] font-extrabold uppercase tracking-wider text-granate-deep">{SECTION_LABELS[section] ?? section}</p>
                 <span className="text-[14px] font-bold tabular-nums text-granate">
                   {formatMoney(items.filter((i) => i.currency === 'ARS').reduce((s, i) => s + i.amount, 0))}
                 </span>
               </div>
-              <div className="divide-y divide-zinc-100">
+              <div className="divide-y divide-line">
                 {items.map((e) => (
                   <LedgerRow key={e.id} entry={e} onZoom={setLightbox} onEdit={setEditing} onDelete={handleDelete} />
                 ))}
@@ -574,44 +606,44 @@ function LedgerRow({
       {entry.sourceImageUrl ? (
         isImage ? (
           <button type="button" onClick={() => onZoom(entry.sourceImageUrl!)} className="shrink-0">
-            <img src={entry.sourceImageUrl} alt="comprobante" className="size-10 rounded object-cover border border-zinc-200 hover:opacity-80" />
+            <img src={entry.sourceImageUrl} alt="comprobante" className="size-10 rounded-xl object-cover border border-line hover:opacity-80" />
           </button>
         ) : (
-          <a href={entry.sourceImageUrl} target="_blank" rel="noopener noreferrer" className="flex size-10 shrink-0 items-center justify-center rounded border border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100">
+          <a href={entry.sourceImageUrl} target="_blank" rel="noopener noreferrer" className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-ink-soft hover:bg-granate-tenue hover:text-granate">
             <FileDown className="size-4" />
           </a>
         )
       ) : (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded border border-zinc-200 bg-zinc-50 text-zinc-400">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-idle">
           <ImageIcon className="size-4" />
         </div>
       )}
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-zinc-800">{entry.description}</p>
-        <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+        <p className="truncate text-[13px] font-medium text-ink">{entry.description}</p>
+        <div className="flex items-center gap-1.5 text-[11px] text-ink-soft">
           <span>{entry.docDate ? formatDate(entry.docDate) : periodLabel(entry.period)}</span>
           {entry.wasCorrected && (
-            <span className="flex items-center gap-0.5 rounded bg-blue-50 px-1.5 py-0.5 text-blue-700"><PenLine className="size-3" /> corregido</span>
+            <span className="flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-blue-700"><PenLine className="size-3" /> corregido</span>
           )}
           {entry.aiUsed && (
-            <span className="flex items-center gap-0.5 rounded bg-purple-50 px-1.5 py-0.5 text-purple-700">Auto</span>
+            <span className="flex items-center gap-0.5 rounded-full bg-purple-50 px-1.5 py-0.5 text-purple-700">Auto</span>
           )}
         </div>
       </div>
 
       <div className="shrink-0 text-right">
-        <p className="text-[14px] font-semibold tabular-nums text-zinc-800">
-          {entry.currency !== 'ARS' && <span className="text-[11px] text-zinc-400">{entry.currency} </span>}
+        <p className="text-[14px] font-semibold tabular-nums text-ink">
+          {entry.currency !== 'ARS' && <span className="text-[11px] text-ink-soft">{entry.currency} </span>}
           {formatMoney(entry.amount)}
         </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded p-1.5 text-zinc-400 hover:bg-zinc-150 hover:text-zinc-800 transition-colors">
+        <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded-xl p-1.5 text-ink-soft hover:bg-granate-tenue hover:text-granate transition-colors">
           <Pencil className="size-3.5" />
         </button>
-        <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+        <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded-xl p-1.5 text-ink-soft hover:bg-danger/10 hover:text-danger transition-colors">
           <Trash2 className="size-3.5" />
         </button>
       </div>
@@ -633,13 +665,15 @@ function HistoryTabSection({ companyId }: { companyId: string }) {
   return (
     <div className="space-y-4">
       {isLoading ? (
-        <div className="py-12 text-center text-sm text-zinc-400">Cargando…</div>
+        <div className="py-12 text-center text-sm text-ink-soft">Cargando…</div>
       ) : !data?.items.length ? (
         <Card>
-          <CardBody className="py-12 text-center">
-            <History className="mx-auto mb-3 size-8 text-zinc-300" />
-            <p className="text-sm font-medium text-zinc-800">Sin historial de validaciones</p>
-            <p className="mt-1 text-xs text-zinc-400">
+          <CardBody className="flex flex-col items-center gap-3 py-12 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl border border-line bg-zinc-50 text-zinc-300">
+              <History className="size-6" />
+            </div>
+            <p className="text-sm font-bold text-ink">Sin historial de validaciones</p>
+            <p className="text-xs text-ink-soft">
               Los documentos procesados por operadores aparecerán aquí una vez que los valides.
             </p>
           </CardBody>
@@ -652,30 +686,30 @@ function HistoryTabSection({ companyId }: { companyId: string }) {
               description="Historial completo de aprobaciones, rechazos y correcciones"
             />
             <CardBody className="p-0">
-              <ul className="divide-y divide-zinc-100">
+              <ul className="divide-y divide-line">
                 {data.items.map((entry) => {
                   const cfg = STATUS_CONFIG[entry.status];
                   return (
                     <li key={entry.id} className="flex items-start justify-between gap-4 px-6 py-4">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1.5">
                           <span className={cn(
-                            'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
+                            'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border shadow-sm',
                             cfg?.className
                           )}>
                             {cfg?.label ?? entry.status}
                           </span>
-                          <span className="text-[11px] text-zinc-400">{entry.fileName ?? 'Texto libre'}</span>
+                          <span className="text-[11px] text-ink-soft">{entry.fileName ?? 'Texto libre'}</span>
                         </div>
-                        <p className="text-[13px] text-zinc-700 font-medium leading-relaxed">
+                        <p className="text-[13px] text-ink font-medium leading-relaxed">
                           {entry.correctedContent ?? entry.rawContent}
                         </p>
                         {entry.reviewNote && (
-                          <p className="mt-1.5 text-xs text-zinc-500 italic bg-zinc-50 border-l-2 border-zinc-200 px-2 py-1">
+                          <p className="mt-1.5 text-xs text-ink-soft italic bg-zinc-50 border-l-2 border-line px-2 py-1 rounded-r-lg">
                             "{entry.reviewNote}"
                           </p>
                         )}
-                        <div className="mt-2 flex gap-4 text-[11px] text-zinc-400">
+                        <div className="mt-2 flex gap-4 text-[11px] text-ink-soft">
                           <span>Recibido: {formatDate(entry.createdAt)}</span>
                           {entry.reviewedAt && <span>Validado: {formatDate(entry.reviewedAt)}</span>}
                         </div>
@@ -692,7 +726,7 @@ function HistoryTabSection({ companyId }: { companyId: string }) {
               <Button variant="ghost" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
                 Anterior
               </Button>
-              <span className="text-xs text-zinc-500">Página {page} de {Math.ceil(data.total / 20)}</span>
+              <span className="text-xs text-ink-soft">Página {page} de {Math.ceil(data.total / 20)}</span>
               <Button variant="ghost" size="sm" disabled={page >= Math.ceil(data.total / 20)} onClick={() => setPage((p) => p + 1)}>
                 Siguiente
               </Button>
@@ -770,7 +804,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
       <CardBody>
         {/* Formulario de invitación */}
         {showForm && (
-          <div className="mb-5 rounded-md bg-surface-alt p-4 animate-rise space-y-3">
+          <div className="mb-5 rounded-2xl border border-line bg-surface-alt p-4 animate-rise space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Input
                 label="Nombre completo"
@@ -801,7 +835,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
               El operador recibirá un email con sus credenciales temporales y podrá cambiar su contraseña al ingresar.
             </p>
             {generateError && (
-              <p className="rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{generateError}</p>
+              <p className="rounded-xl bg-danger/10 px-3 py-2 text-[13px] text-danger">{generateError}</p>
             )}
             <div className="flex gap-2">
               <Button size="sm" onClick={handleGenerate} loading={generate.isPending} disabled={!operatorFullName.trim() || !emailValid}>
@@ -814,7 +848,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
 
         {/* Credenciales generadas */}
         {generatedAccess && (
-          <div className="mb-5 rounded-md border border-action/30 bg-action/5 p-4 animate-rise">
+          <div className="mb-5 rounded-2xl border border-action/30 bg-action/5 p-4 animate-rise">
             <p className="mb-3 text-[13px] font-semibold text-ink">
               Acceso generado — compartí estas credenciales con el operador. Solo se muestran una vez.
             </p>
@@ -830,7 +864,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
                   <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
                     Contraseña temporal
                   </label>
-                  <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+                  <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2">
                     <span className="flex-1 font-mono text-sm text-ink">
                       {showPassword ? generatedAccess.tempPassword : '••••••••••••'}
                     </span>
@@ -851,7 +885,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
                   <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
                     Código de invitación
                   </label>
-                  <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+                  <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2">
                     <span className="flex-1 font-mono text-sm text-ink">{generatedAccess.inviteCode ?? '—'}</span>
                     <button
                       type="button"
@@ -878,7 +912,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
 
         {/* Credenciales reseteadas */}
         {resetResult && (
-          <div className="mb-5 rounded-md border border-amber-400/40 bg-amber-50/60 p-4 animate-rise">
+          <div className="mb-5 rounded-2xl border border-amber-400/40 bg-amber-50/60 p-4 animate-rise">
             <p className="mb-3 text-[13px] font-semibold text-ink">
               Acceso reseteado — compartí las nuevas credenciales con el operador. Solo se muestran una vez.
             </p>
@@ -893,7 +927,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
                 <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">
                   Nueva contraseña temporal
                 </label>
-                <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+                <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2">
                   <span className="flex-1 font-mono text-sm text-ink">
                     {showPassword ? resetResult.tempPassword : '••••••••••••'}
                   </span>
@@ -921,20 +955,22 @@ function OperatorsSection({ companyId }: { companyId: string }) {
 
         {/* Lista de operadores */}
         {operators.length === 0 && !showForm ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <Users className="size-8 text-ink-soft/40" />
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl border border-line bg-zinc-50 text-zinc-300">
+              <Users className="size-6" />
+            </div>
             <p className="text-[13px] text-ink-soft">Todavía no hay personal autorizado para esta empresa.</p>
           </div>
         ) : (
           <ul className="divide-y divide-line">
             {operators.map((op) => (
               <li key={op.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-surface-alt text-ink-soft">
+                <div className="flex items-center gap-3.5">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-granate/10 bg-granate-tenue text-granate shadow-sm">
                     <Users className="size-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-ink">{op.name}</p>
+                    <p className="text-sm font-bold text-ink">{op.name}</p>
                     <p className="text-[12px] text-ink-soft">{op.email}</p>
                   </div>
                 </div>
@@ -978,7 +1014,7 @@ function CredField({ label, value, copied, onCopy }: { label: string; value: str
   return (
     <div>
       <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-soft mb-1">{label}</label>
-      <div className="flex items-center gap-2 rounded-sm border border-line bg-surface px-3 py-2">
+      <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2">
         <span className="flex-1 font-mono text-sm text-ink">{value}</span>
         <button
           type="button"
@@ -1012,10 +1048,10 @@ function NewStructureForm({ companyId, onDone }: { companyId: string; onDone: ()
         <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
           <Input label="Producto o Proceso" {...register('productName', { required: true })} />
           <Input label="Período (YYYY-MM)" placeholder="2026-06" {...register('period', { required: true })} />
-          <div className="flex flex-col gap-1 sm:col-span-2">
-            <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Sistema de Costeo</label>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label className="text-[12px] font-medium uppercase tracking-wide text-ink-soft">Sistema de Costeo</label>
             <select
-              className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 focus:border-granate focus:outline-none"
+              className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none"
               {...register('costingSystem')}
             >
               <option value="ORDERS">Por Órdenes de Fabricación</option>
@@ -1023,7 +1059,7 @@ function NewStructureForm({ companyId, onDone }: { companyId: string; onDone: ()
             </select>
           </div>
           {error && (
-            <div className="sm:col-span-2 rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">
+            <div className="sm:col-span-2 rounded-xl bg-danger/10 px-3 py-2 text-[13px] text-danger">
               {error}
             </div>
           )}
