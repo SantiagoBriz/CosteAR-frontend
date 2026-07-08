@@ -59,7 +59,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
       <div className="pointer-events-none absolute right-[-5%] bottom-[-5%] h-[550px] w-[550px] rounded-full bg-action-soft/5 opacity-40 blur-[120px] animate-orb-2 z-0" />
 
       {/* FLOATING VERTICAL SIDEBAR DOCK (Bordó Wine Red, Overflow Visible) */}
-      <aside className="fixed top-4 bottom-4 left-4 w-20 bg-granate rounded-[30px] border border-granate-deep/20 flex flex-col items-center py-6 justify-between shadow-[0_16px_40px_rgba(74,21,27,0.12)] z-30 overflow-visible">
+      <aside className="fixed top-4 bottom-4 left-4 w-20 bg-granate rounded-[30px] flex flex-col items-center py-6 justify-between shadow-[0_16px_40px_rgba(74,21,27,0.08)] z-30 overflow-visible">
         
         {/* Top: Logo in white container */}
         <div className="flex flex-col items-center overflow-visible">
