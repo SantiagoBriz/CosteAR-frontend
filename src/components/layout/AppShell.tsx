@@ -68,45 +68,69 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           </div>
         </div>
 
-        {/* Center: Main Nav Icons (Active Protrudes/Pops-out to the Right) */}
-        <nav className="flex flex-col gap-5 w-full items-center overflow-visible">
+        {/* Center: Main Nav Icons (Negative Border-Radius Curved Tab Design) */}
+        <nav className="flex flex-col gap-4 w-full items-stretch overflow-visible">
           {NAV.map(({ to, label, icon: Icon, ...rest }) => {
             const active = location.pathname.startsWith(to);
             const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
             return (
-              <div key={to} className="relative w-full flex justify-center overflow-visible">
-                <Link
-                  to={to}
-                  className={cn(
-                    'flex size-12 items-center justify-center rounded-[18px] transition-all duration-300 relative group',
-                    active
-                      ? 'bg-white text-granate shadow-[0_8px_20px_rgba(0,0,0,0.12)] translate-x-4 scale-105 z-15'
-                      : 'text-white/70 hover:text-white hover:bg-white/10 z-10'
-                  )}
-                >
-                  <Icon className="size-[20px] shrink-0" />
-                  
-                  {/* Hover tooltips */}
-                  <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
-                    {label}
-                  </span>
+              <div key={to} className="relative w-full h-12 flex items-center justify-center overflow-visible">
+                {active ? (
+                  /* Active tab - blends into content page with smooth negative border-radius curves */
+                  <Link
+                    to={to}
+                    className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
+                  >
+                    {/* Background tab shape (inset from the left by 10px, matches the mockup spacing) */}
+                    <div className="absolute left-2.5 right-0 top-0 bottom-0 bg-surface-alt rounded-l-[20px] z-10" />
+                    
+                    {/* Seamless extension to cover the sidebar-content gap */}
+                    <div className="absolute left-20 right-[-16px] top-0 bottom-0 bg-surface-alt z-10" />
+                    
+                    {/* Top curve (solid bordó with bottom-right rounded corner) */}
+                    <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-10 pointer-events-none" />
+                    
+                    {/* Bottom curve (solid bordó with top-right rounded corner) */}
+                    <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-10 pointer-events-none" />
 
-                  {showBadge && (
-                    <span className={cn(
-                      "absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-action text-[9.5px] font-extrabold text-white border-2",
-                      active ? "border-white" : "border-granate"
-                    )}>
-                      {pendingCount > 99 ? '99+' : pendingCount}
+                    {/* Centered icon on the 80px line */}
+                    <div className="absolute left-0 w-20 h-full flex items-center justify-center z-30 pointer-events-none">
+                      <Icon className="size-[20px]" />
+                    </div>
+
+                    {showBadge && (
+                      <span className="absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white shadow-sm border border-white z-40">
+                        {pendingCount > 99 ? '99+' : pendingCount}
+                      </span>
+                    )}
+                  </Link>
+                ) : (
+                  /* Inactive tab - standard clean icon centering */
+                  <Link
+                    to={to}
+                    className="w-full h-12 relative flex items-center justify-center text-white/70 hover:text-white rounded-[18px] hover:bg-white/5 z-10 group"
+                  >
+                    <Icon className="size-[20px] shrink-0" />
+                    
+                    {/* Hover tooltips */}
+                    <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+                      {label}
                     </span>
-                  )}
-                </Link>
+
+                    {showBadge && (
+                      <span className="absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white border border-granate">
+                        {pendingCount > 99 ? '99+' : pendingCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
               </div>
             );
           })}
         </nav>
 
         {/* Bottom: Portal, Profile, Logout */}
-        <div className="flex flex-col items-center gap-4 overflow-visible">
+        <div className="flex flex-col items-center gap-3.5 w-full overflow-visible">
           {/* Operator Portal Link */}
           <Link
             to="/portal"
@@ -119,32 +143,45 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           </Link>
 
           {/* Profile link */}
-          <div className="relative w-full flex justify-center overflow-visible">
-            <Link
-              to="/profile"
-              className={cn(
-                "flex size-12 items-center justify-center rounded-[18px] transition-all duration-300 relative group",
-                location.pathname.startsWith('/profile') 
-                  ? 'bg-white text-granate shadow-[0_8px_20px_rgba(0,0,0,0.12)] translate-x-4 scale-105 z-15' 
-                  : 'text-white/70 hover:text-white hover:bg-white/10 z-10'
-              )}
-            >
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-white/20" />
-              ) : (
-                <span className={cn(
-                  "flex size-8 items-center justify-center rounded-full text-xs font-bold border",
-                  location.pathname.startsWith('/profile') 
-                    ? 'bg-granate-tenue text-granate border-granate/10' 
-                    : 'bg-white/10 text-white border-white/20'
-                )}>
-                  {user?.name?.[0]?.toUpperCase() ?? 'U'}
+          <div className="relative w-full h-12 flex items-center justify-center overflow-visible">
+            {location.pathname.startsWith('/profile') ? (
+              <Link
+                to="/profile"
+                className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
+              >
+                <div className="absolute left-2.5 right-0 top-0 bottom-0 bg-surface-alt rounded-l-[20px] z-10" />
+                <div className="absolute left-20 right-[-16px] top-0 bottom-0 bg-surface-alt z-10" />
+                <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-10 pointer-events-none" />
+                <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-10 pointer-events-none" />
+                
+                {/* Centered avatar or initials */}
+                <div className="absolute left-0 w-20 h-full flex items-center justify-center z-30 pointer-events-none">
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-granate/10" />
+                  ) : (
+                    <span className="flex size-8 items-center justify-center rounded-full bg-granate-tenue text-xs font-bold text-granate border border-granate/10">
+                      {user?.name?.[0]?.toUpperCase() ?? 'U'}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            ) : (
+              <Link
+                to="/profile"
+                className="w-full h-12 relative flex items-center justify-center text-white/70 hover:text-white rounded-[18px] hover:bg-white/5 z-10 group"
+              >
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-white/20" />
+                ) : (
+                  <span className="flex size-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white border border-white/20">
+                    {user?.name?.[0]?.toUpperCase() ?? 'U'}
+                  </span>
+                )}
+                <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+                  Mi Perfil
                 </span>
-              )}
-              <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
-                Mi Perfil
-              </span>
-            </Link>
+              </Link>
+            )}
           </div>
 
           {/* Logout */}
