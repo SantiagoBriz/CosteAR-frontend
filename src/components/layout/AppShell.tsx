@@ -82,17 +82,17 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                     className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
                   >
                     {/* Background tab shape (inset from the left by 10px, matches the mockup spacing) */}
-                    <div className="absolute left-2.5 right-0 top-0 bottom-0 bg-surface-alt rounded-l-[20px] z-10" />
+                    <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
                     
                     {/* Seamless extension to cover the sidebar-content gap */}
-                    <div className="absolute left-20 right-[-16px] top-0 bottom-0 bg-surface-alt z-10" />
+                    <div className="absolute left-20 right-[-16px] top-0 bottom-0 z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
                     
                     {/* Top curve (Concave assembly) */}
-                    <div className="absolute right-0 bottom-full w-4 h-4 bg-surface-alt z-10 pointer-events-none" />
+                    <div className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
                     <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-20 pointer-events-none" />
                     
                     {/* Bottom curve (Concave assembly) */}
-                    <div className="absolute right-0 top-full w-4 h-4 bg-surface-alt z-10 pointer-events-none" />
+                    <div className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
                     <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-20 pointer-events-none" />
 
                     {/* Centered icon on the 80px line */}
@@ -151,11 +151,11 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                 to="/profile"
                 className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
               >
-                <div className="absolute left-2.5 right-0 top-0 bottom-0 bg-surface-alt rounded-l-[20px] z-10" />
-                <div className="absolute left-20 right-[-16px] top-0 bottom-0 bg-surface-alt z-10" />
-                <div className="absolute right-0 bottom-full w-4 h-4 bg-surface-alt z-10 pointer-events-none" />
+                <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+                <div className="absolute left-20 right-[-16px] top-0 bottom-0 z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+                <div className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
                 <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-20 pointer-events-none" />
-                <div className="absolute right-0 top-full w-4 h-4 bg-surface-alt z-10 pointer-events-none" />
+                <div className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
                 <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-20 pointer-events-none" />
                 
                 {/* Centered avatar or initials */}
