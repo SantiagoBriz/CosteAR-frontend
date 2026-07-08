@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { Check, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useLogin } from './auth-hooks';
 import { apiErrorMessage } from '@/lib/api';
-
 import { CosteARLogo } from '@/components/layout/CosteARLogo';
 import { InteractiveDotGrid } from '@/components/layout/InteractiveDotGrid';
 
@@ -33,6 +33,7 @@ export function LoginPage() {
   const login = useLogin();
   const [needs2fa, setNeeds2fa] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit, formState, watch, setValue } = useForm<LoginForm>();
 
   const identifierValue = watch('identifier', '');
@@ -139,13 +140,25 @@ export function LoginPage() {
               )}
             </div>
 
-            <Input
-              label="Contraseña"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••••"
-              {...register('password', { required: true })}
-            />
+            <div className="relative">
+              <Input
+                label="Contraseña"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••••"
+                className="pr-10"
+                {...register('password', { required: true })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                className="absolute bottom-0 right-0 flex h-11 w-10 items-center justify-center text-ink-soft hover:text-granate"
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
 
             {needs2fa && (
               <Input
@@ -182,6 +195,11 @@ export function LoginPage() {
             </Link>
           </div>
         </form>
+
+        <p className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-ink-soft/70">
+          <ShieldCheck className="size-3.5 text-emerald-600" />
+          Conexión cifrada de extremo a extremo
+        </p>
       </div>
     </div>
   );

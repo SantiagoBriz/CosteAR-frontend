@@ -7,10 +7,19 @@ import { useAuthStore, getStoredRefreshToken } from '@/stores/auth-store';
  * viaja en una cookie httpOnly que el navegador adjunta sola.
  */
 /**
- * Base del backend. En desarrollo queda vacía y Vite proxea /api → :3000.
- * En producción se setea VITE_API_URL al dominio del backend desplegado.
+ * Base del backend.
+ * - Si está seteada VITE_API_URL, se usa esa (config explícita del deploy).
+ * - En local (localhost) queda vacía y Vite proxea /api → :3000.
+ * - En producción (cualquier otro dominio) sin VITE_API_URL, se cae al backend
+ *   de Railway por defecto, para no romper si falta la env var en Vercel.
  */
-export const API_BASE = import.meta.env.VITE_API_URL ?? '';
+const ENV_API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+const RAILWAY_API_URL = 'https://costear-backend-production.up.railway.app';
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+
+export const API_BASE = ENV_API_URL || (isLocalhost ? '' : RAILWAY_API_URL);
 
 export const api = axios.create({
   baseURL: `${API_BASE}/api/v1`,
