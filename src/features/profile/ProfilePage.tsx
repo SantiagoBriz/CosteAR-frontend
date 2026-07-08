@@ -77,15 +77,15 @@ export function ProfilePage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Datos personales" />
-          <CardBody className="space-y-4">
+          <CardHeader title="Datos personales" description="Tu información de cuenta" />
+          <CardBody className="space-y-5">
             {/* Foto de perfil */}
             <div className="flex items-center gap-4">
-              <div className="relative">
+              <div className="relative shrink-0">
                 {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="Foto de perfil" className="size-20 rounded-full object-cover ring-1 ring-line" />
+                  <img src={user.avatarUrl} alt="Foto de perfil" className="size-20 rounded-full border border-line object-cover shadow-sm" />
                 ) : (
-                  <div className="flex size-20 items-center justify-center rounded-full bg-granate-tenue text-granate ring-1 ring-line">
+                  <div className="flex size-20 items-center justify-center rounded-full border border-granate/10 bg-granate-tenue text-granate shadow-sm">
                     <User className="size-8" />
                   </div>
                 )}
@@ -93,26 +93,28 @@ export function ProfilePage() {
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   title="Cambiar foto"
-                  className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-granate text-white shadow hover:bg-action"
+                  className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full border-2 border-surface bg-granate text-white shadow-md transition-colors hover:bg-action"
                 >
                   <Camera className="size-3.5" />
                 </button>
               </div>
-              <div>
-                <p className="text-sm font-medium text-ink">Foto de perfil</p>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-ink">Foto de perfil</p>
                 <p className="text-[12px] text-ink-soft">JPG, PNG o WebP · hasta 6 MB. Vas a poder recortarla.</p>
-                {avatarError && <p className="mt-1 text-[12px] text-danger">{avatarError}</p>}
+                {avatarError && <p className="mt-1 text-[12px] font-semibold text-danger">{avatarError}</p>}
               </div>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePickFile} />
             </div>
 
-            <div>
-              <div className="text-[12px] uppercase tracking-wide text-ink-soft">Nombre</div>
-              <div className="text-sm text-ink">{user?.name}</div>
-            </div>
-            <div>
-              <div className="text-[12px] uppercase tracking-wide text-ink-soft">Email</div>
-              <div className="text-sm text-ink">{user?.email}</div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-line bg-surface-alt p-3.5">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">Nombre</div>
+                <div className="mt-0.5 truncate text-sm font-bold text-ink">{user?.name}</div>
+              </div>
+              <div className="rounded-2xl border border-line bg-surface-alt p-3.5">
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-ink-soft">Email</div>
+                <div className="mt-0.5 truncate text-sm font-bold text-ink">{user?.email}</div>
+              </div>
             </div>
           </CardBody>
         </Card>
@@ -125,16 +127,21 @@ export function ProfilePage() {
           <CardBody className="space-y-4">
             {backupCodes ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-ok">
-                  <ShieldCheck className="size-5" />
-                  <span className="text-sm font-medium">2FA activado</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-ok/20 bg-ok/10 text-ok">
+                    <ShieldCheck className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-ink">2FA activado</p>
+                    <p className="text-[12px] text-ink-soft">Tu cuenta está protegida con un segundo factor</p>
+                  </div>
                 </div>
                 <p className="text-[13px] text-ink-soft">
                   Guardá estos códigos de respaldo en un lugar seguro. No se vuelven a mostrar.
                 </p>
-                <div className="grid grid-cols-2 gap-2 rounded-md bg-surface-alt p-3">
+                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-surface-alt p-4">
                   {backupCodes.map((c) => (
-                    <span key={c} className="tabular text-sm text-ink">
+                    <span key={c} className="tabular text-sm font-bold text-ink">
                       {c}
                     </span>
                   ))}
@@ -146,7 +153,7 @@ export function ProfilePage() {
                   Escaneá el código con Google Authenticator o Authy y confirmá con el código de 6
                   dígitos.
                 </p>
-                <img src={qr} alt="QR de configuración 2FA" className="size-44 rounded-md border border-line" />
+                <img src={qr} alt="QR de configuración 2FA" className="size-44 rounded-2xl border border-line bg-white p-2 shadow-sm" />
                 <Input
                   label="Código de verificación"
                   numeric
@@ -160,10 +167,12 @@ export function ProfilePage() {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-ink-soft">
-                  <ShieldOff className="size-5" />
-                  <span className="text-sm">2FA no configurado</span>
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface-alt p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-idle/20 bg-idle/10 text-idle">
+                    <ShieldOff className="size-5" />
+                  </div>
+                  <span className="text-sm font-semibold text-ink-soft">2FA no configurado</span>
                 </div>
                 <Button variant="secondary" size="sm" onClick={startSetup}>
                   Activar 2FA
@@ -171,7 +180,9 @@ export function ProfilePage() {
               </div>
             )}
             {error && (
-              <div className="rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>
+              <p className="rounded-xl border border-danger/20 bg-danger/5 px-3 py-2 text-[12.5px] font-semibold text-danger">
+                {error}
+              </p>
             )}
           </CardBody>
         </Card>
