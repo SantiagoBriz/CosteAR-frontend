@@ -23,6 +23,8 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   const { data: alerts = [] } = useAlerts();
   const unreadAlertsCount = alerts.filter((a) => !a.isRead).length;
 
+  const activeIndex = NAV.findIndex((item) => location.pathname.startsWith(item.to));
+
   return (
     <div className="flex min-h-screen bg-surface-alt font-outfit overflow-x-hidden relative">
       <style>{`
@@ -68,64 +70,61 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           </div>
         </div>
 
-        {/* Center: Main Nav Icons (Negative Border-Radius Curved Tab Design) */}
-        <nav className="flex flex-col gap-4 w-full items-stretch overflow-visible">
+        {/* Center: Main Nav Icons (With smooth liquid sliding indicator) */}
+        <nav className="relative flex flex-col gap-4 w-full items-stretch overflow-visible py-5">
+          
+          {/* LIQUID SLIDING ACTIVE INDICATOR ASSEMBLY */}
+          <div
+            className="absolute left-0 right-0 h-12 pointer-events-none z-10 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]"
+            style={{
+              top: '20px', // matches padding-top py-5 (20px)
+              transform: `translateY(${activeIndex * (48 + 16)}px)`, // active height (48px) + gap-4 (16px)
+              opacity: activeIndex === -1 ? 0 : 1,
+            }}
+          >
+            {/* Background tab shape (inset from the left by 10px) */}
+            <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px]" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+            
+            {/* Seamless extension to cover the sidebar-content gap */}
+            <div className="absolute left-20 right-[-16px] top-0 bottom-0" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+            
+            {/* Top curve (Concave assembly) */}
+            <div className="absolute right-0 bottom-full w-4 h-4 pointer-events-none" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+            <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] pointer-events-none" />
+            
+            {/* Bottom curve (Concave assembly) */}
+            <div className="absolute right-0 top-full w-4 h-4 pointer-events-none" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+            <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] pointer-events-none" />
+          </div>
+
           {NAV.map(({ to, label, icon: Icon, ...rest }) => {
             const active = location.pathname.startsWith(to);
             const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
             return (
               <div key={to} className="relative w-full h-12 flex items-center justify-center overflow-visible">
-                {active ? (
-                  /* Active tab - blends into content page with smooth negative border-radius curves */
-                  <Link
-                    to={to}
-                    className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
-                  >
-                    {/* Background tab shape (inset from the left by 10px, matches the mockup spacing) */}
-                    <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-                    
-                    {/* Seamless extension to cover the sidebar-content gap */}
-                    <div className="absolute left-20 right-[-16px] top-0 bottom-0 z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-                    
-                    {/* Top curve (Concave assembly) */}
-                    <div className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-                    <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-20 pointer-events-none" />
-                    
-                    {/* Bottom curve (Concave assembly) */}
-                    <div className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-                    <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-20 pointer-events-none" />
+                <Link
+                  to={to}
+                  className={cn(
+                    'w-full h-12 relative flex items-center justify-center rounded-l-[24px] z-25 group transition-colors duration-300',
+                    active ? 'text-granate' : 'text-white/70 hover:text-white hover:bg-white/5'
+                  )}
+                >
+                  <Icon className="size-[20px] shrink-0" />
+                  
+                  {/* Hover tooltips */}
+                  <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+                    {label}
+                  </span>
 
-                    {/* Centered icon on the 80px line */}
-                    <div className="absolute left-0 w-20 h-full flex items-center justify-center z-30 pointer-events-none">
-                      <Icon className="size-[20px]" />
-                    </div>
-
-                    {showBadge && (
-                      <span className="absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white shadow-sm border border-white z-40">
-                        {pendingCount > 99 ? '99+' : pendingCount}
-                      </span>
-                    )}
-                  </Link>
-                ) : (
-                  /* Inactive tab - standard clean icon centering */
-                  <Link
-                    to={to}
-                    className="w-full h-12 relative flex items-center justify-center text-white/70 hover:text-white rounded-[18px] hover:bg-white/5 z-10 group"
-                  >
-                    <Icon className="size-[20px] shrink-0" />
-                    
-                    {/* Hover tooltips */}
-                    <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
-                      {label}
+                  {showBadge && (
+                    <span className={cn(
+                      "absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white border",
+                      active ? "border-white" : "border-granate"
+                    )}>
+                      {pendingCount > 99 ? '99+' : pendingCount}
                     </span>
-
-                    {showBadge && (
-                      <span className="absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white border border-granate">
-                        {pendingCount > 99 ? '99+' : pendingCount}
-                      </span>
-                    )}
-                  </Link>
-                )}
+                  )}
+                </Link>
               </div>
             );
           })}
@@ -144,18 +143,18 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
             </span>
           </Link>
 
-          {/* Profile link */}
+          {/* Profile link (Static since it is separated at the bottom) */}
           <div className="relative w-full h-12 flex items-center justify-center overflow-visible">
             {location.pathname.startsWith('/profile') ? (
               <Link
                 to="/profile"
                 className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
               >
-                <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-                <div className="absolute left-20 right-[-16px] top-0 bottom-0 z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-                <div className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+                <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+                <div className="absolute left-20 right-[-16px] top-0 bottom-0 z-10" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+                <div className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
                 <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-20 pointer-events-none" />
-                <div className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+                <div className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
                 <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-20 pointer-events-none" />
                 
                 {/* Centered avatar or initials */}
