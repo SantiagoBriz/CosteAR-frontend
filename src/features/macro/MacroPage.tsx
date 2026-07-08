@@ -11,11 +11,11 @@ import type { MacroSnapshot } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
-const SOURCE_CONFIG: Record<string, { label: string; color: string; icon: typeof DollarSign }> = {
-  BCRA:      { label: 'BCRA',      color: 'text-blue-600 bg-blue-50',   icon: DollarSign },
-  INDEC:     { label: 'INDEC',     color: 'text-purple-600 bg-purple-50', icon: BarChart3 },
-  ARCA:      { label: 'ARCA',      color: 'text-orange-600 bg-orange-50', icon: Zap },
-  PARITARIA: { label: 'Paritaria', color: 'text-granate bg-granate-tenue', icon: TrendingUp },
+const SOURCE_CONFIG: Record<string, { label: string; color: string; border: string; icon: typeof DollarSign }> = {
+  BCRA:      { label: 'BCRA',      color: 'text-blue-600 bg-blue-50',     border: 'border-blue-200/70',   icon: DollarSign },
+  INDEC:     { label: 'INDEC',     color: 'text-purple-600 bg-purple-50', border: 'border-purple-200/70', icon: BarChart3 },
+  ARCA:      { label: 'ARCA',      color: 'text-orange-600 bg-orange-50', border: 'border-orange-200/70', icon: Zap },
+  PARITARIA: { label: 'Paritaria', color: 'text-granate bg-granate-tenue', border: 'border-granate/15',   icon: TrendingUp },
 };
 
 const INDICATOR_LABELS: Record<string, string> = {
@@ -74,7 +74,9 @@ export function MacroPage() {
       />
 
       {syncMsg && (
-        <div className="mb-4 rounded-sm bg-action/10 px-3 py-2 text-[13px] text-action">{syncMsg}</div>
+        <div className="mb-4 rounded-xl border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] font-medium text-action">
+          {syncMsg}
+        </div>
       )}
 
       {showForm && <ManualEntryForm onDone={() => { setShowForm(false); qc.invalidateQueries({ queryKey: ['macro'] }); }} />}
@@ -99,8 +101,11 @@ export function MacroPage() {
         <p className="text-sm text-ink-soft">Cargando…</p>
       ) : !data?.length ? (
         <Card>
-          <CardBody className="py-12 text-center">
-            <p className="text-sm text-ink-soft mb-3">
+          <CardBody className="py-14 text-center">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl border border-granate/10 bg-granate-tenue text-granate">
+              <TrendingUp className="size-5" />
+            </div>
+            <p className="text-sm text-ink-soft mb-4">
               Todavía no hay datos macro. Hacé clic en "Sincronizar BCRA/INDEC" para traer los valores actuales.
             </p>
             <Button size="sm" onClick={() => syncNow.mutate()} loading={syncNow.isPending}>
@@ -115,25 +120,26 @@ export function MacroPage() {
             const Icon = cfg.icon;
             const friendlyLabel = INDICATOR_LABELS[m.indicatorCode] ?? m.indicatorCode;
             return (
-              <Card key={m.id} className="transition-shadow hover:shadow-md">
-                <CardBody>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className={cn('flex size-9 items-center justify-center rounded-md', cfg.color)}>
-                      <Icon className="size-4" />
-                    </div>
-                    <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', cfg.color)}>
-                      {cfg.label}
-                    </span>
+              <div
+                key={m.id}
+                className="group rounded-[28px] border border-line bg-surface p-5 shadow-[0_10px_30px_rgba(74,21,27,0.015)] transition-all duration-300 hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20 hover:-translate-y-1"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className={cn('flex size-9 items-center justify-center rounded-xl border shadow-[0_2px_8px_rgba(0,0,0,0.015)]', cfg.color, cfg.border)}>
+                    <Icon className="size-4.5" />
                   </div>
-                  <div className="mt-3 text-[13px] text-ink-soft">{friendlyLabel}</div>
-                  <div className="mt-1 tabular text-2xl font-bold text-ink">
-                    {Number(m.value).toLocaleString('es-AR', { maximumFractionDigits: 4 })}
-                  </div>
-                  <div className="mt-2 text-[11px] text-ink-soft/60">
-                    Efectivo: {formatDate(m.effectiveDate)}
-                  </div>
-                </CardBody>
-              </Card>
+                  <span className={cn('rounded-full border px-2.5 py-1 text-[10.5px] font-bold shadow-sm', cfg.color, cfg.border)}>
+                    {cfg.label}
+                  </span>
+                </div>
+                <p className="font-mono-jb mt-4 text-[28px] font-bold leading-none tracking-tight text-granate-deep">
+                  {Number(m.value).toLocaleString('es-AR', { maximumFractionDigits: 4 })}
+                </p>
+                <p className="mt-2.5 text-[12.5px] font-bold text-ink leading-tight">{friendlyLabel}</p>
+                <p className="mt-1 text-[10.5px] font-semibold text-ink-soft/75">
+                  Efectivo: {formatDate(m.effectiveDate)}
+                </p>
+              </div>
             );
           })}
         </div>
@@ -168,7 +174,11 @@ function ManualEntryForm({ onDone }: { onDone: () => void }) {
         title="Cargar variable manualmente"
         description="Paritarias, tarifas u otros índices no automáticos"
         action={
-          <button type="button" onClick={onDone} className="text-ink-soft hover:text-ink">
+          <button
+            type="button"
+            onClick={onDone}
+            className="flex size-8 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-granate-tenue hover:text-granate"
+          >
             <X className="size-4" />
           </button>
         }
@@ -176,9 +186,9 @@ function ManualEntryForm({ onDone }: { onDone: () => void }) {
       <CardBody>
         <div className="grid gap-4 sm:grid-cols-4">
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-ink-soft mb-1.5">Fuente</label>
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-ink-soft">Fuente</label>
             <select
-              className="h-10 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink focus:border-granate"
+              className="h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink transition-colors focus:border-granate focus:outline-none"
               value={source}
               onChange={(e) => setSource(e.target.value as typeof source)}
             >
@@ -189,30 +199,30 @@ function ManualEntryForm({ onDone }: { onDone: () => void }) {
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-ink-soft mb-1.5">Código indicador</label>
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-ink-soft">Código indicador</label>
             <input
-              className="h-10 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink focus:border-granate focus:outline-none"
+              className="h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink transition-colors focus:border-granate focus:outline-none"
               placeholder="Ej: UATRE_PARITARIA"
               value={indicatorCode}
               onChange={(e) => setIndicatorCode(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-ink-soft mb-1.5">Valor / Factor</label>
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-ink-soft">Valor / Factor</label>
             <input
               type="number"
               step="0.01"
-              className="h-10 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink focus:border-granate focus:outline-none"
+              className="h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink transition-colors focus:border-granate focus:outline-none"
               placeholder="1.15 (= +15%)"
               value={value}
               onChange={(e) => setValue(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-ink-soft mb-1.5">Fecha efectiva</label>
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-ink-soft">Fecha efectiva</label>
             <input
               type="date"
-              className="h-10 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink focus:border-granate focus:outline-none"
+              className="h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink transition-colors focus:border-granate focus:outline-none"
               value={effectiveDate}
               onChange={(e) => setEffectiveDate(e.target.value)}
             />
