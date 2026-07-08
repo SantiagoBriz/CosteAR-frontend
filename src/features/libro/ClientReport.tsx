@@ -1,4 +1,5 @@
 import { X, Printer } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { formatMoney } from '@/lib/utils';
 import type { LedgerEntry } from './libro-hooks';
 
@@ -58,25 +59,25 @@ export function ClientReport({
       <div className="mx-auto my-8 max-w-3xl px-4 print:my-0 print:px-0">
         {/* Barra de acciones (no se imprime) */}
         <div className="no-print mb-3 flex justify-end gap-2">
-          <button onClick={() => window.print()} className="flex items-center gap-1.5 rounded-md bg-granate px-4 py-2 text-sm font-medium text-white hover:bg-granate/90">
+          <Button onClick={() => window.print()} size="sm">
             <Printer className="size-4" /> Imprimir / Guardar PDF
-          </button>
-          <button onClick={onClose} className="flex items-center gap-1.5 rounded-md border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-surface-alt">
+          </Button>
+          <Button onClick={onClose} variant="secondary" size="sm">
             <X className="size-4" /> Cerrar
-          </button>
+          </Button>
         </div>
 
         {/* Documento */}
-        <div id="client-report" className="rounded-lg bg-white p-10 shadow-xl print:rounded-none print:p-0 print:shadow-none">
+        <div id="client-report" className="rounded-[28px] bg-white p-10 shadow-[0_20px_50px_rgba(74,21,27,0.08)] print:rounded-none print:p-0 print:shadow-none">
           {/* Encabezado */}
           <div className="mb-8 flex items-start justify-between border-b border-ink/10 pb-5">
             <div>
-              <h1 className="text-2xl font-bold text-ink">Reporte de costos</h1>
-              <p className="mt-1 text-sm text-ink-soft">{companyName}</p>
+              <h1 className="text-[26px] font-extrabold tracking-tight text-granate-deep">Reporte de costos</h1>
+              <p className="mt-1.5 text-sm font-semibold text-ink-soft">{companyName}</p>
               <p className="text-sm text-ink-soft">Período: {periodLabel(period)}</p>
             </div>
             <div className="text-right">
-              <p className="text-lg font-bold text-granate">CosteAR</p>
+              <p className="text-lg font-extrabold text-granate">CosteAR</p>
               <p className="text-[11px] text-ink-soft">Emitido el {today}</p>
             </div>
           </div>
@@ -84,46 +85,48 @@ export function ClientReport({
           {/* Resumen de costos */}
           <table className="mb-6 w-full text-sm">
             <thead>
-              <tr className="border-b border-ink/10 text-left text-[11px] uppercase tracking-wide text-ink-soft">
-                <th className="pb-2">Elemento del costo</th>
-                <th className="pb-2 text-right">Importe</th>
-                <th className="pb-2 text-right">% del costo</th>
+              <tr className="border-b-2 border-ink/10 text-left text-[10.5px] font-extrabold uppercase tracking-wider text-ink-soft">
+                <th className="pb-2.5">Elemento del costo</th>
+                <th className="pb-2.5 text-right">Importe</th>
+                <th className="pb-2.5 text-right">% del costo</th>
               </tr>
             </thead>
             <tbody>
               {costSections.map((s) => (
                 <tr key={s} className="border-b border-ink/5">
-                  <td className="py-2 text-ink">{SECTION_LABELS[s] ?? s}</td>
-                  <td className="py-2 text-right tabular-nums text-ink">{formatMoney(totalsBySection[s])}</td>
-                  <td className="py-2 text-right tabular-nums text-ink-soft">
+                  <td className="py-2.5 text-ink">{SECTION_LABELS[s] ?? s}</td>
+                  <td className="py-2.5 text-right tabular-nums text-ink">{formatMoney(totalsBySection[s])}</td>
+                  <td className="py-2.5 text-right tabular-nums text-ink-soft">
                     {totalCosts > 0 ? `${Math.round(((totalsBySection[s] ?? 0) / totalCosts) * 100)}%` : '—'}
                   </td>
                 </tr>
               ))}
-              <tr className="border-t-2 border-ink/20 font-bold">
-                <td className="py-2 text-ink">Costo total</td>
-                <td className="py-2 text-right tabular-nums text-ink">{formatMoney(totalCosts)}</td>
-                <td className="py-2 text-right text-ink-soft">100%</td>
+              <tr className="border-t-2 border-ink/20 font-extrabold text-granate-deep">
+                <td className="py-2.5">Costo total</td>
+                <td className="py-2.5 text-right tabular-nums">{formatMoney(totalCosts)}</td>
+                <td className="py-2.5 text-right text-ink-soft">100%</td>
               </tr>
             </tbody>
           </table>
 
           {/* Ventas y margen, si hay */}
           {totalSales > 0 && (
-            <div className="mb-6 rounded-md bg-surface-alt p-4 text-sm">
-              <div className="flex justify-between"><span className="text-ink-soft">Ventas del período</span><span className="font-medium tabular-nums text-ink">{formatMoney(totalSales)}</span></div>
-              <div className="flex justify-between"><span className="text-ink-soft">Costo total</span><span className="font-medium tabular-nums text-ink">{formatMoney(totalCosts)}</span></div>
+            <div className="mb-6 rounded-2xl border border-granate/10 bg-granate-tenue/40 p-5 text-sm shadow-sm">
+              <div className="flex justify-between"><span className="text-ink-soft">Ventas del período</span><span className="font-semibold tabular-nums text-ink">{formatMoney(totalSales)}</span></div>
+              <div className="flex justify-between"><span className="text-ink-soft">Costo total</span><span className="font-semibold tabular-nums text-ink">{formatMoney(totalCosts)}</span></div>
               {margin != null && (
-                <div className="mt-1 flex justify-between border-t border-ink/10 pt-1"><span className="font-semibold text-ink">Margen bruto</span><span className="font-bold tabular-nums text-granate">{margin.toFixed(1)}%</span></div>
+                <div className="mt-1.5 flex justify-between border-t border-granate/10 pt-1.5"><span className="font-bold text-ink">Margen bruto</span><span className="font-extrabold tabular-nums text-granate">{margin.toFixed(1)}%</span></div>
               )}
             </div>
           )}
 
           {/* Respaldo documental */}
-          <p className="text-[12px] leading-relaxed text-ink-soft">
-            Este reporte está respaldado por <strong className="text-ink">{docCount}</strong> {docCount === 1 ? 'comprobante validado' : 'comprobantes validados'} y revisados.
-            Cada importe es trazable a su documento de origen.
-          </p>
+          <div className="rounded-2xl border border-line bg-surface-alt/60 p-4">
+            <p className="text-[12px] leading-relaxed text-ink-soft">
+              Este reporte está respaldado por <strong className="text-ink">{docCount}</strong> {docCount === 1 ? 'comprobante validado' : 'comprobantes validados'} y revisados.
+              Cada importe es trazable a su documento de origen.
+            </p>
+          </div>
 
           <p className="mt-8 border-t border-ink/10 pt-3 text-[10px] text-ink-soft/60">
             Generado con CosteAR · {today} · Documento de uso profesional

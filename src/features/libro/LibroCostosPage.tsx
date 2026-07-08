@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { BookOpen, ImageIcon, Bot, PenLine, FileText, FileDown, Plus, Pencil, Trash2, Table } from 'lucide-react';
+import { BookOpen, ImageIcon, Bot, PenLine, FileText, FileDown, Plus, Pencil, Trash2, Table, Boxes, Users, Layers, TrendingUp } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
-import { Card, CardBody } from '@/components/ui/Card';
+import { Card, CardHeader, CardBody } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { formatMoney, formatDate } from '@/lib/utils';
 import { useCompanies } from '@/features/companies/company-hooks';
@@ -51,6 +53,15 @@ const SECTION_LABELS: Record<string, string> = {
 
 const SECTION_ORDER = ['MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS'];
 
+const SECTION_ICONS: Record<string, typeof Boxes> = {
+  MATERIA_PRIMA: Boxes,
+  MANO_DE_OBRA: Users,
+  COSTOS_INDIRECTOS: Layers,
+  VENTAS: TrendingUp,
+};
+
+const selectClass = 'h-11 rounded-xl border border-line bg-surface px-3.5 text-[13px] font-semibold text-ink shadow-sm transition-colors focus:border-granate focus:outline-none';
+
 function periodLabel(p: string): string {
   const [y, m] = p.split('-');
   const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -89,9 +100,9 @@ export function LibroCostosPage() {
       />
 
       {/* Filtros */}
-      <div className="mb-5 flex flex-wrap gap-3">
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-[28px] border border-line bg-surface p-5 shadow-[0_10px_30px_rgba(74,21,27,0.015)]">
         <select
-          className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none"
+          className={selectClass}
           value={companyId}
           onChange={(e) => setCompanyId(e.target.value)}
         >
@@ -101,7 +112,7 @@ export function LibroCostosPage() {
           ))}
         </select>
         <select
-          className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none"
+          className={selectClass}
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
         >
@@ -129,12 +140,15 @@ export function LibroCostosPage() {
 
       {/* Totales por sección */}
       {data && Object.keys(data.totalsBySection).length > 0 && (
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {SECTION_ORDER.filter((s) => data.totalsBySection[s] != null).map((s) => (
-            <div key={s} className="rounded-lg border border-line bg-surface p-3">
-              <p className="text-[11px] uppercase tracking-wide text-ink-soft">{SECTION_LABELS[s]}</p>
-              <p className="mt-0.5 text-xl font-bold tabular-nums text-ink">{formatMoney(data.totalsBySection[s])}</p>
-            </div>
+            <StatCard
+              key={s}
+              label={SECTION_LABELS[s] ?? s}
+              value={formatMoney(data.totalsBySection[s])}
+              sub="Total del período"
+              icon={SECTION_ICONS[s] ?? Layers}
+            />
           ))}
         </div>
       )}
@@ -143,24 +157,28 @@ export function LibroCostosPage() {
         <p className="text-sm text-ink-soft">Cargando…</p>
       ) : entries.length === 0 ? (
         <Card>
-          <CardBody className="py-12 text-center">
-            <BookOpen className="mx-auto mb-3 size-8 text-ink-soft/40" />
-            <p className="text-sm font-medium text-ink">Todavía no hay costos cargados</p>
-            <p className="mt-1 text-[13px] text-ink-soft">
+          <CardBody className="py-16 text-center">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl border border-line bg-white text-granate shadow-sm">
+              <BookOpen className="size-6" />
+            </div>
+            <p className="text-[13px] font-bold text-ink">Todavía no hay costos cargados</p>
+            <p className="mx-auto mt-1 max-w-xs text-[13px] text-ink-soft">
               Cuando apruebes documentos en Validaciones, sus montos aparecen acá automáticamente.
             </p>
           </CardBody>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {grouped.map(({ section, items }) => (
             <Card key={section}>
-              <div className="flex items-center justify-between border-b border-line px-5 py-3">
-                <p className="text-[15px] font-semibold text-ink">{SECTION_LABELS[section] ?? section}</p>
-                <span className="text-[13px] font-semibold tabular-nums text-granate">
-                  {formatMoney(items.filter((i) => i.currency === 'ARS').reduce((s, i) => s + i.amount, 0))}
-                </span>
-              </div>
+              <CardHeader
+                title={SECTION_LABELS[section] ?? section}
+                action={
+                  <span className="inline-flex items-center rounded-full border border-granate/15 bg-granate-tenue px-3.5 py-1.5 font-mono-jb text-[12.5px] font-bold text-granate shadow-sm">
+                    {formatMoney(items.filter((i) => i.currency === 'ARS').reduce((s, i) => s + i.amount, 0))}
+                  </span>
+                }
+              />
               <div className="divide-y divide-line">
                 {items.map((e) => (
                   <LedgerRow key={e.id} entry={e} onZoom={setLightbox} onEdit={setEditing} onDelete={handleDelete} />
@@ -192,8 +210,8 @@ export function LibroCostosPage() {
 
       {lightbox && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setLightbox(null)}>
-          <img src={lightbox} alt="Comprobante" className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" onClick={(ev) => ev.stopPropagation()} />
-          <button type="button" onClick={() => setLightbox(null)} className="absolute right-4 top-4 size-9 rounded-full bg-black/50 text-lg text-white hover:bg-black/70">✕</button>
+          <img src={lightbox} alt="Comprobante" className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl" onClick={(ev) => ev.stopPropagation()} />
+          <button type="button" onClick={() => setLightbox(null)} className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-full bg-black/50 text-lg text-white shadow-lg transition-colors hover:bg-black/70">✕</button>
         </div>
       )}
     </AppShell>
@@ -208,53 +226,57 @@ function LedgerRow({ entry, onZoom, onEdit, onDelete }: {
 }) {
   const isImage = entry.sourceImageUrl && /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(entry.sourceImageUrl);
   return (
-    <div className="flex items-center gap-3 px-5 py-3">
+    <div className="flex items-center gap-3.5 px-6 py-4 transition-colors hover:bg-zinc-50/40">
       {/* Origen: miniatura o ícono, clickeable */}
       {entry.sourceImageUrl ? (
         isImage ? (
           <button type="button" onClick={() => onZoom(entry.sourceImageUrl!)} className="shrink-0">
-            <img src={entry.sourceImageUrl} alt="comprobante" className="size-10 rounded object-cover border border-line hover:opacity-80" />
+            <img src={entry.sourceImageUrl} alt="comprobante" className="size-11 rounded-xl border border-line object-cover shadow-sm transition-opacity hover:opacity-80" />
           </button>
         ) : (
-          <a href={entry.sourceImageUrl} target="_blank" rel="noopener noreferrer" className="flex size-10 shrink-0 items-center justify-center rounded border border-line bg-surface-alt text-ink-soft hover:bg-surface">
+          <a href={entry.sourceImageUrl} target="_blank" rel="noopener noreferrer" className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-alt text-ink-soft shadow-sm hover:bg-surface">
             <FileText className="size-4" />
           </a>
         )
       ) : (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded border border-line bg-surface-alt text-ink-soft/40">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-alt text-ink-soft/40">
           <ImageIcon className="size-4" />
         </div>
       )}
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-ink">{entry.description}</p>
-        <div className="flex items-center gap-1.5 text-[11px] text-ink-soft">
-          <span>{entry.docDate ? formatDate(entry.docDate) : periodLabel(entry.period)}</span>
+        <p className="truncate text-[13px] font-bold text-ink">{entry.description}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-soft">
+          <span className="font-semibold">{entry.docDate ? formatDate(entry.docDate) : periodLabel(entry.period)}</span>
           {entry.wasCorrected && (
-            <span className="flex items-center gap-0.5 rounded bg-blue-50 px-1 text-blue-700"><PenLine className="size-3" /> corregido</span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200/60 bg-blue-50 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-blue-700 shadow-sm">
+              <PenLine className="size-3" /> corregido
+            </span>
           )}
           {entry.aiUsed && (
-            <span className="flex items-center gap-0.5 rounded bg-purple-50 px-1 text-purple-700"><Bot className="size-3" /> Auto</span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-purple-700 shadow-sm">
+              <Bot className="size-3" /> auto
+            </span>
           )}
           {entry.confidence != null && entry.confidence < 72 && (
-            <span className="rounded bg-amber-50 px-1 text-amber-700">conf. {entry.confidence}%</span>
+            <StatusBadge status="warn">conf. {entry.confidence}%</StatusBadge>
           )}
         </div>
       </div>
 
       <div className="shrink-0 text-right">
-        <p className="text-[14px] font-semibold tabular-nums text-ink">
-          {entry.currency !== 'ARS' && <span className="text-[11px] text-ink-soft">{entry.currency} </span>}
+        <p className="font-mono-jb text-[14px] font-bold tabular-nums text-ink">
+          {entry.currency !== 'ARS' && <span className="text-[11px] font-semibold text-ink-soft">{entry.currency} </span>}
           {formatMoney(entry.amount)}
         </p>
       </div>
 
       {/* Editar / borrar */}
       <div className="flex shrink-0 items-center gap-1">
-        <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded p-1.5 text-ink-soft hover:bg-surface-alt hover:text-ink">
+        <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded-xl p-2 text-ink-soft transition-colors hover:bg-granate-tenue hover:text-granate">
           <Pencil className="size-3.5" />
         </button>
-        <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded p-1.5 text-ink-soft hover:bg-danger/10 hover:text-danger">
+        <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded-xl p-2 text-ink-soft transition-colors hover:bg-danger/10 hover:text-danger">
           <Trash2 className="size-3.5" />
         </button>
       </div>
