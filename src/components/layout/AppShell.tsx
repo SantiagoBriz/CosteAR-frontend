@@ -132,11 +132,16 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                   to={to}
                   viewTransition
                   className={cn(
-                    'w-full h-12 relative flex items-center justify-center rounded-l-[24px] z-25 group transition-colors duration-300',
-                    active ? 'text-granate' : 'text-white/70 hover:text-white hover:bg-white/5'
+                    'w-full h-12 relative flex items-center justify-center rounded-l-[24px] z-25 group transition-colors duration-150',
+                    active ? 'text-granate' : 'text-white/70 hover:text-white'
                   )}
                 >
-                  <Icon className="size-[20px] shrink-0" />
+                  {/* Hover background helper matching the active tab bounds */}
+                  {!active && (
+                    <div className="absolute left-2.5 right-0 top-0 bottom-0 bg-transparent group-hover:bg-white/5 rounded-l-[20px] transition-colors duration-200 z-10 pointer-events-none" />
+                  )}
+
+                  <Icon className="size-[20px] shrink-0 z-20" />
                   
                   {/* Hover tooltips */}
                   <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
@@ -145,7 +150,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 
                   {showBadge && (
                     <span className={cn(
-                      "absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white border",
+                      "absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white border z-30",
                       active ? "border-white" : "border-granate"
                     )}>
                       {pendingCount > 99 ? '99+' : pendingCount}
@@ -201,12 +206,15 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
               <Link
                 to="/profile"
                 viewTransition
-                className="w-full h-12 relative flex items-center justify-center text-white/70 hover:text-white rounded-[18px] hover:bg-white/5 z-10 group"
+                className="w-full h-12 relative flex items-center justify-center text-white/70 hover:text-white z-10 group transition-colors duration-150"
               >
+                {/* Hover background helper matching the active tab bounds */}
+                <div className="absolute left-2.5 right-0 top-0 bottom-0 bg-transparent group-hover:bg-white/5 rounded-l-[20px] transition-colors duration-200 z-10 pointer-events-none" />
+
                 {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-white/20" />
+                  <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-white/20 z-20" />
                 ) : (
-                  <span className="flex size-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white border border-white/20">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white border border-white/20 z-20">
                     {user?.name?.[0]?.toUpperCase() ?? 'U'}
                   </span>
                 )}
