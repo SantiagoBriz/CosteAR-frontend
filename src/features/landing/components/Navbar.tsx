@@ -1,6 +1,8 @@
 import { LogIn } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 
+import { CosteARLogo } from '@/components/layout/CosteARLogo';
+
 interface NavbarProps {
   onAccessClick: () => void;
 }
@@ -11,7 +13,10 @@ export function Navbar({ onAccessClick }: NavbarProps) {
   return (
     <header className="fixed top-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl lg:max-w-7xl xl:max-w-[1360px] -translate-x-1/2 rounded-full border border-line/80 bg-surface/80 px-6 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.06)] backdrop-blur-md">
       <div className="flex items-center justify-between">
-        <span className="text-base font-bold tracking-tight text-ink">CosteAR</span>
+        <div className="flex items-center gap-2.5">
+          <CosteARLogo className="h-8 w-auto text-granate" />
+          <span className="text-base font-extrabold tracking-tight text-ink">CosteAR</span>
+        </div>
 
         <nav className="hidden items-center gap-8 text-xs font-semibold text-ink-soft md:flex">
           <a href="#features" className="transition-colors hover:text-ink">Características</a>

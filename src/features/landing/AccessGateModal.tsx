@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Lock } from 'lucide-react';
+import { X, Lock, Key } from 'lucide-react';
 import { api, apiErrorMessage } from '@/lib/api';
 
 interface Props {
@@ -7,11 +7,6 @@ interface Props {
   onSuccess: () => void;
 }
 
-/**
- * Gate de acceso previo al login (producto en construcción). La contraseña se
- * verifica en el backend contra un hash Argon2 (POST /access-gate); acá nunca
- * vive el texto plano ni el hash. Estética de la landing (oscuro + granate).
- */
 export function AccessGateModal({ onClose, onSuccess }: Props) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,57 +37,77 @@ export function AccessGateModal({ onClose, onSuccess }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-md animate-fade-in"
       onClick={onClose}
     >
-      <style>{`@keyframes gateShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}`}</style>
+      <style>{`
+        @keyframes gateShake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-8px); }
+          40%, 80% { transform: translateX(8px); }
+        }
+      `}</style>
       <div
-        className="relative w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-950 p-7 text-zinc-100"
-        style={{ boxShadow: '0 0 70px -12px rgba(80,16,26,0.75)', animation: shake ? 'gateShake .4s' : undefined }}
+        className="relative w-full max-w-md rounded-3xl border border-line/80 bg-surface/90 p-8 text-ink shadow-[0_30px_70px_rgba(74,21,27,0.12)] backdrop-blur-xl"
+        style={{ animation: shake ? 'gateShake .4s' : undefined }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Cerrar"
-          className="absolute right-4 top-4 text-zinc-500 transition-colors hover:text-zinc-200"
+          className="absolute right-5 top-5 text-ink-soft/70 transition-all hover:text-ink hover:bg-surface-alt p-1.5 rounded-full border border-line/40 cursor-pointer"
         >
-          <X className="size-5" />
+          <X className="size-4.5" />
         </button>
 
-        <div className="mb-4 flex size-11 items-center justify-center rounded-md" style={{ background: 'rgba(80,16,26,0.35)' }}>
-          <Lock className="size-5" style={{ color: '#e0919b' }} />
+        {/* Lock Icon Badge */}
+        <div className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-granate-tenue text-granate shadow-inner">
+          <Lock className="size-5.5" />
         </div>
 
-        <h2 className="mb-2 text-[23px] font-semibold leading-tight text-white">
-          Muchas gracias por su interés
+        {/* Title & Info */}
+        <h2 className="mb-2 text-2xl font-extrabold leading-tight text-ink">
+          Área de Acceso Restringido
         </h2>
-        <p className="mb-6 text-[14px] leading-relaxed text-zinc-400">
-          Estamos trabajando en estos momentos para brindar un servicio de calidad.
+        <p className="mb-6 text-xs leading-relaxed text-ink-soft">
+          Para ver el panel del equipo de CosteAR, ingresá la contraseña autorizada.
         </p>
 
-        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
-          Contraseña de acceso
-        </label>
-        <input
-          type="password"
-          value={password}
-          autoFocus
-          onChange={(e) => { setPassword(e.target.value); setError(null); }}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-          placeholder="Ingresá la clave del equipo"
-          className="w-full rounded-md border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-[15px] text-zinc-100 placeholder-zinc-600 outline-none transition-colors focus:border-[#7a2230]"
-        />
-        {error && <p className="mt-2 text-[13px] text-red-400">{error}</p>}
+        {/* Form Input */}
+        <div className="space-y-2">
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-ink-soft/75">
+            Contraseña del Equipo
+          </label>
+          <div className="relative">
+            <input
+              type="password"
+              value={password}
+              autoFocus
+              onChange={(e) => { setPassword(e.target.value); setError(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+              placeholder="Ingresá la clave del equipo"
+              className="w-full rounded-2xl border border-line bg-surface/60 pl-11 pr-4 py-3.5 text-sm text-ink placeholder-ink-soft/40 outline-none transition-all focus:border-granate focus:ring-1 focus:ring-granate"
+            />
+            <Key className="absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-ink-soft/45" />
+          </div>
+        </div>
 
+        {error && (
+          <p className="mt-2 text-xs font-semibold text-danger flex items-center gap-1.5 animate-fade-in">
+            <span className="h-1.5 w-1.5 rounded-full bg-danger inline-block" /> {error}
+          </p>
+        )}
+
+        {/* Submit Button */}
         <button
           type="button"
           onClick={submit}
           disabled={password.trim().length === 0 || loading}
-          className="mt-5 w-full rounded-md py-3 text-[15px] font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50"
-          style={{ background: 'linear-gradient(120deg,#50101A,#7a1a28)' }}
+          className="mt-6 w-full rounded-full py-4 text-xs font-bold text-white bg-action shadow-lg shadow-action/20 transition-all hover:bg-action-soft hover:shadow-xl active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          {loading ? 'Verificando…' : 'Acceder'}
+          {loading ? 'Verificando…' : 'Acceder al Equipo'}
         </button>
       </div>
     </div>

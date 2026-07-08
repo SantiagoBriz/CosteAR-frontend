@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Check, Plus, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { CosteARLogo } from '@/components/layout/CosteARLogo';
+import { InteractiveDotGrid } from '@/components/layout/InteractiveDotGrid';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useRegister, type RegisterPayload, type ProfessionalType } from './auth-hooks';
@@ -62,7 +64,6 @@ export function RegisterPage() {
   const emailCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cuitCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-formatea el input de CUIT a XX-XXXXXXXX-X mientras el usuario escribe.
   const formatCuit = (raw: string): string => {
     const digits = raw.replace(/\D/g, '').slice(0, 11);
     if (digits.length <= 2) return digits;
@@ -73,7 +74,6 @@ export function RegisterPage() {
   const CUIT_COMPLETE = /^\d{2}-\d{8}-\d$/;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
-    // Auto-formatear CUIT antes de guardarlo en el draft
     const finalValue = key === 'cuit' ? formatCuit(value as string) as Draft[K] : value;
     setDraft((d) => ({ ...d, [key]: finalValue }));
 
@@ -86,7 +86,7 @@ export function RegisterPage() {
           try {
             const res = await api.get<{ data: { available: boolean } }>(`/auth/check-email?email=${encodeURIComponent(val)}`);
             setEmailTaken(!res.data.data.available);
-          } catch { /* ignorar errores de red */ }
+          } catch { }
         }, 600);
       }
     }
@@ -94,19 +94,17 @@ export function RegisterPage() {
       setCuitTaken(false);
       if (cuitCheckRef.current) clearTimeout(cuitCheckRef.current);
       const formatted = formatCuit(value as string);
-      // Disparar el check AJAX solo cuando el CUIT está completo (11 dígitos)
       if (CUIT_COMPLETE.test(formatted)) {
         cuitCheckRef.current = setTimeout(async () => {
           try {
             const res = await api.get<{ data: { available: boolean } }>(`/auth/check-cuit?cuit=${encodeURIComponent(formatted)}`);
             setCuitTaken(!res.data.data.available);
-          } catch { /* ignorar errores de red */ }
+          } catch { }
         }, 400);
       }
     }
   };
 
-  // Validación mínima por paso para habilitar "Continuar".
   const canContinue = (): boolean => {
     if (step === 0) return (
       draft.name.length >= 2 &&
@@ -150,7 +148,6 @@ export function RegisterPage() {
     } catch (e) {
       const msg = apiErrorMessage(e);
       setError(msg);
-      // Si el email ya existe, volver al paso 0 para que el error sea visible
       if ((e as { response?: { status?: number } })?.response?.status === 409) {
         setStep(0);
       }
@@ -158,16 +155,53 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-alt px-6 py-12">
-      <div className="w-full max-w-lg rounded-lg border border-line bg-surface p-8 shadow-sm animate-rise">
-        <div className="mb-6 flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-md bg-action font-bold text-white">C</div>
-          <span className="text-xl font-bold tracking-tight text-granate">CosteAR</span>
+    <div className="relative flex min-h-screen items-center justify-center bg-surface-alt px-6 py-12 overflow-hidden">
+      {/* Dynamic Floating Background Glows */}
+      <style>{`
+        @keyframes orbFloat1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(30px, -20px) scale(1.08); }
+        }
+        @keyframes orbFloat2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-30px, 20px) scale(1.05); }
+        }
+        .animate-orb-1 {
+          animation: orbFloat1 12s ease-in-out infinite;
+        }
+        .animate-orb-2 {
+          animation: orbFloat2 15s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* Interactive 3D Dot Grid Background */}
+      <InteractiveDotGrid />
+
+      {/* Ambient Glows */}
+      <div 
+        className="pointer-events-none absolute left-[-10%] top-[-10%] h-[550px] w-[550px] rounded-full bg-granate-tenue opacity-70 blur-[130px] animate-orb-1 z-0" 
+      />
+      <div 
+        className="pointer-events-none absolute right-[-5%] bottom-[-5%] h-[500px] w-[500px] rounded-full bg-action-soft/10 opacity-55 blur-[120px] animate-orb-2 z-0" 
+      />
+
+      {/* Main glass card container with deep floating shadow */}
+      <div className="relative z-10 w-full max-w-md rounded-3xl border border-line/60 bg-surface/80 p-8 sm:p-10 shadow-[0_32px_80px_rgba(74,21,27,0.08),_0_8px_24px_rgba(179,25,41,0.04)] backdrop-blur-md animate-rise">
+        
+        {/* Logo and Brand */}
+        <div className="mb-8 flex items-center justify-between border-b border-line/40 pb-5">
+          <div className="flex items-center gap-2.5">
+            <CosteARLogo className="h-9 w-auto text-granate" />
+            <span className="text-xl font-extrabold tracking-tight text-granate">CosteAR</span>
+          </div>
+          <span className="text-[10px] font-bold text-ink-soft/70 uppercase tracking-wider bg-surface-alt border border-line/50 px-2.5 py-1 rounded-full">
+            Registro
+          </span>
         </div>
 
         <Stepper step={step} />
 
-        <div className="mt-7 space-y-5">
+        <div className="mt-8 space-y-6">
           {step === 0 && <StepAccount draft={draft} set={set} emailTaken={emailTaken} cuitTaken={cuitTaken} />}
           {step === 1 && <StepProfessional draft={draft} set={set} />}
           {step === 2 && <StepClients draft={draft} set={set} />}
@@ -175,31 +209,33 @@ export function RegisterPage() {
         </div>
 
         {error && (
-          <div className="mt-5 rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>
+          <div className="mt-5 rounded-xl bg-danger/10 px-3.5 py-2.5 text-[12px] font-semibold text-danger animate-fade-in">
+            {error}
+          </div>
         )}
 
-        <div className="mt-7 flex items-center justify-between">
+        <div className="mt-8 flex items-center justify-between border-t border-line/40 pt-6">
           {step > 0 ? (
-            <Button variant="ghost" size="sm" onClick={() => setStep((s) => s - 1)}>
+            <Button variant="ghost" size="sm" onClick={() => setStep((s) => s - 1)} className="rounded-full">
               <ArrowLeft className="size-4" /> Atrás
             </Button>
           ) : (
             <span />
           )}
           {step < STEPS.length - 1 ? (
-            <Button onClick={() => setStep((s) => s + 1)} disabled={!canContinue()}>
+            <Button onClick={() => setStep((s) => s + 1)} disabled={!canContinue()} className="rounded-full px-6 py-2.5">
               Continuar <ArrowRight className="size-4" />
             </Button>
           ) : (
-            <Button onClick={submit} loading={register.isPending}>
+            <Button onClick={submit} loading={register.isPending} className="rounded-full px-6 py-2.5">
               Crear cuenta
             </Button>
           )}
         </div>
 
-        <p className="mt-6 text-center text-[13px] text-ink-soft">
+        <p className="mt-6 text-center text-xs text-ink-soft">
           ¿Ya tenés cuenta?{' '}
-          <Link to="/login" className="text-granate hover:text-action">
+          <Link to="/login" className="text-granate font-bold hover:text-action transition-colors">
             Ingresá
           </Link>
         </p>
@@ -210,31 +246,42 @@ export function RegisterPage() {
 
 function Stepper({ step }: { step: number }) {
   return (
-    <div className="flex items-center gap-2">
-      {STEPS.map((label, i) => (
-        <div key={label} className="flex flex-1 flex-col items-center gap-1.5">
-          <div className="flex w-full items-center">
+    <div className="relative mb-8">
+      {/* Background track connecting lines */}
+      <div className="absolute left-[12.5%] right-[12.5%] top-4 -translate-y-1/2 h-0.5 bg-line z-0">
+        <div 
+          className="h-full bg-granate transition-all duration-500 ease-out" 
+          style={{ width: `${(step / (STEPS.length - 1)) * 100}%` }}
+        />
+      </div>
+
+      {/* Steps circles and labels container */}
+      <div className="relative z-10 flex justify-between w-full">
+        {STEPS.map((label, i) => (
+          <div key={label} className="flex flex-col items-center flex-1">
             <div
               className={cn(
-                'flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold',
+                'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 border bg-surface',
                 i < step
-                  ? 'bg-granate text-white'
+                  ? 'bg-granate border-granate text-white shadow-sm'
                   : i === step
-                    ? 'bg-action text-white'
-                    : 'bg-surface-alt text-ink-soft border border-line',
+                    ? 'bg-action border-action text-white shadow-md shadow-action/25 scale-105'
+                    : 'border-line text-ink-soft'
               )}
             >
-              {i < step ? <Check className="size-3.5" /> : i + 1}
+              {i < step ? <Check className="size-4" /> : i + 1}
             </div>
-            {i < STEPS.length - 1 && (
-              <div className={cn('h-0.5 flex-1', i < step ? 'bg-granate' : 'bg-line')} />
-            )}
+            <span 
+              className={cn(
+                'text-[10px] mt-2 font-bold tracking-tight text-center leading-none',
+                i === step ? 'text-ink font-extrabold' : 'text-ink-soft/75'
+              )}
+            >
+              {label}
+            </span>
           </div>
-          <span className={cn('text-[11px]', i === step ? 'font-medium text-ink' : 'text-ink-soft')}>
-            {label}
-          </span>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -254,28 +301,21 @@ function passwordStrength(p: string): number {
   return PASSWORD_RULES.filter((r) => r.test(p)).length;
 }
 
-// CUIT completo: XX-XXXXXXXX-X (exactamente 11 dígitos con guiones auto-insertados)
 const CUIT_RE_COMPLETE = /^\d{2}-\d{8}-\d$/;
 
-// Valida el dígito verificador del CUIT/CUIL argentino
 function validateCuit(cuit: string): boolean {
   const digits = cuit.replace(/\D/g, '');
   if (digits.length !== 11) return false;
   const weights = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
   const sum = weights.reduce((acc, w, i) => acc + w * Number(digits[i]), 0);
   const remainder = sum % 11;
-  if (remainder === 1) return false; // ningún CUIT válido tiene este resultado
+  if (remainder === 1) return false;
   const expectedVerifier = remainder === 0 ? 0 : 11 - remainder;
   return Number(digits[10]) === expectedVerifier;
 }
 
 function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set: SetFn; emailTaken: boolean; cuitTaken: boolean }) {
   const emailInvalid = draft.email.length > 0 && !EMAIL_RE.test(draft.email);
-
-  // Lógica de feedback del CUIT:
-  // - Mientras escribe: nada (los guiones se insertan solos)
-  // - Cuando hay dígitos pero no completo (< 11): "Formato incompleto"
-  // - Cuando tiene 11 dígitos (formato XX-XXXXXXXX-X): check AJAX automático
   const cuitDigits = draft.cuit.replace(/\D/g, '');
   const cuitTyping = cuitDigits.length > 0 && cuitDigits.length < 11;
   const cuitComplete = CUIT_RE_COMPLETE.test(draft.cuit);
@@ -299,63 +339,42 @@ function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set:
         )}
       </div>
       <div>
-        <Input
-          label="CUIT / CUIL"
-          placeholder="20-12345678-9"
-          value={draft.cuit}
-          inputMode="numeric"
-          onChange={(e) => set('cuit', e.target.value)}
-        />
+        <Input label="CUIT/CUIL" placeholder="20-12345678-9" value={draft.cuit} onChange={(e) => set('cuit', e.target.value)} />
         {cuitTyping && (
-          <p className="mt-1 text-[12px] text-yellow-600">
-            Formato: XX-XXXXXXXX-X — faltan {11 - cuitDigits.length} dígitos
-          </p>
+          <p className="mt-1 text-[12px] text-yellow-600">Formato incompleto ({11 - cuitDigits.length} dígitos restantes)</p>
         )}
-        {cuitComplete && !cuitValid && (
-          <p className="mt-1 text-[12px] text-danger">
-            CUIT/CUIL inválido — revisá los números ingresados
-          </p>
+        {cuitComplete && !cuitValid && !cuitTaken && (
+          <p className="mt-1 text-[12px] text-danger">CUIT inválido (dígito verificador incorrecto)</p>
         )}
-        {cuitValid && !cuitTaken && (
-          <p className="mt-1 flex items-center gap-1 text-[12px] text-green-600">
-            <Check className="size-3" /> CUIT/CUIL válido
-          </p>
-        )}
-        {cuitTaken && cuitValid && (
-          <p className="mt-1 text-[12px] text-danger">
-            Ese CUIT ya tiene una cuenta.{' '}
-            <Link to="/login" className="underline">Iniciá sesión</Link>
-          </p>
+        {cuitTaken && (
+          <p className="mt-1 text-[12px] text-danger">Este CUIT ya está registrado. <Link to="/login" className="underline">Iniciá sesión</Link></p>
         )}
       </div>
-      <div>
-        <Input
-          label="Contraseña"
-          type="password"
-          value={draft.password}
-          onChange={(e) => set('password', e.target.value)}
-        />
+      <div className="space-y-2">
+        <Input label="Contraseña" type="password" value={draft.password} onChange={(e) => set('password', e.target.value)} />
         {draft.password.length > 0 && (
-          <div className="mt-2 space-y-2">
-            <div className="flex gap-1">
-              {PASSWORD_RULES.map((_, i) => (
-                <div
-                  key={i}
-                  className={cn('h-1 flex-1 rounded-full transition-colors', i < strength ? strengthColors[strength] : 'bg-line')}
-                />
+          <div className="space-y-1.5">
+            <div className="flex h-1 gap-1">
+              {[1, 2, 3, 4].map((v) => (
+                <div key={v} className={cn('h-full flex-1 rounded-sm bg-line', strength >= v && strengthColors[strength])} />
               ))}
             </div>
-            <p className="text-[11px] text-ink-soft">{strengthLabels[strength]}</p>
-            <div className="space-y-1">
-              {PASSWORD_RULES.map((rule) => (
-                <div key={rule.label} className={cn('flex items-center gap-1.5 text-[12px]', rule.test(draft.password) ? 'text-green-500' : 'text-ink-soft')}>
-                  <div className={cn('size-3 rounded-full border', rule.test(draft.password) ? 'bg-green-500 border-green-500' : 'border-line')} />
-                  {rule.label}
-                </div>
-              ))}
-            </div>
+            <p className="text-[11px] font-medium text-ink-soft">
+              Seguridad: <span className="font-bold text-ink">{strengthLabels[strength]}</span>
+            </p>
           </div>
         )}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 text-[11px] text-ink-soft">
+          {PASSWORD_RULES.map((r) => {
+            const ok = r.test(draft.password);
+            return (
+              <div key={r.label} className={cn('flex items-center gap-1.5', ok ? 'text-emerald-600' : 'opacity-70')}>
+                <Check className={cn('size-3.5', ok ? 'opacity-100' : 'opacity-0')} />
+                <span>{r.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </>
   );
@@ -364,39 +383,48 @@ function StepAccount({ draft, set, emailTaken, cuitTaken }: { draft: Draft; set:
 function StepProfessional({ draft, set }: { draft: Draft; set: SetFn }) {
   return (
     <>
-      <h2 className="text-xl font-bold text-ink">Tus datos profesionales</h2>
-      <Input
-        label="DNI (opcional)"
-        placeholder="12345678"
-        value={draft.dni}
-        onChange={(e) => set('dni', e.target.value)}
-      />
-      <div className="flex flex-col gap-1.5">
-        <label className="text-[12px] font-medium uppercase tracking-wide text-ink-soft">
+      <h2 className="text-xl font-bold text-ink">Datos profesionales</h2>
+      <div className="space-y-1.5">
+        <label className="block text-[11px] font-semibold uppercase tracking-widest text-ink-soft">
           Tipo de profesional
         </label>
-        <select
-          className="h-11 rounded-sm border border-line bg-surface px-3 text-sm text-ink focus:border-granate"
-          value={draft.professionalType}
-          onChange={(e) => set('professionalType', e.target.value as ProfessionalType)}
-        >
-          <option value="">Seleccioná…</option>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {PROFESSIONAL_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => set('professionalType', t.value)}
+              className={cn(
+                'rounded-md border px-4 py-3 text-left text-xs font-medium transition-all hover:bg-surface-alt',
+                draft.professionalType === t.value
+                  ? 'border-granate bg-granate-tenue text-granate shadow-sm'
+                  : 'border-line text-ink',
+              )}
+            >
               {t.label}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
       </div>
+
       <div className="grid grid-cols-2 gap-4">
         <Input
+          label="DNI (opcional)"
+          value={draft.dni}
+          onChange={(e) => set('dni', e.target.value.replace(/\D/g, ''))}
+        />
+        <Input
           label="Matrícula (opcional)"
-          placeholder="CPCE…"
           value={draft.licenseNumber}
           onChange={(e) => set('licenseNumber', e.target.value)}
         />
-        <Input label="Provincia" value={draft.province} onChange={(e) => set('province', e.target.value)} />
       </div>
+
+      <Input
+        label="Provincia de actuación"
+        value={draft.province}
+        onChange={(e) => set('province', e.target.value)}
+      />
     </>
   );
 }
