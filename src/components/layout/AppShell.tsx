@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
 import { usePendingCount } from '@/features/validaciones/validaciones-hooks';
+import { useAlerts } from '@/features/alerts/alert-hooks';
 import { CosteARLogo } from '@/components/layout/CosteARLogo';
 
 const NAV = [
@@ -19,9 +20,11 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   const logout = useLogout();
   const { location } = useRouterState();
   const { data: pendingCount = 0 } = usePendingCount();
+  const { data: alerts = [] } = useAlerts();
+  const unreadAlertsCount = alerts.filter((a) => !a.isRead).length;
 
   return (
-    <div className="flex flex-col min-h-screen bg-surface-alt font-outfit overflow-x-hidden relative">
+    <div className="flex min-h-screen bg-surface-alt font-outfit overflow-x-hidden relative">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         
@@ -51,106 +54,167 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
         }
       `}</style>
 
-      {/* Ambient background glows for cohesiveness */}
-      <div className="pointer-events-none absolute left-[-10%] top-[-10%] h-[550px] w-[550px] rounded-full bg-granate-tenue opacity-60 blur-[130px] animate-orb-1 z-0" />
-      <div className="pointer-events-none absolute right-[-5%] bottom-[-5%] h-[500px] w-[500px] rounded-full bg-action-soft/5 opacity-40 blur-[120px] animate-orb-2 z-0" />
+      {/* Ambient background glows */}
+      <div className="pointer-events-none absolute left-[-10%] top-[-10%] h-[600px] w-[600px] rounded-full bg-granate-tenue opacity-55 blur-[130px] animate-orb-1 z-0" />
+      <div className="pointer-events-none absolute right-[-5%] bottom-[-5%] h-[550px] w-[550px] rounded-full bg-action-soft/5 opacity-40 blur-[120px] animate-orb-2 z-0" />
 
-      {/* Floating Horizontal Header (Glassmorphic, Matches Landing Page Navbar) */}
-      <header className="sticky top-4 z-40 mx-4 sm:mx-8 mt-4">
-        <div className="flex h-16 items-center justify-between rounded-2xl border border-line/65 bg-surface/80 px-6 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-3">
+      {/* DETACHED FLOATING VERTICAL SIDEBAR DOCK (Matches Tablet design screenshot) */}
+      <aside className="fixed top-4 bottom-4 left-4 w-20 bg-gradient-to-b from-[#200408] via-[#140205] to-[#0e0002] rounded-[30px] border border-white/5 flex flex-col items-center py-6 justify-between shadow-[0_20px_50px_rgba(74,21,27,0.06)] z-30">
+        
+        {/* Top: Logo in clean white container */}
+        <div className="flex flex-col items-center">
+          <div className="flex size-12 items-center justify-center rounded-[18px] bg-white text-granate shadow-md shadow-granate/10 hover:scale-105 transition-transform duration-300">
             <CosteARLogo className="h-6.5 w-auto text-granate" />
-            <span className="text-[17px] font-syne font-extrabold tracking-tight text-granate">CosteAR</span>
+          </div>
+        </div>
+
+        {/* Center: Main Nav Icons */}
+        <nav className="flex flex-col gap-4">
+          {NAV.map(({ to, label, icon: Icon, ...rest }) => {
+            const active = location.pathname.startsWith(to);
+            const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={cn(
+                  'flex size-12 items-center justify-center rounded-[18px] transition-all duration-300 relative group',
+                  active
+                    ? 'bg-white text-granate shadow-lg'
+                    : 'text-zinc-450 hover:text-white hover:bg-white/5'
+                )}
+              >
+                <Icon className="size-[20px] shrink-0" />
+                
+                {/* Clean hover tooltip */}
+                <span className="absolute left-16 bg-[#140205] border border-white/5 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+                  {label}
+                </span>
+
+                {showBadge && (
+                  <span className={cn(
+                    "absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-action text-[9.5px] font-extrabold text-white border-2",
+                    active ? "border-white" : "border-[#140205]"
+                  )}>
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom: Portal, Profile, Logout */}
+        <div className="flex flex-col items-center gap-4">
+          {/* Operator Portal Link */}
+          <Link
+            to="/portal"
+            className="flex size-12 items-center justify-center rounded-[18px] text-action-soft hover:text-white hover:bg-white/5 transition-all duration-200 relative group"
+          >
+            <Zap className="size-[20px]" />
+            <span className="absolute left-16 bg-[#140205] border border-white/5 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+              Portal de Operador
+            </span>
+          </Link>
+
+          {/* Profile link */}
+          <Link
+            to="/profile"
+            className={cn(
+              "flex size-12 items-center justify-center rounded-[18px] transition-all duration-200 relative group",
+              location.pathname.startsWith('/profile') ? 'bg-white text-granate shadow-lg' : 'text-zinc-450 hover:text-white hover:bg-white/5'
+            )}
+          >
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-white/10" />
+            ) : (
+              <span className={cn(
+                "flex size-8 items-center justify-center rounded-full text-xs font-bold border",
+                location.pathname.startsWith('/profile') ? 'bg-granate-tenue text-granate border-granate/10' : 'bg-white/5 text-zinc-350 border-white/10'
+              )}>
+                {user?.name?.[0]?.toUpperCase() ?? 'U'}
+              </span>
+            )}
+            <span className="absolute left-16 bg-[#140205] border border-white/5 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+              Mi Perfil
+            </span>
+          </Link>
+
+          {/* Logout */}
+          <button
+            onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
+            className="flex size-12 items-center justify-center rounded-[18px] text-zinc-400 hover:text-danger hover:bg-red-950/20 transition-all duration-200 cursor-pointer relative group"
+          >
+            <LogOut className="size-[20px]" />
+            <span className="absolute left-16 bg-[#140205] border border-white/5 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+              Cerrar Sesión
+            </span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Container (Shifted right by pl-28 to clear the floating sidebar) */}
+      <div className="flex-1 flex flex-col pl-28 relative z-10 min-h-screen">
+        
+        {/* PERSISTENT TOP GLOBAL HEADER STRIP (Matches Tablet design top bar) */}
+        <header className="flex h-16 items-center justify-between border-b border-line/40 px-8">
+          {/* Left side: Context badge */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-granate-deep/70 bg-granate-tenue/60 px-3 py-1 rounded-full border border-granate/10">
+              Panel de Control
+            </span>
           </div>
 
-          {/* Horizontal Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1.5">
-            {NAV.map(({ to, label, icon: Icon, ...rest }) => {
-              const active = location.pathname.startsWith(to);
-              const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  className={cn(
-                    'flex items-center gap-2 rounded-full px-4.5 py-2 text-[13px] font-bold transition-all relative',
-                    active
-                      ? 'bg-granate text-white shadow-md shadow-granate/10'
-                      : 'text-ink-soft hover:text-granate hover:bg-granate-tenue/30'
-                  )}
-                >
-                  <Icon className="size-[15px] shrink-0" />
-                  <span>{label}</span>
-                  {showBadge && (
-                    <span className="flex items-center justify-center rounded-full bg-action text-[9.5px] font-extrabold text-white px-1.5 py-0.5 ml-1 shadow-sm">
-                      {pendingCount > 99 ? '99+' : pendingCount}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Right Area (Actions & Profile) */}
+          {/* Right side: Alerts and User details */}
           <div className="flex items-center gap-4">
-            {/* Operator Portal button (brand action styled) */}
+            {/* Alerts Indicator */}
             <Link
-              to="/portal"
-              className="hidden lg:flex items-center gap-1.5 rounded-full border border-action/10 bg-action/5 px-3.5 py-2 text-[11px] font-bold text-action hover:bg-action/10 transition-all"
+              to="/alerts"
+              className="relative p-2 rounded-full border border-line bg-surface/40 text-ink-soft hover:text-granate hover:bg-surface transition-all shadow-sm"
+              title="Alertas"
             >
-              <Zap className="size-[13px] shrink-0" />
-              <span>Portal de Operador</span>
+              <Bell className="size-4" />
+              {unreadAlertsCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-action animate-pulse" />
+              )}
             </Link>
 
-            {/* Profile Avatar / Initials Link */}
-            <Link
-              to="/profile"
-              className={cn(
-                "flex items-center gap-2 rounded-full border border-line bg-surface/50 p-1 pr-3 hover:bg-zinc-100/50 hover:border-granate/20 transition-all",
-                location.pathname.startsWith('/profile') && "border-granate/25 bg-granate-tenue text-granate"
-              )}
-              title="Mi perfil"
-            >
+            {/* Profile Detail Card */}
+            <div className="flex items-center gap-2.5 rounded-full border border-line bg-surface/50 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
               {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="size-6 shrink-0 rounded-full object-cover border border-line" />
+                <img src={user.avatarUrl} alt="" className="size-6.5 shrink-0 rounded-full object-cover border border-line" />
               ) : (
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-granate-tenue text-[10.5px] font-bold text-granate border border-granate/10">
+                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-granate-tenue text-[10.5px] font-extrabold text-granate border border-granate/10">
                   {user?.name?.[0]?.toUpperCase() ?? 'U'}
                 </span>
               )}
-              <span className="text-[11.5px] font-bold text-ink truncate max-w-[80px]">{user?.name?.split(' ')[0] ?? 'Perfil'}</span>
-            </Link>
-
-            {/* Logout button */}
-            <button
-              onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
-              className="flex size-8 items-center justify-center rounded-full border border-line bg-surface/50 text-ink-soft hover:text-danger hover:border-danger/20 hover:bg-red-50/50 transition-all cursor-pointer"
-              title="Cerrar sesión"
-            >
-              <LogOut className="size-[15px] shrink-0" />
-            </button>
+              <div className="text-left leading-none pr-1">
+                <p className="text-[11.5px] font-bold text-ink">{user?.name ?? 'Usuario'}</p>
+                <p className="text-[8.5px] text-ink-soft mt-0.5 font-bold uppercase tracking-wider">Costista</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content Area (Takes full-width, no sidebar offset!) */}
-      <main className="flex-1 relative z-10">
-        <div className={cn('mx-auto px-4 sm:px-8 py-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
-      </main>
+        {/* Content Area */}
+        <main className="flex-1">
+          <div className={cn('mx-auto px-8 py-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
+        </main>
 
-      {/* Footer / Safety Badge */}
-      <footer className="relative z-10 border-t border-line/40 py-6 mt-auto bg-zinc-50/20">
-        <div className="mx-auto max-w-6xl px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center">
-          <div className="flex items-center gap-1.5 text-[10.5px] text-ink-soft/75">
-            <ShieldCheck className="size-4 text-emerald-600" />
-            <span>Sistema validado académicamente por la Cátedra de Costos · FCE — UNT</span>
+        {/* Cohesive Footer */}
+        <footer className="border-t border-line/40 py-6 bg-zinc-50/20">
+          <div className="mx-auto max-w-6xl px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center">
+            <div className="flex items-center gap-1.5 text-[10.5px] text-ink-soft/75">
+              <ShieldCheck className="size-4 text-emerald-600 animate-pulse" />
+              <span>Entorno cifrado y auditado académicamente por la Cátedra</span>
+            </div>
+            <p className="text-[10px] text-ink-soft/60 font-semibold">
+              © {new Date().getFullYear()} CosteAR. Todos los derechos reservados.
+            </p>
           </div>
-          <p className="text-[10px] text-ink-soft/60 font-semibold">
-            © {new Date().getFullYear()} CosteAR. Todos los derechos reservados.
-          </p>
-        </div>
-      </footer>
+        </footer>
+
+      </div>
     </div>
   );
 }
