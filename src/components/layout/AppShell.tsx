@@ -52,7 +52,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   return (
     <div className="flex h-screen bg-surface-alt font-outfit relative overflow-hidden">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
         
         .font-syne {
           font-family: 'Syne', sans-serif;
@@ -62,21 +62,6 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
         }
         .font-mono-jb {
           font-family: 'JetBrains Mono', monospace;
-        }
-
-        @keyframes orbFloat1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(30px, -20px) scale(1.08); }
-        }
-        @keyframes orbFloat2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-30px, 20px) scale(1.05); }
-        }
-        .animate-orb-1 {
-          animation: orbFloat1 15s ease-in-out infinite;
-        }
-        .animate-orb-2 {
-          animation: orbFloat2 18s ease-in-out infinite;
         }
       `}</style>
 
@@ -108,17 +93,17 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
             }}
           >
             {/* Background tab shape (inset from the left by 10px) */}
-            <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px]" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+            <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px]" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
             
             {/* Seamless extension to cover the sidebar-content gap */}
-            <div className="absolute left-20 right-[-16px] top-0 bottom-0" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+            <div className="absolute left-20 right-[-16px] top-0 bottom-0" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
             
             {/* Top curve (Concave assembly) */}
-            <div className="absolute right-0 bottom-full w-4 h-4 pointer-events-none" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+            <div className="absolute right-0 bottom-full w-4 h-4 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
             <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] pointer-events-none" />
             
             {/* Bottom curve (Concave assembly) */}
-            <div className="absolute right-0 top-full w-4 h-4 pointer-events-none" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+            <div className="absolute right-0 top-full w-4 h-4 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
             <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] pointer-events-none" />
           </div>
 
@@ -183,11 +168,11 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                 viewTransition
                 className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
               >
-                <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
-                <div className="absolute left-20 right-[-16px] top-0 bottom-0 z-10" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
-                <div className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+                <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+                <div className="absolute left-20 right-[-16px] top-0 bottom-0 z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+                <div className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
                 <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-20 pointer-events-none" />
-                <div className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
+                <div className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
                 <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-20 pointer-events-none" />
                 
                 {/* Centered avatar or initials */}
