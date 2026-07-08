@@ -7,6 +7,7 @@ import { useLogout } from '@/features/auth/auth-hooks';
 import { usePendingCount } from '@/features/validaciones/validaciones-hooks';
 import { useAlerts } from '@/features/alerts/alert-hooks';
 import { CosteARLogo } from '@/components/layout/CosteARLogo';
+import { TopBar } from '@/components/layout/TopBar';
 
 const NAV = [
   { to: '/dashboard', label: 'Inicio', icon: LayoutDashboard },
@@ -20,8 +21,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   const logout = useLogout();
   const { location } = useRouterState();
   const { data: pendingCount = 0 } = usePendingCount();
-  const { data: alerts = [] } = useAlerts();
-  const unreadAlertsCount = alerts.filter((a) => !a.isRead).length;
+
 
   const activeIndex = NAV.findIndex((item) => location.pathname.startsWith(item.to));
   const [prevIndex, setPrevIndex] = useState(activeIndex);
@@ -50,7 +50,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   const transformOrigin = direction === 'down' ? 'top center' : direction === 'up' ? 'bottom center' : 'center center';
 
   return (
-    <div className="flex min-h-screen bg-surface-alt font-outfit overflow-x-hidden relative">
+    <div className="flex h-screen bg-surface-alt font-outfit relative overflow-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         
@@ -80,9 +80,8 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
         }
       `}</style>
 
-      {/* Ambient background glows */}
-      <div className="pointer-events-none absolute left-[-10%] top-[-10%] h-[600px] w-[600px] rounded-full bg-granate-tenue opacity-55 blur-[130px] animate-orb-1 z-0" />
-      <div className="pointer-events-none absolute right-[-5%] bottom-[-5%] h-[550px] w-[550px] rounded-full bg-action-soft/5 opacity-40 blur-[120px] animate-orb-2 z-0" />
+
+
 
       {/* FLOATING VERTICAL SIDEBAR DOCK (Bordó Wine Red, Overflow Visible) */}
       <aside className="fixed top-4 bottom-4 left-4 w-20 bg-granate rounded-[30px] flex flex-col items-center py-6 justify-between shadow-[0_16px_40px_rgba(74,21,27,0.08)] z-30 overflow-visible">
@@ -239,51 +238,13 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
       </aside>
 
       {/* Main Container (Shifted right by pl-28 to clear the floating sidebar) */}
-      <div className="flex-1 flex flex-col pl-28 relative z-10 min-h-screen">
+      <div className="flex-1 flex flex-col pl-28 pt-5 pr-5 relative z-10 overflow-y-auto scrollbar-hidden">
         
-        {/* PERSISTENT TOP GLOBAL HEADER STRIP (Matches Tablet design top bar) */}
-        <header className="flex h-16 items-center justify-between border-b border-line/40 px-8">
-          {/* Left side: Context badge */}
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-granate-deep/70 bg-granate-tenue/60 px-3 py-1 rounded-full border border-granate/10">
-              Panel de Control
-            </span>
-          </div>
-
-          {/* Right side: Alerts and User details */}
-          <div className="flex items-center gap-4">
-            {/* Alerts Indicator */}
-            <Link
-              to="/alerts"
-              className="relative p-2 rounded-full border border-line bg-surface-alt/40 text-ink-soft hover:text-granate hover:bg-surface-alt/70 transition-all shadow-sm"
-              title="Alertas"
-            >
-              <Bell className="size-4" />
-              {unreadAlertsCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-action animate-pulse" />
-              )}
-            </Link>
-
-            {/* Profile Detail Card */}
-            <div className="flex items-center gap-2.5 rounded-full border border-line bg-surface-alt/50 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="size-6.5 shrink-0 rounded-full object-cover border border-line" />
-              ) : (
-                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-granate-tenue text-[10.5px] font-extrabold text-granate border border-granate/10">
-                  {user?.name?.[0]?.toUpperCase() ?? 'U'}
-                </span>
-              )}
-              <div className="text-left leading-none pr-1">
-                <p className="text-[11.5px] font-bold text-ink">{user?.name ?? 'Usuario'}</p>
-                <p className="text-[8.5px] text-ink-soft mt-0.5 font-bold uppercase tracking-wider">Costista</p>
-              </div>
-            </div>
-          </div>
-        </header>
+        <TopBar />
 
         {/* Content Area */}
         <main className="flex-1">
-          <div className={cn('mx-auto px-8 py-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
+          <div className={cn('mx-auto px-8 pt-10 pb-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
         </main>
 
         {/* Cohesive Footer */}
