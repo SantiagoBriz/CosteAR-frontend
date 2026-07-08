@@ -105,6 +105,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
               transform: `translateY(${activeIndex * (48 + 16)}px) scaleY(${stretchFactor})`, // active height (48px) + gap-4 (16px) + liquid stretch
               transformOrigin,
               opacity: activeIndex === -1 ? 0 : 1,
+              viewTransitionName: 'active-nav-tab',
             }}
           >
             {/* Background tab shape (inset from the left by 10px) */}
@@ -129,6 +130,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
               <div key={to} className="relative w-full h-12 flex items-center justify-center overflow-visible">
                 <Link
                   to={to}
+                  viewTransition
                   className={cn(
                     'w-full h-12 relative flex items-center justify-center rounded-l-[24px] z-25 group transition-colors duration-300',
                     active ? 'text-granate' : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -160,6 +162,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           {/* Operator Portal Link */}
           <Link
             to="/portal"
+            viewTransition
             className="flex size-12 items-center justify-center rounded-[18px] text-granate-tenue hover:text-white hover:bg-white/10 transition-all duration-200 relative group"
           >
             <Zap className="size-[20px]" />
@@ -173,6 +176,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
             {location.pathname.startsWith('/profile') ? (
               <Link
                 to="/profile"
+                viewTransition
                 className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
               >
                 <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-granate-tenue)' }} />
@@ -196,6 +200,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
             ) : (
               <Link
                 to="/profile"
+                viewTransition
                 className="w-full h-12 relative flex items-center justify-center text-white/70 hover:text-white rounded-[18px] hover:bg-white/5 z-10 group"
               >
                 {user?.avatarUrl ? (
