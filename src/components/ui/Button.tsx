@@ -14,14 +14,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  * Botones según la guía: una sola acción primaria por vista. El primario usa
  * el rojo de acción; el secundario, borde granate sobre blanco; el destructivo,
  * rojo de estado (más oscuro) reservado para acciones irreversibles.
+ * Radio rounded-xl (32px, ver --radius-xl en index.css) que en botones de
+ * 36-44px de alto se comporta como pill — mismo efecto que los botones
+ * "Ver Todos"/"Auditar" del dashboard, sin necesidad de override manual.
  */
 const variants: Record<Variant, string> = {
   primary:
-    'bg-action text-white hover:bg-action-soft active:bg-action shadow-sm',
+    'bg-action text-white hover:bg-action-soft active:bg-action shadow-sm hover:shadow-md',
   secondary:
-    'bg-surface text-granate border border-granate hover:bg-granate-tenue',
+    'bg-surface text-granate border border-granate hover:bg-granate-tenue shadow-sm',
   ghost: 'bg-transparent text-granate hover:bg-granate-tenue',
-  danger: 'bg-danger text-white hover:opacity-90',
+  danger: 'bg-danger text-white hover:opacity-90 shadow-sm',
 };
 
 const sizes: Record<Size, string> = {
@@ -35,7 +38,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors',
+        'inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-all duration-200',
         'disabled:cursor-not-allowed disabled:opacity-50',
         variants[variant],
         sizes[size],
