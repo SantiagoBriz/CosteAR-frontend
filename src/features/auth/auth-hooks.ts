@@ -84,3 +84,12 @@ export function useForgotPassword() {
     },
   });
 }
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async (input: { token: string; password: string }) => {
+      const res = await api.post<{ data: unknown }>('/auth/reset-password', input);
+      return res.data.data;
+    },
+  });
+}
