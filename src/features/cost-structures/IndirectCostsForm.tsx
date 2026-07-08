@@ -122,6 +122,50 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   const { fields: serviceDists, append: addServiceDist, remove: removeServiceDist } = useFieldArray({ control, name: 'serviceDistributions' });
   const { fields: prodSettings, append: addProdSetting, remove: removeProdSetting } = useFieldArray({ control, name: 'productiveSettings' });
 
+  // Pegado rápido desde Excel
+  const [showPasteConcepts, setShowPasteConcepts] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteError, setPasteError] = useState<string | null>(null);
+
+  const handlePasteImport = () => {
+    if (!pasteText.trim()) return;
+    try {
+      const lines = pasteText.split('\n').filter(l => l.trim() !== '');
+      const parsedConcepts = lines.map((line, idx) => {
+        const parts = line.split('\t');
+        if (parts.length < 3) {
+          throw new Error(`Fila ${idx + 1}: Debe tener al menos Concepto, Monto Fijo y Monto Variable.`);
+        }
+        const [name, fixedStr, varStr, ...distStrs] = parts;
+        const fixedVal = fixedStr?.trim();
+        const varVal = varStr?.trim();
+        const fixed = !fixedVal || isNaN(Number(fixedVal)) ? 0 : Number(fixedVal);
+        const variable = !varVal || isNaN(Number(varVal)) ? 0 : Number(varVal);
+
+        const distribution: Record<string, number> = {};
+        watchedCenters?.forEach((center, cIdx) => {
+          const val = distStrs[cIdx];
+          if (val && !isNaN(Number(val.trim()))) {
+            distribution[center.id] = Number(val.trim());
+          }
+        });
+
+        return {
+          name: name?.trim() || '',
+          amount: { fixed, variable },
+          distribution,
+        };
+      });
+
+      parsedConcepts.forEach(c => addConcept(c));
+      setPasteText('');
+      setPasteError(null);
+      setShowPasteConcepts(false);
+    } catch (e: any) {
+      setPasteError(e.message || 'Error al parsear el texto de Excel.');
+    }
+  };
+
   const watchedCenters = useWatch({ control, name: 'centers' });
   const watchedProdSettings = useWatch({ control, name: 'productiveSettings' });
   const watchedServiceDists = useWatch({ control, name: 'serviceDistributions' });
@@ -232,10 +276,34 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">Conceptos de CIF y prorrateo primario (%)</h4>
-          <Button type="button" size="sm" variant="secondary" onClick={() => addConcept({ name: '', amount: { fixed: 0, variable: 0 }, distribution: {} })}>
-            <Plus className="size-3" /> Concepto
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={() => setShowPasteConcepts(!showPasteConcepts)}>
+              Pegar de Excel
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => addConcept({ name: '', amount: { fixed: 0, variable: 0 }, distribution: {} })}>
+              <Plus className="size-3" /> Concepto
+            </Button>
+          </div>
         </div>
+
+        {showPasteConcepts && (
+          <div className="mb-4 rounded-xl border border-line bg-surface-alt p-4 space-y-3 animate-rise">
+            <p className="text-[11px] text-ink-soft">
+              Copiá las columnas de tu Excel (Concepto, Fijo, Variable, y luego los porcentajes correspondientes a cada centro de costo) y pegalas abajo:
+            </p>
+            <textarea
+              className="w-full h-24 rounded-md border border-line bg-surface p-2 text-xs font-mono outline-none focus:border-granate text-ink"
+              placeholder={`Ejemplo:\nAlquiler\t150000\t0\t60\t40\nFuerza Motriz\t0\t80000\t70\t30`}
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+            />
+            {pasteError && <p className="text-xs text-danger">{pasteError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button type="button" size="sm" variant="ghost" onClick={() => { setShowPasteConcepts(false); setPasteError(null); }}>Cancelar</Button>
+              <Button type="button" size="sm" onClick={handlePasteImport}>Procesar e Importar</Button>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto rounded-md border border-line">
           <table className="w-full text-sm">
             <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">

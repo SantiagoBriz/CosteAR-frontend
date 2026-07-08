@@ -63,7 +63,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           {!collapsed && (
             <Link
               to="/portal"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-xs font-semibold text-action-soft hover:bg-zinc-900 transition-colors"
+              className="flex items-center gap-3 rounded-full px-4 py-2 text-xs font-semibold text-action-soft hover:bg-zinc-900 transition-colors"
             >
               <Zap className="size-[16px] shrink-0" />
               <span>Portal del Operador</span>
@@ -73,7 +73,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
             <Link
               to="/portal"
               title="Portal del Operador"
-              className="flex size-10 items-center justify-center rounded-md text-action-soft hover:bg-zinc-900 transition-colors mx-auto"
+              className="flex size-10 items-center justify-center rounded-full text-action-soft hover:bg-zinc-900 transition-colors mx-auto"
             >
               <Zap className="size-[18px]" />
             </Link>
@@ -82,7 +82,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           <Link
             to="/profile"
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100",
+              "flex items-center gap-3 rounded-full px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100",
               collapsed && "justify-center"
             )}
             title="Mi perfil"
@@ -97,7 +97,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           <button
             onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
             className={cn(
-              "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100",
+              "flex w-full items-center gap-3 rounded-full px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100",
               collapsed && "justify-center"
             )}
             title="Cerrar sesión"
@@ -129,9 +129,9 @@ function NavItems({ currentPath, collapsed }: { currentPath: string; collapsed: 
             key={to}
             to={to}
             className={cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors relative',
+              'flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-all relative',
               active
-                ? 'bg-granate text-white'
+                ? 'bg-granate text-white shadow-md shadow-granate/10'
                 : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
               collapsed && 'justify-center'
             )}

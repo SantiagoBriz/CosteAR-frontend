@@ -98,6 +98,60 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
   // Confirmación previa al guardado (paso explícito).
   const [pending, setPending] = useState<RawMaterialConfig | null>(null);
 
+  // Pegado desde Excel
+  const [showPasteArea, setShowPasteArea] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteError, setPasteError] = useState<string | null>(null);
+
+  const handlePasteImport = () => {
+    if (!pasteText.trim()) return;
+    try {
+      const lines = pasteText.split('\n').filter(l => l.trim() !== '');
+      const parsedMovements = lines.map((line, idx) => {
+        const parts = line.split('\t'); // tab separated
+        if (parts.length < 4) {
+          throw new Error(`Fila ${idx + 1}: Debe tener al menos Fecha, Tipo (Compra/Consumo), Detalle y Cantidad.`);
+        }
+
+        const [dateStr, typeStr, detail, qtyStr, priceStr] = parts;
+
+        let type: 'purchase' | 'consumption' = 'purchase';
+        const cleanType = typeStr?.toLowerCase().trim();
+        if (cleanType === 'consumo' || cleanType === 'consumption' || cleanType === 'consumido') {
+          type = 'consumption';
+        }
+
+        let date = dateStr?.trim() || '';
+        if (date.includes('/')) {
+          const [d, m, y] = date.split('/');
+          if (d && m && y) {
+            date = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+          }
+        }
+
+        const qtyVal = qtyStr?.trim();
+        const priceVal = priceStr?.trim();
+        const quantity = !qtyVal || isNaN(Number(qtyVal)) ? 0 : Number(qtyVal);
+        const unitCost = !priceVal || isNaN(Number(priceVal)) ? 0 : Number(priceVal);
+
+        return {
+          date,
+          type,
+          detail: detail?.trim() || '',
+          quantity,
+          unitCost: type === 'consumption' ? 0 : unitCost,
+        };
+      });
+
+      parsedMovements.forEach(m => append(m));
+      setPasteText('');
+      setPasteError(null);
+      setShowPasteArea(false);
+    } catch (e: any) {
+      setPasteError(e.message || 'Error al parsear el texto de Excel. Verificá el formato.');
+    }
+  };
+
   return (
     <>
     <form onSubmit={handleSubmit((data) => setPending(cleanRawMaterialForSubmit(data)))} className="space-y-5 pt-3">
@@ -147,15 +201,45 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
           <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
             Movimientos (ficha PPP)
           </h4>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => append({ date: '', type: 'purchase', detail: '', quantity: 0, unitCost: 0 })}
-          >
-            <Plus className="size-3" /> Agregar
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowPasteArea(!showPasteArea)}
+            >
+              Pegar de Excel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => append({ date: '', type: 'purchase', detail: '', quantity: 0, unitCost: 0 })}
+            >
+              <Plus className="size-3" /> Agregar
+            </Button>
+          </div>
         </div>
+
+        {showPasteArea && (
+          <div className="mb-4 rounded-xl border border-line bg-surface-alt p-4 space-y-3 animate-rise">
+            <p className="text-[11px] text-ink-soft">
+              Copiá las columnas de tu Excel (Fecha, Tipo [Compra/Consumo], Detalle, Cantidad, Precio Unitario [compra]) y pegalas abajo:
+            </p>
+            <textarea
+              className="w-full h-24 rounded-md border border-line bg-surface p-2 text-xs font-mono outline-none focus:border-granate text-ink"
+              placeholder={`Ejemplo:\n01/11/2026\tCompra\tFactura A-123\t100\t1500\n05/11/2026\tConsumo\tPara producción\t50\t0`}
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+            />
+            {pasteError && <p className="text-xs text-danger">{pasteError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button type="button" size="sm" variant="ghost" onClick={() => { setShowPasteArea(false); setPasteError(null); }}>Cancelar</Button>
+              <Button type="button" size="sm" onClick={handlePasteImport}>Procesar e Importar</Button>
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto rounded-md border border-line">
           <table className="w-full text-sm">
             <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
