@@ -196,7 +196,7 @@ export function DashboardPage() {
             {/* Macro strip (Glass minimalista sin colores primarios invasivos) */}
             <div className="flex flex-wrap items-center gap-3">
               {dolarOficial && (
-                <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface/60 px-4 py-2 backdrop-blur-md">
+                <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface-alt/60 px-4 py-2 backdrop-blur-md">
                   <DollarSign className="size-4 text-granate" />
                   <div>
                     <p className="text-[9px] font-bold uppercase tracking-wider text-ink-soft">Dólar Oficial</p>
@@ -207,7 +207,7 @@ export function DashboardPage() {
                 </div>
               )}
               {ipc && (
-                <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface/60 px-4 py-2 backdrop-blur-md">
+                <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface-alt/60 px-4 py-2 backdrop-blur-md">
                   <Percent className="size-4 text-granate" />
                   <div>
                     <p className="text-[9px] font-bold uppercase tracking-wider text-ink-soft">IPC Mensual</p>
@@ -258,7 +258,7 @@ export function DashboardPage() {
 
           {/* ── ATENCIÓN INMEDIATA (Sutil y elegante, sin rojo chillón) ───────── */}
           {attention.some((a) => a.needsAttention) && (
-            <div className="overflow-hidden rounded-3xl border border-line/65 bg-surface/70 backdrop-blur-md shadow-sm">
+            <div className="overflow-hidden rounded-3xl border border-line/65 bg-surface-alt/70 backdrop-blur-md shadow-sm">
               <div className="flex items-center gap-2 border-b border-line bg-zinc-50/40 px-6 py-3.5">
                 <div className="size-1.5 rounded-full bg-action animate-pulse" />
                 <h2 className="font-syne text-[13px] font-extrabold text-granate uppercase tracking-wider">Requiere atención</h2>
@@ -294,7 +294,7 @@ export function DashboardPage() {
 
           {/* ── DOCUMENTOS POR VALIDAR (Estructura de Tarjeta limpia con badge granate) ── */}
           {pendingCount > 0 && (
-            <div className="overflow-hidden rounded-3xl border border-line bg-surface/75 backdrop-blur-md shadow-sm">
+            <div className="overflow-hidden rounded-3xl border border-line bg-surface-alt/75 backdrop-blur-md shadow-sm">
               <div className="flex flex-col gap-4 border-b border-line bg-zinc-50/40 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <span className="flex size-5.5 items-center justify-center rounded-full bg-granate text-[10.5px] font-extrabold text-white shadow-sm">
@@ -346,7 +346,7 @@ export function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_340px] items-start">
 
           {/* COLUMNA IZQUIERDA: MONITOREO DE CARTERA */}
-          <div className="overflow-hidden rounded-3xl border border-line bg-surface/75 backdrop-blur-md shadow-sm">
+          <div className="overflow-hidden rounded-3xl border border-line bg-surface-alt/75 backdrop-blur-md shadow-sm">
             
             {/* Header de Cartera con Búsqueda */}
             <div className="border-b border-line px-6 py-4.5">
@@ -478,7 +478,7 @@ export function DashboardPage() {
           <div className="flex flex-col gap-6">
 
             {/* Alertas */}
-            <div className="overflow-hidden rounded-3xl border border-line bg-surface/75 backdrop-blur-md shadow-sm">
+            <div className="overflow-hidden rounded-3xl border border-line bg-surface-alt/75 backdrop-blur-md shadow-sm">
               <div className="flex items-center justify-between border-b border-line px-5 py-4">
                 <h2 className="font-syne text-[13px] font-extrabold text-granate-deep uppercase tracking-wider flex items-center gap-2">
                   Alertas
@@ -520,7 +520,7 @@ export function DashboardPage() {
 
             {/* Documentos Recientes */}
             {recentDocs.length > 0 && (
-              <div className="overflow-hidden rounded-3xl border border-line bg-surface/75 backdrop-blur-md shadow-sm">
+              <div className="overflow-hidden rounded-3xl border border-line bg-surface-alt/75 backdrop-blur-md shadow-sm">
                 <div className="flex items-center justify-between border-b border-line px-5 py-4">
                   <h2 className="font-syne text-[13px] font-extrabold text-granate-deep uppercase tracking-wider">
                     Automatización
@@ -557,14 +557,14 @@ export function DashboardPage() {
             )}
 
             {/* Acciones Rápidas (Glass styling ultra-limpio) */}
-            <div className="overflow-hidden rounded-3xl border border-line bg-surface/75 backdrop-blur-md shadow-sm">
+            <div className="overflow-hidden rounded-3xl border border-line bg-surface-alt/75 backdrop-blur-md shadow-sm">
               <div className="border-b border-line px-5 py-4">
                 <h2 className="font-syne text-[13px] font-extrabold text-granate-deep uppercase tracking-wider">
                   Accesos Rápidos
                 </h2>
               </div>
               <div className="grid grid-cols-2 gap-2 p-3 bg-zinc-50/20">
-                <Link to="/companies" className="flex flex-col gap-2 rounded-2xl border border-line/60 bg-surface/70 p-3 hover:bg-zinc-50/50 hover:border-granate/20 transition-all shadow-sm">
+                <Link to="/companies" className="flex flex-col gap-2 rounded-2xl border border-line/60 bg-surface-alt/70 p-3 hover:bg-zinc-50/50 hover:border-granate/20 transition-all shadow-sm">
                   <div className="flex size-7 items-center justify-center rounded-lg bg-granate-tenue text-granate border border-granate/5">
                     <Building2 className="size-3.5" />
                   </div>
@@ -573,7 +573,7 @@ export function DashboardPage() {
                     <p className="text-[9px] text-ink-soft mt-0.5">Alta de PyME</p>
                   </div>
                 </Link>
-                <Link to="/validaciones" className="flex flex-col gap-2 rounded-2xl border border-line/60 bg-surface/70 p-3 hover:bg-zinc-50/50 hover:border-granate/20 transition-all shadow-sm">
+                <Link to="/validaciones" className="flex flex-col gap-2 rounded-2xl border border-line/60 bg-surface-alt/70 p-3 hover:bg-zinc-50/50 hover:border-granate/20 transition-all shadow-sm">
                   <div className="flex size-7 items-center justify-center rounded-lg bg-granate-tenue text-granate border border-granate/5">
                     <ClipboardCheck className="size-3.5" />
                   </div>
@@ -582,7 +582,7 @@ export function DashboardPage() {
                     <p className="text-[9px] text-ink-soft mt-0.5">{pendingCount} pendientes</p>
                   </div>
                 </Link>
-                <Link to="/alerts" className="flex flex-col gap-2 rounded-2xl border border-line/60 bg-surface/70 p-3 hover:bg-zinc-50/50 hover:border-granate/20 transition-all shadow-sm">
+                <Link to="/alerts" className="flex flex-col gap-2 rounded-2xl border border-line/60 bg-surface-alt/70 p-3 hover:bg-zinc-50/50 hover:border-granate/20 transition-all shadow-sm">
                   <div className="flex size-7 items-center justify-center rounded-lg bg-granate-tenue text-granate border border-granate/5">
                     <Bell className="size-3.5" />
                   </div>
@@ -591,7 +591,7 @@ export function DashboardPage() {
                     <p className="text-[9px] text-ink-soft mt-0.5">{unread} activas</p>
                   </div>
                 </Link>
-                <Link to="/profile" className="flex flex-col gap-2 rounded-2xl border border-line/60 bg-surface/70 p-3 hover:bg-zinc-50/50 hover:border-granate/20 transition-all shadow-sm">
+                <Link to="/profile" className="flex flex-col gap-2 rounded-2xl border border-line/60 bg-surface-alt/70 p-3 hover:bg-zinc-50/50 hover:border-granate/20 transition-all shadow-sm">
                   <div className="flex size-7 items-center justify-center rounded-lg bg-granate-tenue text-granate border border-granate/5">
                     <User className="size-3.5" />
                   </div>
@@ -632,10 +632,10 @@ function StatCard({
   variant: 'neutral' | 'urgent' | 'warn' | 'ok';
 }) {
   const styles = {
-    neutral: { card: 'border-line/60 bg-surface/70 hover:border-granate/20', num: 'text-granate-deep', icon: 'bg-zinc-100 text-zinc-500 border-zinc-200/60', dot: '' },
-    urgent:  { card: 'border-red-200/60 bg-surface/75 hover:border-red-300', num: 'text-action', icon: 'bg-granate-tenue text-action border-granate/5', dot: 'bg-action' },
-    warn:    { card: 'border-amber-200/60 bg-surface/75 hover:border-amber-300', num: 'text-amber-700', icon: 'bg-amber-50 text-amber-600 border-amber-100/50', dot: 'bg-amber-500 animate-pulse' },
-    ok:      { card: 'border-emerald-200/65 bg-surface/75 hover:border-emerald-300', num: 'text-emerald-700', icon: 'bg-emerald-50 text-emerald-600 border-emerald-100/50', dot: '' },
+    neutral: { card: 'border-line/60 bg-surface-alt/70 hover:border-granate/20', num: 'text-granate-deep', icon: 'bg-zinc-100 text-zinc-500 border-zinc-200/60', dot: '' },
+    urgent:  { card: 'border-red-200/60 bg-surface-alt/75 hover:border-red-300', num: 'text-action', icon: 'bg-granate-tenue text-action border-granate/5', dot: 'bg-action' },
+    warn:    { card: 'border-amber-200/60 bg-surface-alt/75 hover:border-amber-300', num: 'text-amber-700', icon: 'bg-amber-50 text-amber-600 border-amber-100/50', dot: 'bg-amber-500 animate-pulse' },
+    ok:      { card: 'border-emerald-200/65 bg-surface-alt/75 hover:border-emerald-300', num: 'text-emerald-700', icon: 'bg-emerald-50 text-emerald-600 border-emerald-100/50', dot: '' },
   }[variant];
 
   return (

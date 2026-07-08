@@ -63,7 +63,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
         
         {/* Top: Logo in white container */}
         <div className="flex flex-col items-center overflow-visible">
-          <div className="flex size-12 items-center justify-center rounded-[18px] bg-white text-granate shadow-md hover:scale-105 transition-transform duration-300">
+          <div className="flex size-12 items-center justify-center rounded-[18px] bg-surface-alt text-granate shadow-md hover:scale-105 transition-transform duration-300">
             <CosteARLogo className="h-6.5 w-auto text-granate" />
           </div>
         </div>
@@ -218,7 +218,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
             {/* Alerts Indicator */}
             <Link
               to="/alerts"
-              className="relative p-2 rounded-full border border-line bg-surface/40 text-ink-soft hover:text-granate hover:bg-surface transition-all shadow-sm"
+              className="relative p-2 rounded-full border border-line bg-surface-alt/40 text-ink-soft hover:text-granate hover:bg-surface-alt/70 transition-all shadow-sm"
               title="Alertas"
             >
               <Bell className="size-4" />
@@ -228,7 +228,7 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
             </Link>
 
             {/* Profile Detail Card */}
-            <div className="flex items-center gap-2.5 rounded-full border border-line bg-surface/50 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
+            <div className="flex items-center gap-2.5 rounded-full border border-line bg-surface-alt/50 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="size-6.5 shrink-0 rounded-full object-cover border border-line" />
               ) : (
