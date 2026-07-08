@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { LayoutDashboard, Building2, Bell, LogOut, ClipboardCheck, Zap, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,30 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   const unreadAlertsCount = alerts.filter((a) => !a.isRead).length;
 
   const activeIndex = NAV.findIndex((item) => location.pathname.startsWith(item.to));
+  const [prevIndex, setPrevIndex] = useState(activeIndex);
+  const [isMoving, setIsMoving] = useState(false);
+  const [direction, setDirection] = useState<'up' | 'down' | null>(null);
+  const [distance, setDistance] = useState(0);
+
+  useEffect(() => {
+    if (activeIndex !== -1 && prevIndex !== -1 && activeIndex !== prevIndex) {
+      setIsMoving(true);
+      setDirection(activeIndex > prevIndex ? 'down' : 'up');
+      setDistance(Math.abs(activeIndex - prevIndex));
+      setPrevIndex(activeIndex);
+      const timer = setTimeout(() => {
+        setIsMoving(false);
+        setDirection(null);
+        setDistance(0);
+      }, 320);
+      return () => clearTimeout(timer);
+    } else if (activeIndex !== prevIndex) {
+      setPrevIndex(activeIndex);
+    }
+  }, [activeIndex, prevIndex]);
+
+  const stretchFactor = isMoving ? 1 + Math.min(distance * 0.15, 0.35) : 1;
+  const transformOrigin = direction === 'down' ? 'top center' : direction === 'up' ? 'bottom center' : 'center center';
 
   return (
     <div className="flex min-h-screen bg-surface-alt font-outfit overflow-x-hidden relative">
@@ -75,10 +99,11 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           
           {/* LIQUID SLIDING ACTIVE INDICATOR ASSEMBLY */}
           <div
-            className="absolute left-0 right-0 h-12 pointer-events-none z-10 transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]"
+            className="absolute left-0 right-0 h-12 pointer-events-none z-10 transition-all duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
             style={{
               top: '20px', // matches padding-top py-5 (20px)
-              transform: `translateY(${activeIndex * (48 + 16)}px)`, // active height (48px) + gap-4 (16px)
+              transform: `translateY(${activeIndex * (48 + 16)}px) scaleY(${stretchFactor})`, // active height (48px) + gap-4 (16px) + liquid stretch
+              transformOrigin,
               opacity: activeIndex === -1 ? 0 : 1,
             }}
           >
