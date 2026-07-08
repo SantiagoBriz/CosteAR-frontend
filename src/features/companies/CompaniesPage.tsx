@@ -45,7 +45,7 @@ export function CompaniesPage() {
       ) : !companies?.length ? (
         <Card>
           <CardBody className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-granate-tenue text-granate">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-white border border-line text-granate shadow-sm">
               <Building2 className="size-6" />
             </div>
             <p className="text-sm text-ink-soft">Todavía no cargaste ningún cliente.</p>
@@ -55,23 +55,32 @@ export function CompaniesPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {companies.map((c) => (
-            <Link key={c.id} to="/companies/$id" params={{ id: c.id }}>
-              <Card className="transition-shadow hover:shadow-md">
-                <CardBody className="flex items-center justify-between gap-4 py-4">
-                  <div className="flex items-center gap-3 animate-fade">
-                    <div className="flex size-10 items-center justify-center rounded-md bg-granate-tenue text-granate">
+        <Card className="overflow-hidden">
+          <div className="border-b border-line bg-zinc-50/15 px-6 py-5">
+            <h2 className="text-[13px] font-extrabold uppercase tracking-wider text-granate-deep">
+              {companies.length} cliente{companies.length !== 1 ? 's' : ''} registrado{companies.length !== 1 ? 's' : ''}
+            </h2>
+          </div>
+          <ul className="divide-y divide-line">
+            {companies.map((c) => (
+              <li key={c.id}>
+                <Link
+                  to="/companies/$id"
+                  params={{ id: c.id }}
+                  className="group flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-zinc-50/15"
+                >
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-granate/10 bg-granate-tenue text-granate shadow-sm transition-transform duration-300 group-hover:scale-105">
                       <Building2 className="size-5" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-ink">{c.name}</div>
-                      <div className="text-[13px] text-ink-soft">
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-ink transition-colors group-hover:text-granate">{c.name}</p>
+                      <p className="mt-0.5 text-[12px] text-ink-soft">
                         {c.industry ?? 'Sin rubro'} · {c._count?.costStructures ?? 0} estructuras
-                      </div>
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-3">
                     <StatusBadge status={c.isActive ? 'ok' : 'idle'}>
                       {c.isActive ? 'Activo' : 'Inactivo'}
                     </StatusBadge>
@@ -82,18 +91,18 @@ export function CompaniesPage() {
                         e.stopPropagation();
                         handleDelete(c.id, c.name);
                       }}
-                      className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600"
                       title="Eliminar Cliente"
                     >
                       <Trash2 className="size-4" />
                     </button>
-                    <ChevronRight className="size-5 text-idle" />
+                    <ChevronRight className="size-5 text-zinc-300 transition-transform group-hover:translate-x-0.5" />
                   </div>
-                </CardBody>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
     </AppShell>
   );
@@ -207,7 +216,7 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
             <textarea
               {...register('description')}
               placeholder="Ej: Fabrica muebles de madera. Costea por órdenes de producción. El principal insumo es madera de pino y la chapa MDF..."
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 focus:border-granate focus:outline-none min-h-[80px]"
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 focus:border-granate focus:outline-none min-h-[80px]"
             />
           </div>
 
