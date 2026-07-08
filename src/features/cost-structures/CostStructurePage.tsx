@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Calculator, Package, Users, Factory,
   TrendingUp, BarChart2, CheckCircle2, History,
-  Download, Loader2,
+  Download, Loader2, Sparkles,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -544,6 +544,8 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
           </CardBody>
         </Card>
 
+        <SensitivitySimulator result={result} />
+
         <Card>
           <CardHeader title="Detalle MOD" />
           <CardBody className="space-y-2 text-sm">
@@ -568,6 +570,135 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
         </Card>
       </div>
     </div>
+  );
+}
+
+interface SensitivitySimulatorProps {
+  result: CalculationResult;
+}
+
+function SensitivitySimulator({ result }: SensitivitySimulatorProps) {
+  const [mpChange, setMpChange] = useState(0);
+  const [laborChange, setLaborChange] = useState(0);
+  const [cipChange, setCipChange] = useState(0);
+
+  // Sales = COGS + GrossMargin
+  const sales = result.costOfGoodsSold + result.grossMargin;
+
+  const newMP = result.rawMaterialConsumed * (1 + mpChange / 100);
+  const newLabor = result.directLaborTotal * (1 + laborChange / 100);
+  const newCIP = result.indirectCostsApplied * (1 + cipChange / 100);
+
+  const newProductionCost = newMP + newLabor + newCIP;
+  const newCOGS = result.productionCost > 0 
+    ? result.costOfGoodsSold * (newProductionCost / result.productionCost) 
+    : 0;
+
+  const newGrossMargin = sales - newCOGS;
+  const newGrossMarginPct = sales > 0 ? (newGrossMargin / sales) * 100 : 0;
+
+  const targetMargin = result.grossMarginPct;
+  const targetFactor = (100 - targetMargin) / 100;
+  const newSalesRequired = targetFactor > 0 ? newCOGS / targetFactor : 0;
+  const priceIncreasePctRequired = sales > 0 ? ((newSalesRequired / sales) - 1) * 100 : 0;
+
+  const hasChanges = mpChange !== 0 || laborChange !== 0 || cipChange !== 0;
+
+  return (
+    <Card className="border-indigo-150 bg-indigo-50/15">
+      <CardHeader 
+        title={
+          <span className="flex items-center gap-1.5 text-indigo-950 font-bold">
+            <Sparkles className="size-4 text-indigo-600" />
+            Simulador de Sensibilidad
+          </span>
+        }
+        description="Ajustá los costos para ver el impacto en el margen en tiempo real."
+      />
+      <CardBody className="space-y-4">
+        <div className="space-y-3">
+          <div>
+            <div className="flex justify-between text-xs font-semibold text-zinc-700 mb-1">
+              <span>Materia Prima (MP)</span>
+              <span className={cn('font-mono', mpChange > 0 ? 'text-amber-600' : mpChange < 0 ? 'text-green-600' : 'text-zinc-500')}>
+                {mpChange >= 0 ? '+' : ''}{mpChange}%
+              </span>
+            </div>
+            <input 
+              type="range" 
+              min="-20" 
+              max="100" 
+              value={mpChange} 
+              onChange={(e) => setMpChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between text-xs font-semibold text-zinc-700 mb-1">
+              <span>Mano de Obra (MOD)</span>
+              <span className={cn('font-mono', laborChange > 0 ? 'text-amber-600' : laborChange < 0 ? 'text-green-600' : 'text-zinc-500')}>
+                {laborChange >= 0 ? '+' : ''}{laborChange}%
+              </span>
+            </div>
+            <input 
+              type="range" 
+              min="-20" 
+              max="100" 
+              value={laborChange} 
+              onChange={(e) => setLaborChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between text-xs font-semibold text-zinc-700 mb-1">
+              <span>Costos Indirectos (CIP)</span>
+              <span className={cn('font-mono', cipChange > 0 ? 'text-amber-600' : cipChange < 0 ? 'text-green-600' : 'text-zinc-500')}>
+                {cipChange >= 0 ? '+' : ''}{cipChange}%
+              </span>
+            </div>
+            <input 
+              type="range" 
+              min="-20" 
+              max="100" 
+              value={cipChange} 
+              onChange={(e) => setCipChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+          </div>
+        </div>
+
+        {hasChanges && (
+          <div className="pt-3 border-t border-indigo-100 space-y-2.5 text-xs animate-rise">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Nuevo costo de producción:</span>
+              <span className="font-semibold text-zinc-800"><Money value={newProductionCost} /></span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-zinc-500">Nuevo Margen Bruto:</span>
+              <span className={cn('font-bold text-sm', newGrossMarginPct < 15 ? 'text-danger' : 'text-ok')}>
+                {newGrossMarginPct.toFixed(1)}%
+              </span>
+            </div>
+
+            {priceIncreasePctRequired > 0 && (
+              <div className="mt-3 rounded-lg bg-indigo-50 p-2.5 border border-indigo-100 text-[11px] text-indigo-950 leading-relaxed">
+                Para mantener tu margen del <strong className="font-bold">{targetMargin.toFixed(1)}%</strong>, debés aumentar el precio de venta un <strong className="font-bold">{priceIncreasePctRequired.toFixed(1)}%</strong>.
+              </div>
+            )}
+
+            <button 
+              type="button" 
+              onClick={() => { setMpChange(0); setLaborChange(0); setCipChange(0); }}
+              className="text-[11px] text-indigo-600 hover:underline block text-right w-full font-medium cursor-pointer"
+            >
+              Restablecer valores
+            </button>
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 
