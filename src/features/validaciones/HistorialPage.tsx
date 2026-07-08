@@ -7,10 +7,10 @@ import { cn } from '@/lib/utils';
 import { useHistorial, type DataEntry } from './validaciones-hooks';
 import { formatDate } from '@/lib/utils';
 
-const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; className: string }> = {
-  APPROVED: { label: 'Aprobada', icon: CheckCircle2, className: 'text-green-600 bg-green-50' },
-  REJECTED: { label: 'Rechazada', icon: XCircle, className: 'text-danger bg-danger/10' },
-  CORRECTED: { label: 'Corregida', icon: PenLine, className: 'text-action bg-action/10' },
+const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; className: string; border: string }> = {
+  APPROVED: { label: 'Aprobada', icon: CheckCircle2, className: 'text-green-600 bg-green-50', border: 'border-green-200' },
+  REJECTED: { label: 'Rechazada', icon: XCircle, className: 'text-danger bg-danger/10', border: 'border-danger/20' },
+  CORRECTED: { label: 'Corregida', icon: PenLine, className: 'text-action bg-action/10', border: 'border-action/20' },
 };
 
 export function HistorialPage() {
@@ -25,20 +25,22 @@ export function HistorialPage() {
       />
 
       {isLoading ? (
-        <div className="py-16 text-center text-sm text-ink-soft">Cargando…</div>
+        <div className="py-16 text-center text-[13px] font-semibold text-ink-soft">Cargando…</div>
       ) : !data?.items.length ? (
         <Card>
           <CardBody className="py-16 text-center">
-            <History className="mx-auto mb-3 size-10 text-ink-soft/40" />
-            <p className="text-sm font-medium text-ink">Sin historial todavía</p>
-            <p className="mt-1 text-[13px] text-ink-soft">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl border border-line bg-white text-granate shadow-sm">
+              <History className="size-6" />
+            </div>
+            <p className="text-[13px] font-bold text-ink">Sin historial todavía</p>
+            <p className="mt-1 text-[11px] text-ink-soft">
               Las entradas que revises aparecerán acá.
             </p>
           </CardBody>
         </Card>
       ) : (
         <>
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader
               title={`${data.total} entradas`}
               description="Ordenadas por fecha de revisión"
@@ -57,7 +59,7 @@ export function HistorialPage() {
               <Button variant="ghost" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
                 <ChevronLeft className="size-4" />
               </Button>
-              <span className="text-[13px] text-ink-soft">
+              <span className="text-[12px] font-semibold text-ink-soft">
                 Página {page} de {Math.ceil(data.total / 20)}
               </span>
               <Button
@@ -81,30 +83,31 @@ function HistorialRow({ entry }: { entry: DataEntry }) {
   const Icon = cfg?.icon ?? CheckCircle2;
 
   return (
-    <li className="flex items-start justify-between gap-4 px-6 py-4">
+    <li className="flex items-start justify-between gap-4 px-6 py-4.5 hover:bg-zinc-50/40 transition-colors">
       <div className="flex items-start gap-3 min-w-0">
-        <div className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md', cfg?.className)}>
+        <div className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border shadow-sm', cfg?.className, cfg?.border)}>
           <Icon className="size-4" />
         </div>
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="font-medium text-sm text-ink">{entry.connection.company.name}</span>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-extrabold text-[13px] text-ink">{entry.connection.company.name}</span>
             <span
               className={cn(
-                'rounded-sm px-1.5 py-0.5 text-[11px] font-medium',
+                'rounded-full border px-2 py-0.5 text-[10.5px] font-bold shadow-sm',
                 cfg?.className,
+                cfg?.border,
               )}
             >
               {cfg?.label ?? entry.status}
             </span>
           </div>
-          <p className="text-[13px] text-ink-soft truncate max-w-md">
+          <p className="text-[12.5px] text-ink-soft truncate max-w-md">
             {entry.correctedContent ?? entry.rawContent}
           </p>
           {entry.reviewNote && (
-            <p className="mt-0.5 text-[12px] text-ink-soft/70 italic">"{entry.reviewNote}"</p>
+            <p className="mt-0.5 text-[11.5px] text-ink-soft/70 italic">"{entry.reviewNote}"</p>
           )}
-          <div className="mt-0.5 flex items-center gap-3 text-[11px] text-ink-soft/60">
+          <div className="mt-1 flex items-center gap-3 text-[10.5px] font-semibold text-ink-soft/60">
             <span>Cargada: {formatDate(entry.createdAt)}</span>
             {entry.reviewedAt && <span>Revisada: {formatDate(entry.reviewedAt)}</span>}
           </div>

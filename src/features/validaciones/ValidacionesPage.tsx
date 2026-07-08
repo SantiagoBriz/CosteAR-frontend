@@ -128,7 +128,7 @@ export function ValidacionesPage() {
 
       {/* Panel de precisión del clasificador */}
       {accuracy && accuracy.total >= 3 && (
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3.5 sm:grid-cols-4">
           <AccuracyCard
             label="Precisión"
             value={accuracy.accuracy != null ? `${accuracy.accuracy}%` : '—'}
@@ -160,13 +160,13 @@ export function ValidacionesPage() {
           onClick={() => setReviewing(null)}
         >
           <div
-            className="w-full max-w-2xl rounded-lg border border-line bg-surface p-6 shadow-xl animate-rise max-h-[92vh] overflow-y-auto"
+            className="w-full max-w-2xl rounded-[28px] border border-line bg-surface p-7 shadow-[0_25px_60px_rgba(74,21,27,0.15)] animate-rise max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="font-bold text-ink">Revisar entrada</h3>
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h3 className="text-[17px] font-extrabold text-granate-deep">Revisar entrada</h3>
               {/* Empresa prominente: evita aplicar un costo al cliente equivocado */}
-              <span className="flex items-center gap-1.5 rounded-full bg-granate-tenue px-3 py-1 text-[13px] font-semibold text-granate">
+              <span className="flex items-center gap-1.5 rounded-full border border-granate/15 bg-granate-tenue px-3.5 py-1.5 text-[12px] font-bold text-granate shadow-sm">
                 <Building2 className="size-3.5" />
                 {reviewing.entry.connection.company.name}
               </span>
@@ -179,9 +179,9 @@ export function ValidacionesPage() {
               const amt = ed?.totalAmount ?? ed?.netAmount;
               if (amt == null || typeof amt !== 'number' || amt <= 0) return null;
               return (
-                <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wide text-amber-700">Se registrará en el libro de costos</p>
-                  <p className="text-lg font-bold tabular-nums text-amber-900">{fmt(amt)}</p>
+                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-amber-700">Se registrará en el libro de costos</p>
+                  <p className="mt-0.5 font-mono-jb text-lg font-bold tabular-nums text-amber-900">{fmt(amt)}</p>
                   <p className="text-[11px] text-amber-700">Verificá que coincida con el comprobante antes de aprobar.</p>
                 </div>
               );
@@ -197,25 +197,25 @@ export function ValidacionesPage() {
                 <img
                   src={reviewing.entry.fileUrl ?? `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`}
                   alt={reviewing.entry.fileName ?? 'documento'}
-                  className="w-full rounded-md object-contain max-h-64 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
+                  className="w-full rounded-2xl object-contain max-h-64 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
                 />
               </button>
             )}
             {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) && reviewing.entry.fileMimeType === 'application/pdf' && (
-              <div className="mb-4 flex items-center gap-2 rounded-md border border-line bg-surface-alt p-3">
+              <div className="mb-4 flex items-center gap-2 rounded-2xl border border-line bg-surface-alt p-3.5">
                 <FileText className="size-5 text-ink-soft" />
                 <a
                   href={reviewing.entry.fileUrl ?? '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[13px] text-action hover:underline"
+                  className="text-[13px] font-semibold text-action hover:underline"
                 >
                   {reviewing.entry.fileName}
                 </a>
               </div>
             )}
 
-            <div className="mb-4 rounded-md bg-surface-alt p-3 text-sm text-ink whitespace-pre-wrap">
+            <div className="mb-4 rounded-2xl border border-line bg-zinc-50/60 p-4 text-sm text-ink whitespace-pre-wrap">
               {reviewing.entry.rawContent}
             </div>
 
@@ -229,7 +229,7 @@ export function ValidacionesPage() {
                       Tipo correcto
                     </label>
                     <select
-                      className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none"
+                      className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink transition-colors focus:border-granate focus:outline-none"
                       value={correctedType}
                       onChange={(e) => setCorrectedType(e.target.value)}
                     >
@@ -244,7 +244,7 @@ export function ValidacionesPage() {
                       Sección correcta
                     </label>
                     <select
-                      className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none"
+                      className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink transition-colors focus:border-granate focus:outline-none"
                       value={correctedSection}
                       onChange={(e) => setCorrectedSection(e.target.value)}
                     >
@@ -260,7 +260,7 @@ export function ValidacionesPage() {
                     Contenido corregido
                   </label>
                   <textarea
-                    className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none min-h-[80px]"
+                    className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink transition-colors focus:border-granate focus:outline-none min-h-[80px]"
                     placeholder="Escribí la versión corregida del dato…"
                     value={correctedContent}
                     onChange={(e) => setCorrectedContent(e.target.value)}
@@ -275,14 +275,14 @@ export function ValidacionesPage() {
               </label>
               <input
                 type="text"
-                className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none"
+                className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink transition-colors focus:border-granate focus:outline-none"
                 placeholder="Ej: actualizado en estructura de costos de Oct 2025"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2 border-t border-line/60 pt-4">
               <Button variant="ghost" size="sm" onClick={() => setReviewing(null)}>
                 Cancelar
               </Button>
@@ -306,23 +306,25 @@ export function ValidacionesPage() {
       )}
 
       {isLoading ? (
-        <div className="py-16 text-center text-sm text-ink-soft">Cargando…</div>
+        <div className="py-16 text-center text-[13px] font-semibold text-ink-soft">Cargando…</div>
       ) : !data?.items.length ? (
         <Card>
           <CardBody className="py-16 text-center">
-            <ClipboardCheck className="mx-auto mb-3 size-10 text-ink-soft/40" />
-            <p className="text-sm font-medium text-ink">Todo al día</p>
-            <p className="mt-1 text-[13px] text-ink-soft">No hay datos pendientes de validación.</p>
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl border border-line bg-white text-granate shadow-sm">
+              <ClipboardCheck className="size-6" />
+            </div>
+            <p className="text-[13px] font-bold text-ink">Todo al día</p>
+            <p className="mt-1 text-[11px] text-ink-soft">No hay datos pendientes de validación.</p>
           </CardBody>
         </Card>
       ) : (
         <>
           {/* Resumen + aprobación masiva */}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-action/10 px-3 py-1 text-[13px] font-semibold text-action">
+          <div className="mb-4 flex flex-wrap items-center gap-2.5">
+            <span className="rounded-full border border-action/15 bg-action/10 px-3.5 py-1.5 text-[12px] font-bold text-action shadow-sm">
               {data.total} pendientes
             </span>
-            <span className="text-[13px] text-ink-soft">en {byCompany.size} {byCompany.size === 1 ? 'empresa' : 'empresas'}</span>
+            <span className="text-[12px] font-semibold text-ink-soft">en {byCompany.size} {byCompany.size === 1 ? 'empresa' : 'empresas'}</span>
             {confidentCount > 0 && (
               <Button
                 size="sm"
@@ -335,7 +337,8 @@ export function ValidacionesPage() {
             )}
           </div>
           {bulkMsg && (
-            <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-[13px] text-green-800">
+            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[12.5px] font-semibold text-green-800 shadow-sm">
+              <CheckCircle2 className="size-4 shrink-0" />
               {bulkMsg}
             </div>
           )}
@@ -367,7 +370,7 @@ export function ValidacionesPage() {
               <Button variant="ghost" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
                 <ChevronLeft className="size-4" />
               </Button>
-              <span className="text-[13px] text-ink-soft">
+              <span className="text-[12px] font-semibold text-ink-soft">
                 Página {page} de {Math.ceil(data.total / 20)}
               </span>
               <Button
@@ -392,7 +395,7 @@ export function ValidacionesPage() {
           <img
             src={lightboxSrc}
             alt="Vista ampliada"
-            className="max-w-full max-h-full rounded-lg shadow-2xl object-contain"
+            className="max-w-full max-h-full rounded-2xl shadow-2xl object-contain"
             onClick={(e) => e.stopPropagation()}
           />
           <button
@@ -413,12 +416,12 @@ export function ValidacionesPage() {
 function AccuracyCard({ label, value, hint, accent }: { label: string; value: string; hint: string; accent?: boolean }) {
   return (
     <div className={cn(
-      'rounded-lg border p-3',
-      accent ? 'border-granate/30 bg-granate-tenue/40' : 'border-line bg-surface',
+      'rounded-2xl border p-4 shadow-[0_4px_12px_rgba(74,21,27,0.01)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md',
+      accent ? 'border-granate/25 bg-granate-tenue/40' : 'border-line bg-white',
     )}>
-      <p className="text-[11px] uppercase tracking-wide text-ink-soft">{label}</p>
-      <p className={cn('mt-0.5 text-2xl font-bold tabular-nums', accent ? 'text-granate' : 'text-ink')}>{value}</p>
-      <p className="text-[11px] text-ink-soft/70">{hint}</p>
+      <p className="text-[10.5px] font-bold uppercase tracking-wider text-ink-soft/80">{label}</p>
+      <p className={cn('mt-1 font-mono-jb text-2xl font-extrabold tabular-nums', accent ? 'text-granate' : 'text-granate-deep')}>{value}</p>
+      <p className="mt-0.5 text-[10.5px] font-semibold text-ink-soft/70">{hint}</p>
     </div>
   );
 }
@@ -445,24 +448,24 @@ function CompanySection({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       {/* Header empresa */}
       <button
         type="button"
-        className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-surface-alt/50 transition-colors"
+        className="flex w-full items-center justify-between px-6 py-5 text-left hover:bg-zinc-50/50 transition-colors"
         onClick={() => setCollapsed((v) => !v)}
       >
         <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-full bg-granate-tenue text-granate">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-granate/10 bg-granate-tenue text-granate shadow-sm">
             <Building2 className="size-4" />
           </div>
           <div>
-            <p className="text-[15px] font-semibold text-ink">{companyName}</p>
-            {industry && <p className="text-[12px] text-ink-soft">{industry}</p>}
+            <p className="text-[14px] font-extrabold text-ink">{companyName}</p>
+            {industry && <p className="text-[11px] font-medium text-ink-soft">{industry}</p>}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-action/10 px-2.5 py-0.5 text-[12px] font-semibold text-action">
+          <span className="rounded-full border border-action/15 bg-action/10 px-2.5 py-1 text-[11px] font-bold text-action shadow-sm">
             {entries.length} {entries.length === 1 ? 'entrada' : 'entradas'}
           </span>
           {collapsed
@@ -511,7 +514,7 @@ function EntryRow({
   const aiAnalysis = parseAIAnalysis(entry.reviewNote);
 
   return (
-    <div className="px-5 py-4">
+    <div className="px-6 py-4.5">
       {/* Cabecera de la fila */}
       <div className="flex items-start justify-between gap-4">
         <button
@@ -519,29 +522,29 @@ function EntryRow({
           className="flex items-start gap-3 min-w-0 flex-1 text-left"
           onClick={() => setExpanded((v) => !v)}
         >
-          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-alt text-ink-soft">
-            {isImage ? <Image className="size-4" /> : isPdf ? <FileText className="size-4" /> : <Clock className="size-4" />}
+          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-line bg-zinc-50 text-zinc-400">
+            {isImage ? <Image className="size-3.5" /> : isPdf ? <FileText className="size-3.5" /> : <Clock className="size-3.5" />}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               {aiAnalysis?.costSection && aiAnalysis.costSection !== 'DESCONOCIDO' && (
-                <span className="rounded-sm bg-indigo-50 px-1.5 py-0.5 text-[11px] text-indigo-700">
+                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10.5px] font-bold text-indigo-700 shadow-sm">
                   {SECTION_LABELS[aiAnalysis.costSection] ?? aiAnalysis.costSection}
                 </span>
               )}
               {aiAnalysis?.quality === 'ilegible' && (
-                <span className="rounded-sm bg-red-50 px-1.5 py-0.5 text-[11px] text-red-700 flex items-center gap-1">
+                <span className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10.5px] font-bold text-red-700 shadow-sm">
                   <AlertTriangle className="size-3" /> Ilegible
                 </span>
               )}
             </div>
-            <p className="text-[13px] text-ink-soft line-clamp-2">
+            <p className="text-[12.5px] font-bold text-ink line-clamp-2">
               {entry.fileName ?? entry.rawContent}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[11px] text-ink-soft/60">{formatDate(entry.createdAt)}</span>
-              <span className="text-[11px] text-ink-soft/40">·</span>
-              <span className="text-[11px] text-action hover:underline">
+              <span className="text-[10.5px] font-semibold text-ink-soft/70">{formatDate(entry.createdAt)}</span>
+              <span className="text-[10.5px] text-ink-soft/40">·</span>
+              <span className="text-[10.5px] font-bold text-action hover:underline">
                 {expanded ? 'Cerrar' : 'Ver todo'}
               </span>
             </div>
@@ -575,20 +578,20 @@ function EntryRow({
               <img
                 src={entry.fileUrl ?? `data:${entry.fileMimeType};base64,${entry.fileData}`}
                 alt={entry.fileName ?? 'documento'}
-                className="w-full rounded-md object-contain max-h-80 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
+                className="w-full rounded-2xl object-contain max-h-80 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
               />
-              <p className="text-center text-[11px] text-ink-soft mt-1">Clic para ampliar</p>
+              <p className="text-center text-[10.5px] font-semibold text-ink-soft mt-1.5">Clic para ampliar</p>
             </button>
           )}
 
           {/* PDF — link a Cloudinary o indicador legacy */}
           {isPdf && (entry.fileUrl ?? entry.fileData) && (
-            <div className="flex items-center gap-3 rounded-md border border-line bg-surface-alt p-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface-alt p-3.5">
               <FileText className="size-6 text-ink-soft shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium text-ink truncate">{entry.fileName}</p>
+                <p className="text-[13px] font-bold text-ink truncate">{entry.fileName}</p>
                 {entry.fileUrl ? (
-                  <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-action hover:underline">
+                  <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-action hover:underline">
                     Ver PDF →
                   </a>
                 ) : (
@@ -600,22 +603,22 @@ function EntryRow({
 
           {/* Contenido de texto */}
           {entry.rawContent && !entry.rawContent.startsWith('[Archivo:') && (
-            <div className="rounded-md border border-line bg-surface-alt p-3">
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-soft/60">Contenido</p>
+            <div className="rounded-2xl border border-line bg-zinc-50/60 p-3.5">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-soft/60">Contenido</p>
               <p className="text-[13px] text-ink whitespace-pre-wrap">{entry.rawContent}</p>
             </div>
           )}
 
           {/* Análisis IA + Clasificación */}
           {aiAnalysis && (
-            <div className="rounded-md border border-indigo-100 bg-indigo-50/50 p-3 space-y-3">
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 shadow-sm space-y-3">
               <div className="flex items-center gap-1.5">
                 <Bot className="size-3.5 text-indigo-500" />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">Análisis del documento</span>
+                <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-indigo-500">Análisis del documento</span>
               </div>
 
               {aiAnalysis.qualityNote && (
-                <div className="flex items-start gap-2 rounded bg-yellow-50 border border-yellow-200 px-2 py-1.5">
+                <div className="flex items-start gap-2 rounded-xl bg-yellow-50 border border-yellow-200 px-2.5 py-2">
                   <AlertTriangle className="size-3.5 mt-0.5 shrink-0 text-yellow-600" />
                   <p className="text-[12px] text-yellow-800">{aiAnalysis.qualityNote}</p>
                 </div>
@@ -639,11 +642,11 @@ function EntryRow({
                 if (d.department) rows.push({ label: 'Departamento', value: String(d.department) });
                 if (!rows.length) return null;
                 return (
-                  <div className="divide-y divide-indigo-100 rounded border border-indigo-100 bg-white overflow-hidden">
+                  <div className="divide-y divide-indigo-100 rounded-xl border border-indigo-100 bg-white overflow-hidden shadow-sm">
                     {rows.map((r) => (
                       <div key={r.label} className="flex justify-between px-3 py-1.5 text-[12px]">
                         <span className="text-ink-soft">{r.label}</span>
-                        <span className="font-medium text-ink">{r.value}</span>
+                        <span className="font-bold text-ink">{r.value}</span>
                       </div>
                     ))}
                   </div>
@@ -652,8 +655,8 @@ function EntryRow({
 
               {/* Explicación del clasificador */}
               {entry.classificationAudits?.[0] && (
-                <div className="rounded border border-indigo-200 bg-white p-3 space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">Por qué se clasificó así</p>
+                <div className="rounded-xl border border-indigo-200 bg-white p-3.5 shadow-sm space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Por qué se clasificó así</p>
                   {entry.classificationAudits[0].explanation && (
                     <p className="text-[12px] text-ink-soft leading-relaxed">
                       {entry.classificationAudits[0].explanation.replace(/\.?\s*Confianza:\s*\d+(?:[.,]\d+)?\s*%\.?/i, '').trim()}
@@ -661,12 +664,12 @@ function EntryRow({
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {entry.classificationAudits[0].definitiveSignal && (
-                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700 font-mono">
+                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700 font-mono shadow-sm">
                         señal: {entry.classificationAudits[0].definitiveSignal}
                       </span>
                     )}
                     {entry.classificationAudits[0].requiresReview && (
-                      <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] text-amber-700">
+                      <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] text-amber-700 shadow-sm">
                         requiere revisión
                       </span>
                     )}
@@ -678,7 +681,7 @@ function EntryRow({
 
 
           {/* Botones de acción al pie del expand */}
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 pt-3 border-t border-line/60">
             <Button size="sm" onClick={onApprove} className="bg-green-600 hover:bg-green-700">
               <CheckCircle2 className="size-3.5" /> Aprobar
             </Button>
