@@ -51,21 +51,6 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 
   return (
     <div className="flex h-screen bg-surface-alt font-outfit relative overflow-hidden">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap');
-        
-        .font-syne {
-          font-family: 'Syne', sans-serif;
-        }
-        .font-outfit {
-          font-family: 'Outfit', sans-serif;
-        }
-        .font-mono-jb {
-          font-family: 'JetBrains Mono', monospace;
-        }
-      `}</style>
-
-
 
 
       {/* FLOATING VERTICAL SIDEBAR DOCK (Bordó Wine Red, Overflow Visible) */}
