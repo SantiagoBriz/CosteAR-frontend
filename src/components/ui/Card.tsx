@@ -2,14 +2,15 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /*
- * Tarjeta: bloque blanco, borde 1px, esquina 8px, padding 16-24px.
- * Contenedor por defecto de cualquier grupo de información.
+ * Tarjeta bento: fondo blanco, radio 28px, sombra granate suave con hover lift.
+ * Contenedor por defecto de cualquier grupo de información — mismo lenguaje
+ * visual que las tarjetas del dashboard (ver DashboardPage.tsx).
  */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+        'rounded-[28px] border border-line bg-surface shadow-[0_10px_30px_rgba(74,21,27,0.015)] transition-all duration-300 hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20',
         className,
       )}
       {...props}
@@ -27,10 +28,10 @@ export function CardHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
+    <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-5">
       <div>
-        <h3 className="text-base font-semibold text-ink">{title}</h3>
-        {description && <p className="mt-0.5 text-[13px] text-ink-soft">{description}</p>}
+        <h3 className="text-[13px] font-extrabold uppercase tracking-wider text-granate-deep">{title}</h3>
+        {description && <p className="mt-1 text-[11px] text-ink-soft">{description}</p>}
       </div>
       {action}
     </div>
