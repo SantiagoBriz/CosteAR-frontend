@@ -58,95 +58,102 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
       <div className="pointer-events-none absolute left-[-10%] top-[-10%] h-[600px] w-[600px] rounded-full bg-granate-tenue opacity-55 blur-[130px] animate-orb-1 z-0" />
       <div className="pointer-events-none absolute right-[-5%] bottom-[-5%] h-[550px] w-[550px] rounded-full bg-action-soft/5 opacity-40 blur-[120px] animate-orb-2 z-0" />
 
-      {/* DETACHED FLOATING VERTICAL SIDEBAR DOCK (Matches Tablet design screenshot) */}
-      <aside className="fixed top-4 bottom-4 left-4 w-20 bg-gradient-to-b from-[#200408] via-[#140205] to-[#0e0002] rounded-[30px] border border-white/5 flex flex-col items-center py-6 justify-between shadow-[0_20px_50px_rgba(74,21,27,0.06)] z-30">
+      {/* FLOATING VERTICAL SIDEBAR DOCK (Bordó Wine Red, Overflow Visible) */}
+      <aside className="fixed top-4 bottom-4 left-4 w-20 bg-granate rounded-[30px] border border-granate-deep/20 flex flex-col items-center py-6 justify-between shadow-[0_16px_40px_rgba(74,21,27,0.12)] z-30 overflow-visible">
         
-        {/* Top: Logo in clean white container */}
-        <div className="flex flex-col items-center">
-          <div className="flex size-12 items-center justify-center rounded-[18px] bg-white text-granate shadow-md shadow-granate/10 hover:scale-105 transition-transform duration-300">
+        {/* Top: Logo in white container */}
+        <div className="flex flex-col items-center overflow-visible">
+          <div className="flex size-12 items-center justify-center rounded-[18px] bg-white text-granate shadow-md hover:scale-105 transition-transform duration-300">
             <CosteARLogo className="h-6.5 w-auto text-granate" />
           </div>
         </div>
 
-        {/* Center: Main Nav Icons */}
-        <nav className="flex flex-col gap-4">
+        {/* Center: Main Nav Icons (Active Protrudes/Pops-out to the Right) */}
+        <nav className="flex flex-col gap-5 w-full items-center overflow-visible">
           {NAV.map(({ to, label, icon: Icon, ...rest }) => {
             const active = location.pathname.startsWith(to);
             const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
             return (
-              <Link
-                key={to}
-                to={to}
-                className={cn(
-                  'flex size-12 items-center justify-center rounded-[18px] transition-all duration-300 relative group',
-                  active
-                    ? 'bg-white text-granate shadow-lg'
-                    : 'text-zinc-450 hover:text-white hover:bg-white/5'
-                )}
-              >
-                <Icon className="size-[20px] shrink-0" />
-                
-                {/* Clean hover tooltip */}
-                <span className="absolute left-16 bg-[#140205] border border-white/5 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
-                  {label}
-                </span>
-
-                {showBadge && (
-                  <span className={cn(
-                    "absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-action text-[9.5px] font-extrabold text-white border-2",
-                    active ? "border-white" : "border-[#140205]"
-                  )}>
-                    {pendingCount > 99 ? '99+' : pendingCount}
+              <div key={to} className="relative w-full flex justify-center overflow-visible">
+                <Link
+                  to={to}
+                  className={cn(
+                    'flex size-12 items-center justify-center rounded-[18px] transition-all duration-300 relative group',
+                    active
+                      ? 'bg-white text-granate shadow-[0_8px_20px_rgba(0,0,0,0.12)] translate-x-4 scale-105 z-15'
+                      : 'text-white/70 hover:text-white hover:bg-white/10 z-10'
+                  )}
+                >
+                  <Icon className="size-[20px] shrink-0" />
+                  
+                  {/* Hover tooltips */}
+                  <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+                    {label}
                   </span>
-                )}
-              </Link>
+
+                  {showBadge && (
+                    <span className={cn(
+                      "absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-action text-[9.5px] font-extrabold text-white border-2",
+                      active ? "border-white" : "border-granate"
+                    )}>
+                      {pendingCount > 99 ? '99+' : pendingCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
             );
           })}
         </nav>
 
         {/* Bottom: Portal, Profile, Logout */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4 overflow-visible">
           {/* Operator Portal Link */}
           <Link
             to="/portal"
-            className="flex size-12 items-center justify-center rounded-[18px] text-action-soft hover:text-white hover:bg-white/5 transition-all duration-200 relative group"
+            className="flex size-12 items-center justify-center rounded-[18px] text-granate-tenue hover:text-white hover:bg-white/10 transition-all duration-200 relative group"
           >
             <Zap className="size-[20px]" />
-            <span className="absolute left-16 bg-[#140205] border border-white/5 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+            <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
               Portal de Operador
             </span>
           </Link>
 
           {/* Profile link */}
-          <Link
-            to="/profile"
-            className={cn(
-              "flex size-12 items-center justify-center rounded-[18px] transition-all duration-200 relative group",
-              location.pathname.startsWith('/profile') ? 'bg-white text-granate shadow-lg' : 'text-zinc-450 hover:text-white hover:bg-white/5'
-            )}
-          >
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-white/10" />
-            ) : (
-              <span className={cn(
-                "flex size-8 items-center justify-center rounded-full text-xs font-bold border",
-                location.pathname.startsWith('/profile') ? 'bg-granate-tenue text-granate border-granate/10' : 'bg-white/5 text-zinc-350 border-white/10'
-              )}>
-                {user?.name?.[0]?.toUpperCase() ?? 'U'}
+          <div className="relative w-full flex justify-center overflow-visible">
+            <Link
+              to="/profile"
+              className={cn(
+                "flex size-12 items-center justify-center rounded-[18px] transition-all duration-300 relative group",
+                location.pathname.startsWith('/profile') 
+                  ? 'bg-white text-granate shadow-[0_8px_20px_rgba(0,0,0,0.12)] translate-x-4 scale-105 z-15' 
+                  : 'text-white/70 hover:text-white hover:bg-white/10 z-10'
+              )}
+            >
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-white/20" />
+              ) : (
+                <span className={cn(
+                  "flex size-8 items-center justify-center rounded-full text-xs font-bold border",
+                  location.pathname.startsWith('/profile') 
+                    ? 'bg-granate-tenue text-granate border-granate/10' 
+                    : 'bg-white/10 text-white border-white/20'
+                )}>
+                  {user?.name?.[0]?.toUpperCase() ?? 'U'}
+                </span>
+              )}
+              <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+                Mi Perfil
               </span>
-            )}
-            <span className="absolute left-16 bg-[#140205] border border-white/5 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
-              Mi Perfil
-            </span>
-          </Link>
+            </Link>
+          </div>
 
           {/* Logout */}
           <button
             onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
-            className="flex size-12 items-center justify-center rounded-[18px] text-zinc-400 hover:text-danger hover:bg-red-950/20 transition-all duration-200 cursor-pointer relative group"
+            className="flex size-12 items-center justify-center rounded-[18px] text-white/70 hover:text-white hover:bg-red-900/40 transition-all duration-200 cursor-pointer relative group"
           >
             <LogOut className="size-[20px]" />
-            <span className="absolute left-16 bg-[#140205] border border-white/5 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+            <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
               Cerrar Sesión
             </span>
           </button>
