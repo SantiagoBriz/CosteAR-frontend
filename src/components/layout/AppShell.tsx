@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
-import { useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { LayoutDashboard, Building2, Bell, LogOut, User, ClipboardCheck, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Building2, Bell, LogOut, ClipboardCheck, Zap, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
 import { usePendingCount } from '@/features/validaciones/validaciones-hooks';
+import { CosteARLogo } from '@/components/layout/CosteARLogo';
 
 const NAV = [
-  { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Inicio', icon: LayoutDashboard },
   { to: '/companies', label: 'Clientes', icon: Building2 },
   { to: '/validaciones', label: 'Validaciones', icon: ClipboardCheck, badge: true },
   { to: '/alerts', label: 'Alertas', icon: Bell },
@@ -18,139 +18,140 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
   const { location } = useRouterState();
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true');
-
-  const toggleCollapse = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem('sidebar-collapsed', String(next));
-  };
-
-  return (
-    <div className="flex min-h-screen bg-surface-alt">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 flex flex-col border-r border-zinc-800 bg-zinc-950 text-zinc-100 transition-all duration-200 z-30",
-          collapsed ? "w-16" : "w-60"
-        )}
-      >
-        {/* Toggle Button */}
-        <button
-          type="button"
-          onClick={toggleCollapse}
-          className="absolute top-5 -right-3 flex size-6 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-all z-40 focus:outline-none"
-          title={collapsed ? "Expandir" : "Colapsar"}
-        >
-          {collapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
-        </button>
-
-        <div className={cn("flex h-16 items-center border-b border-zinc-800 px-4 transition-all duration-200", collapsed && "justify-center px-0")}>
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-granate text-sm font-bold text-white">
-              C
-            </div>
-            {!collapsed && (
-              <span className="text-lg font-bold tracking-tight text-white animate-rise">CosteAR</span>
-            )}
-          </div>
-        </div>
-
-        <NavItems currentPath={location.pathname} collapsed={collapsed} />
-
-        <div className="border-t border-zinc-800 p-2 space-y-1">
-          {/* Switch to Operator Portal */}
-          {!collapsed && (
-            <Link
-              to="/portal"
-              className="flex items-center gap-3 rounded-full px-4 py-2 text-xs font-semibold text-action-soft hover:bg-zinc-900 transition-colors"
-            >
-              <Zap className="size-[16px] shrink-0" />
-              <span>Portal del Operador</span>
-            </Link>
-          )}
-          {collapsed && (
-            <Link
-              to="/portal"
-              title="Portal del Operador"
-              className="flex size-10 items-center justify-center rounded-full text-action-soft hover:bg-zinc-900 transition-colors mx-auto"
-            >
-              <Zap className="size-[18px]" />
-            </Link>
-          )}
-
-          <Link
-            to="/profile"
-            className={cn(
-              "flex items-center gap-3 rounded-full px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100",
-              collapsed && "justify-center"
-            )}
-            title="Mi perfil"
-          >
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="size-[22px] shrink-0 rounded-full object-cover" />
-            ) : (
-              <User className="size-[18px] shrink-0" />
-            )}
-            {!collapsed && <span className="truncate text-[13px]">{user?.name ?? 'Mi perfil'}</span>}
-          </Link>
-          <button
-            onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-full px-4 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100",
-              collapsed && "justify-center"
-            )}
-            title="Cerrar sesión"
-          >
-            <LogOut className="size-[18px] shrink-0" />
-            {!collapsed && <span className="text-[13px]">Cerrar sesión</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* Contenido */}
-      <main className={cn("flex-1 transition-all duration-200", collapsed ? "ml-16" : "ml-60")}>
-        <div className={cn('mx-auto px-8 py-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
-      </main>
-    </div>
-  );
-}
-
-function NavItems({ currentPath, collapsed }: { currentPath: string; collapsed: boolean }) {
   const { data: pendingCount = 0 } = usePendingCount();
 
   return (
-    <nav className="flex-1 space-y-1 px-2 py-4">
-      {NAV.map(({ to, label, icon: Icon, ...rest }) => {
-        const active = currentPath.startsWith(to);
-        const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
-        return (
-          <Link
-            key={to}
-            to={to}
-            className={cn(
-              'flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-all relative',
-              active
-                ? 'bg-granate text-white shadow-md shadow-granate/10'
-                : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
-              collapsed && 'justify-center'
-            )}
-            title={collapsed ? label : undefined}
-          >
-            <Icon className="size-[18px] shrink-0" />
-            {!collapsed && <span className="flex-1 text-[13px]">{label}</span>}
-            {showBadge && (
-              <span className={cn(
-                "flex items-center justify-center rounded-full bg-action text-[10px] font-bold text-white shrink-0",
-                collapsed ? "absolute -top-1 -right-1 size-4.5 border border-zinc-950" : "size-5"
-              )}>
-                {pendingCount > 99 ? '99+' : pendingCount}
-              </span>
-            )}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="flex flex-col min-h-screen bg-surface-alt font-outfit overflow-x-hidden relative">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+        
+        .font-syne {
+          font-family: 'Syne', sans-serif;
+        }
+        .font-outfit {
+          font-family: 'Outfit', sans-serif;
+        }
+        .font-mono-jb {
+          font-family: 'JetBrains Mono', monospace;
+        }
+
+        @keyframes orbFloat1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(30px, -20px) scale(1.08); }
+        }
+        @keyframes orbFloat2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-30px, 20px) scale(1.05); }
+        }
+        .animate-orb-1 {
+          animation: orbFloat1 15s ease-in-out infinite;
+        }
+        .animate-orb-2 {
+          animation: orbFloat2 18s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* Ambient background glows for cohesiveness */}
+      <div className="pointer-events-none absolute left-[-10%] top-[-10%] h-[550px] w-[550px] rounded-full bg-granate-tenue opacity-60 blur-[130px] animate-orb-1 z-0" />
+      <div className="pointer-events-none absolute right-[-5%] bottom-[-5%] h-[500px] w-[500px] rounded-full bg-action-soft/5 opacity-40 blur-[120px] animate-orb-2 z-0" />
+
+      {/* Floating Horizontal Header (Glassmorphic, Matches Landing Page Navbar) */}
+      <header className="sticky top-4 z-40 mx-4 sm:mx-8 mt-4">
+        <div className="flex h-16 items-center justify-between rounded-2xl border border-line/65 bg-surface/80 px-6 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-3">
+            <CosteARLogo className="h-6.5 w-auto text-granate" />
+            <span className="text-[17px] font-syne font-extrabold tracking-tight text-granate">CosteAR</span>
+          </div>
+
+          {/* Horizontal Navigation Links */}
+          <nav className="hidden md:flex items-center gap-1.5">
+            {NAV.map(({ to, label, icon: Icon, ...rest }) => {
+              const active = location.pathname.startsWith(to);
+              const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={cn(
+                    'flex items-center gap-2 rounded-full px-4.5 py-2 text-[13px] font-bold transition-all relative',
+                    active
+                      ? 'bg-granate text-white shadow-md shadow-granate/10'
+                      : 'text-ink-soft hover:text-granate hover:bg-granate-tenue/30'
+                  )}
+                >
+                  <Icon className="size-[15px] shrink-0" />
+                  <span>{label}</span>
+                  {showBadge && (
+                    <span className="flex items-center justify-center rounded-full bg-action text-[9.5px] font-extrabold text-white px-1.5 py-0.5 ml-1 shadow-sm">
+                      {pendingCount > 99 ? '99+' : pendingCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Right Area (Actions & Profile) */}
+          <div className="flex items-center gap-4">
+            {/* Operator Portal button (brand action styled) */}
+            <Link
+              to="/portal"
+              className="hidden lg:flex items-center gap-1.5 rounded-full border border-action/10 bg-action/5 px-3.5 py-2 text-[11px] font-bold text-action hover:bg-action/10 transition-all"
+            >
+              <Zap className="size-[13px] shrink-0" />
+              <span>Portal de Operador</span>
+            </Link>
+
+            {/* Profile Avatar / Initials Link */}
+            <Link
+              to="/profile"
+              className={cn(
+                "flex items-center gap-2 rounded-full border border-line bg-surface/50 p-1 pr-3 hover:bg-zinc-100/50 hover:border-granate/20 transition-all",
+                location.pathname.startsWith('/profile') && "border-granate/25 bg-granate-tenue text-granate"
+              )}
+              title="Mi perfil"
+            >
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="size-6 shrink-0 rounded-full object-cover border border-line" />
+              ) : (
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-granate-tenue text-[10.5px] font-bold text-granate border border-granate/10">
+                  {user?.name?.[0]?.toUpperCase() ?? 'U'}
+                </span>
+              )}
+              <span className="text-[11.5px] font-bold text-ink truncate max-w-[80px]">{user?.name?.split(' ')[0] ?? 'Perfil'}</span>
+            </Link>
+
+            {/* Logout button */}
+            <button
+              onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
+              className="flex size-8 items-center justify-center rounded-full border border-line bg-surface/50 text-ink-soft hover:text-danger hover:border-danger/20 hover:bg-red-50/50 transition-all cursor-pointer"
+              title="Cerrar sesión"
+            >
+              <LogOut className="size-[15px] shrink-0" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area (Takes full-width, no sidebar offset!) */}
+      <main className="flex-1 relative z-10">
+        <div className={cn('mx-auto px-4 sm:px-8 py-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
+      </main>
+
+      {/* Footer / Safety Badge */}
+      <footer className="relative z-10 border-t border-line/40 py-6 mt-auto bg-zinc-50/20">
+        <div className="mx-auto max-w-6xl px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center">
+          <div className="flex items-center gap-1.5 text-[10.5px] text-ink-soft/75">
+            <ShieldCheck className="size-4 text-emerald-600" />
+            <span>Sistema validado académicamente por la Cátedra de Costos · FCE — UNT</span>
+          </div>
+          <p className="text-[10px] text-ink-soft/60 font-semibold">
+            © {new Date().getFullYear()} CosteAR. Todos los derechos reservados.
+          </p>
+        </div>
+      </footer>
+    </div>
   );
 }
 
@@ -164,12 +165,12 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="mb-8 flex items-end justify-between gap-4">
-      <div>
-        <h1 className="text-[28px] font-bold tracking-tight text-ink">{title}</h1>
-        {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
+    <header className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-line/40 pb-5">
+      <div className="space-y-1">
+        <h1 className="font-syne text-[26px] font-extrabold tracking-tight text-granate-deep">{title}</h1>
+        {description && <p className="text-xs text-ink-soft">{description}</p>}
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </header>
   );
 }
