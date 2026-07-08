@@ -87,11 +87,13 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                     {/* Seamless extension to cover the sidebar-content gap */}
                     <div className="absolute left-20 right-[-16px] top-0 bottom-0 bg-surface-alt z-10" />
                     
-                    {/* Top curve (solid bordó with bottom-right rounded corner) */}
-                    <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-10 pointer-events-none" />
+                    {/* Top curve (Concave assembly) */}
+                    <div className="absolute right-0 bottom-full w-4 h-4 bg-surface-alt z-10 pointer-events-none" />
+                    <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-20 pointer-events-none" />
                     
-                    {/* Bottom curve (solid bordó with top-right rounded corner) */}
-                    <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-10 pointer-events-none" />
+                    {/* Bottom curve (Concave assembly) */}
+                    <div className="absolute right-0 top-full w-4 h-4 bg-surface-alt z-10 pointer-events-none" />
+                    <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-20 pointer-events-none" />
 
                     {/* Centered icon on the 80px line */}
                     <div className="absolute left-0 w-20 h-full flex items-center justify-center z-30 pointer-events-none">
@@ -151,8 +153,10 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
               >
                 <div className="absolute left-2.5 right-0 top-0 bottom-0 bg-surface-alt rounded-l-[20px] z-10" />
                 <div className="absolute left-20 right-[-16px] top-0 bottom-0 bg-surface-alt z-10" />
-                <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-10 pointer-events-none" />
-                <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-10 pointer-events-none" />
+                <div className="absolute right-0 bottom-full w-4 h-4 bg-surface-alt z-10 pointer-events-none" />
+                <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-20 pointer-events-none" />
+                <div className="absolute right-0 top-full w-4 h-4 bg-surface-alt z-10 pointer-events-none" />
+                <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-20 pointer-events-none" />
                 
                 {/* Centered avatar or initials */}
                 <div className="absolute left-0 w-20 h-full flex items-center justify-center z-30 pointer-events-none">
