@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RegisterPage } from '@/features/auth/RegisterPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CompaniesPage } from '@/features/companies/CompaniesPage';
 import { CompanyDetailPage } from '@/features/companies/CompanyDetailPage';
@@ -65,6 +66,7 @@ const indexRoute = createRoute({
 const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: '/login', component: LoginPage });
 const registerRoute = createRoute({ getParentRoute: () => rootRoute, path: '/register', component: RegisterPage });
 const forgotRoute = createRoute({ getParentRoute: () => rootRoute, path: '/forgot-password', component: ForgotPasswordPage });
+const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset-password', component: ResetPasswordPage });
 
 const dashboardRoute = createRoute({ getParentRoute: () => rootRoute, path: '/dashboard', beforeLoad: requireAuth, component: DashboardPage });
 const companiesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/companies', beforeLoad: requireAuth, component: CompaniesPage });
@@ -106,6 +108,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   registerRoute,
   forgotRoute,
+  resetRoute,
   dashboardRoute,
   companiesRoute,
   companyDetailRoute,
