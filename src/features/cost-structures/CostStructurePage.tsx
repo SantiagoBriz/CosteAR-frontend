@@ -103,7 +103,7 @@ export function CostStructurePage() {
           >
             <ArrowLeft className="size-3.5" /> Volver a la empresa
           </Link>
-          <h1 className="text-2xl font-bold text-ink">{structure?.productName ?? 'Estructura de costos'}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-granate-deep">{structure?.productName ?? 'Estructura de costos'}</h1>
           <p className="text-sm text-ink-soft">Período {structure?.period}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export function CostStructurePage() {
 
       {/* Error */}
       {error && (
-        <div className="mb-4 flex items-center justify-between rounded-md bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
+        <div className="mb-4 flex items-center justify-between rounded-xl bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
           <span>{error}</span>
           <button type="button" onClick={() => setError(null)} className="ml-3 text-danger/60 hover:text-danger">✕</button>
         </div>
@@ -126,7 +126,7 @@ export function CostStructurePage() {
 
       {/* Aviso de progreso */}
       {!allReady && (
-        <div className="mb-4 rounded-md border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] text-ink">
+        <div className="mb-4 rounded-xl border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] text-ink">
           Completá las 4 secciones para habilitar el cálculo.
         </div>
       )}

@@ -151,7 +151,7 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
     <form onSubmit={handleSubmit((data) => setPending(cleanDirectLaborForSubmit(data)))} className="space-y-5 pt-3">
       {/* Distribución del año */}
       <section>
-        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+        <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
           Distribución del año
         </h4>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -176,7 +176,7 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
 
       {/* ITCS */}
       <section>
-        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+        <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
           ITCS — Índice Total de Cargas Sociales
         </h4>
         <div className="grid grid-cols-2 gap-3">
@@ -226,12 +226,12 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
       {/* Departamentos */}
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">Departamentos productivos</h4>
+          <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">Departamentos productivos</h4>
           <Button type="button" size="sm" variant="secondary" onClick={() => appendDept({ name: '', basicRemuneration: 0, hoursWorked: 0 })}>
             <Plus className="size-3" /> Agregar
           </Button>
         </div>
-        <div className="overflow-x-auto rounded-md border border-line">
+        <div className="overflow-x-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
               <tr>

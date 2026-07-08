@@ -158,7 +158,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
       {/* Wilson */}
       {!isProcesses && (
         <section>
-          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+          <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
             Lote óptimo de Wilson
           </h4>
           <div className="grid grid-cols-2 gap-3">
@@ -172,7 +172,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
 
       {/* Política de stock */}
       <section>
-        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+        <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
           Política de stock
         </h4>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -186,7 +186,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
 
       {/* Stock inicial */}
       <section>
-        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+        <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
           Existencia inicial
         </h4>
         <div className="grid grid-cols-2 gap-3">
@@ -198,7 +198,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
       {/* Movimientos */}
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+          <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
             Movimientos (ficha PPP)
           </h4>
           <div className="flex gap-2">
@@ -227,7 +227,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
               Copiá las columnas de tu Excel (Fecha, Tipo [Compra/Consumo], Detalle, Cantidad, Precio Unitario [compra]) y pegalas abajo:
             </p>
             <textarea
-              className="w-full h-24 rounded-md border border-line bg-surface p-2 text-xs font-mono outline-none focus:border-granate text-ink"
+              className="w-full h-24 rounded-xl border border-line bg-surface p-2 text-xs font-mono outline-none focus:border-granate text-ink"
               placeholder={`Ejemplo:\n01/11/2026\tCompra\tFactura A-123\t100\t1500\n05/11/2026\tConsumo\tPara producción\t50\t0`}
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
@@ -240,7 +240,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-md border border-line">
+        <div className="overflow-x-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
               <tr>

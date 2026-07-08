@@ -224,7 +224,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
       {/* Centros de costo */}
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">Centros de costo</h4>
+          <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">Centros de costo</h4>
           <div className="flex gap-2">
             <Button type="button" size="sm" variant="secondary" onClick={() => addCenter({ id: `prod${centers.length + 1}`, name: '', type: 'productive' })}>
               <Plus className="size-3" /> Productivo
@@ -234,7 +234,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             </Button>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-md border border-line">
+        <div className="overflow-x-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
               <tr>
@@ -275,7 +275,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
       {/* Conceptos de CIF */}
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">Conceptos de CIF y prorrateo primario (%)</h4>
+          <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">Conceptos de CIF y prorrateo primario (%)</h4>
           <div className="flex gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={() => setShowPasteConcepts(!showPasteConcepts)}>
               Pegar de Excel
@@ -292,7 +292,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
               Copiá las columnas de tu Excel (Concepto, Fijo, Variable, y luego los porcentajes correspondientes a cada centro de costo) y pegalas abajo:
             </p>
             <textarea
-              className="w-full h-24 rounded-md border border-line bg-surface p-2 text-xs font-mono outline-none focus:border-granate text-ink"
+              className="w-full h-24 rounded-xl border border-line bg-surface p-2 text-xs font-mono outline-none focus:border-granate text-ink"
               placeholder={`Ejemplo:\nAlquiler\t150000\t0\t60\t40\nFuerza Motriz\t0\t80000\t70\t30`}
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
@@ -304,7 +304,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             </div>
           </div>
         )}
-        <div className="overflow-x-auto rounded-md border border-line">
+        <div className="overflow-x-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
               <tr>
@@ -352,11 +352,11 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
       {serviceCenters.length > 0 && (
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+            <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
               Prorrateo secundario — distribución de servicios (%)
             </h4>
           </div>
-          <div className="overflow-x-auto rounded-md border border-line">
+          <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full text-sm">
               <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
                 <tr>
@@ -428,11 +428,11 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             >
               <Plus className="size-3" /> Agregar
             </Button>
-            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+            <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
               Cuotas y variaciones por centro productivo
             </h4>
           </div>
-          <div className="overflow-x-auto rounded-md border border-line">
+          <div className="overflow-x-auto rounded-xl border border-line">
             <table className="w-full text-sm">
               <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
                 <tr>
