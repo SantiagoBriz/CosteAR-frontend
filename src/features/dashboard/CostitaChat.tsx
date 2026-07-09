@@ -166,7 +166,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: 'Ups, hubo un problema con la IA. Intentá de nuevo.',
+          content: 'Ups, hubo un problema. Intentá de nuevo.',
         },
       ]);
     },

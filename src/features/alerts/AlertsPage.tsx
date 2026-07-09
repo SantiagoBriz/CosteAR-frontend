@@ -14,6 +14,7 @@ import {
 import { useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { AlertTriangle, BellRing, Mail, CheckCircle2 } from "lucide-react";
+import { MacroRiskPanel } from "./MacroRiskPanel";
 
 interface SettingsForm {
   marginThresholdPct: number;
@@ -235,6 +236,8 @@ export function AlertsPage() {
               </form>
             </CardBody>
           </Card>
+
+          <MacroRiskPanel />
 
           <Card className="h-fit border-action/15 bg-action/4">
             <CardBody className="space-y-3">

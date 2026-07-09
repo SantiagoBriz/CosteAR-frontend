@@ -22,8 +22,10 @@ export function ensureDefaultUncertainConcepts(config?: DirectLaborConfig): Dire
     base.itcs.uncertainRemunerative = [];
   }
   
+  // El IAP (Índice de Ausentismo Pago) NO va acá: se calcula automáticamente a
+  // partir de las ausencias remuneradas y se muestra en el Resultado. Ponerlo como
+  // concepto manual lo contaría dos veces.
   const defaults = [
-    'IAP (Indemnización por Accidentes Predeterminada)',
     'PAP (Premio Asistencia Perfecta)',
     'PPP (Premio por Productividad)'
   ];
@@ -61,10 +63,14 @@ function cleanDirectLaborForForm(cfg?: DirectLaborConfig): any {
       // Tasas en %: se guardan como fracción (0.27) y se muestran como porcentaje (27).
       derivationBase: fractionToPercentInput(base.itcs?.derivationBase),
       fixedArt: fractionToPercentInput(base.itcs?.fixedArt),
-      uncertainRemunerative: (base.itcs?.uncertainRemunerative ?? []).map((r) => ({
-        ...r,
-        coefficient: fractionToPercentInput(r.coefficient),
-      })),
+      // Se descarta cualquier concepto "IAP" manual: el IAP es derivado (ausencias
+      // pagas / días efectivos) y se calcula solo. Si estuviera acá, contaría doble.
+      uncertainRemunerative: (base.itcs?.uncertainRemunerative ?? [])
+        .filter((r) => !r.name?.trim().toUpperCase().startsWith('IAP'))
+        .map((r) => ({
+          ...r,
+          coefficient: fractionToPercentInput(r.coefficient),
+        })),
       uncertainNonRemunerative: (base.itcs?.uncertainNonRemunerative ?? []).map((r) => ({
         ...r,
         coefficient: fractionToPercentInput(r.coefficient),
@@ -191,6 +197,9 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
               <Plus className="size-3" /> Agregar
             </Button>
           </div>
+          <p className="mb-2 text-[11px] text-ink-soft">
+            El <strong className="font-medium text-ink">IAP (Índice de Ausentismo Pago)</strong> se calcula automáticamente a partir de las ausencias remuneradas y se muestra en el Resultado — no lo cargues acá.
+          </p>
           {remFields.map((f, i) => (
             <div key={f.id} className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
               <input className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none sm:flex-1" placeholder="Nombre (ej: Antigüedad)" {...register(`itcs.uncertainRemunerative.${i}.name`)} />
