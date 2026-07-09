@@ -284,7 +284,7 @@ export function AppShell({
               className="relative flex flex-col items-center justify-end gap-1 overflow-visible py-1.5"
             >
               {active && (
-                <span className="absolute -top-5 flex size-12 items-center justify-center rounded-full bg-surface-alt shadow-[0_10px_24px_rgba(74,21,27,0.28)]">
+                <span className="absolute -top-5 flex size-12 items-center justify-center rounded-2xl bg-surface-alt shadow-[0_10px_24px_rgba(74,21,27,0.28)]">
                   <Icon className="size-5 text-granate" />
                   {showBadge && (
                     <span className="absolute right-0 top-0 flex size-4 items-center justify-center rounded-full border border-surface-alt bg-action text-[8px] font-extrabold text-white">
