@@ -857,12 +857,21 @@ function EntryRow({
 
               {/* Explicación del clasificador */}
               {entry.classificationAudits?.[0] && (
-                <div className="rounded-xl border border-indigo-200 bg-white p-3.5 shadow-sm space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
-                    Por qué se clasificó así
-                  </p>
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/20 p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">
+                      <Bot className="size-4 text-indigo-500 animate-pulse" />
+                      <span>Análisis del Asistente IA</span>
+                    </div>
+                    {entry.classificationAudits[0].confidence != null && (
+                      <span className="rounded-full bg-indigo-100/80 px-2 py-0.5 text-[10px] font-extrabold text-indigo-700">
+                        Confianza: {entry.classificationAudits[0].confidence}%
+                      </span>
+                    )}
+                  </div>
+
                   {entry.classificationAudits[0].explanation && (
-                    <p className="text-[12px] text-ink-soft leading-relaxed">
+                    <p className="text-[12px] text-ink-soft leading-relaxed font-sans">
                       {entry.classificationAudits[0].explanation
                         .replace(
                           /\.?\s*Confianza:\s*\d+(?:[.,]\d+)?\s*%\.?/i,
@@ -871,15 +880,26 @@ function EntryRow({
                         .trim()}
                     </p>
                   )}
+
+                  {/* Confidence Bar */}
+                  {entry.classificationAudits[0].confidence != null && (
+                    <div className="w-full bg-indigo-100/50 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-indigo-500 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${entry.classificationAudits[0].confidence}%` }}
+                      />
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {entry.classificationAudits[0].definitiveSignal && (
-                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] text-indigo-700 font-mono shadow-sm">
+                      <span className="rounded-full bg-white border border-indigo-200 px-2 py-0.5 text-[10px] text-indigo-700 font-mono shadow-sm">
                         señal: {entry.classificationAudits[0].definitiveSignal}
                       </span>
                     )}
                     {entry.classificationAudits[0].requiresReview && (
-                      <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] text-amber-700 shadow-sm">
-                        requiere revisión
+                      <span className="rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-[10px] text-amber-800 font-semibold shadow-sm">
+                        ⚠️ requiere revisión
                       </span>
                     )}
                   </div>
