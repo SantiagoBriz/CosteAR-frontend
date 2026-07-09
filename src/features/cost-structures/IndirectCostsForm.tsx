@@ -331,7 +331,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                   </td>
                   {watchedCenters?.map((c) => (
                     <td key={c.id} className="px-2 py-1.5">
-                      <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
+                      <input type="number" step="any" inputMode="decimal" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
                     </td>
                   ))}
                   <td className="px-2 py-1.5 text-center">
@@ -369,8 +369,8 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 <tr>
                   {productiveCenters.map((c) => (
                     <Fragment key={c.id}>
-                      <th className="w-20 px-3 py-1 text-center font-medium text-[10px] text-ink-soft border-t border-line">Fijo %</th>
-                      <th className="w-20 px-3 py-1 text-center font-medium text-[10px] text-ink-soft border-t border-line">Var %</th>
+                      <th className="w-24 px-2 py-1 text-center font-medium text-[10px] text-ink-soft border-t border-line">Fijo %</th>
+                      <th className="w-24 px-2 py-1 text-center font-medium text-[10px] text-ink-soft border-t border-line">Var %</th>
                     </Fragment>
                   ))}
                 </tr>
@@ -394,11 +394,11 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                     </td>
                     {productiveCenters.map((c) => (
                       <Fragment key={c.id}>
-                        <td className="px-1 py-1.5 text-center">
-                          <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />
+                        <td className="w-24 px-2 py-1.5">
+                          <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />
                         </td>
-                        <td className="px-1 py-1.5 text-center">
-                          <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />
+                        <td className="w-24 px-2 py-1.5">
+                          <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />
                         </td>
                       </Fragment>
                     ))}
