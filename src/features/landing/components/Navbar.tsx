@@ -18,14 +18,14 @@ export function Navbar({ onAccessClick }: NavbarProps) {
 
   return (
     <header className={cn(
-      "fixed top-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl lg:max-w-7xl xl:max-w-[1360px] -translate-x-1/2 border border-line/80 bg-surface/80 px-6 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.06)] backdrop-blur-md transition-all duration-300 ease-in-out",
-      isOpen ? "rounded-[24px] pb-5" : "rounded-full"
+      "fixed top-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl lg:max-w-7xl xl:max-w-[1360px] -translate-x-1/2 border border-line/80 bg-surface/80 px-4 py-2.5 md:px-6 md:py-3 shadow-[0_8px_32px_rgba(0,0,0,0.06)] backdrop-blur-md transition-all duration-300 ease-in-out",
+      isOpen ? "rounded-[20px] pb-5" : "rounded-[20px] md:rounded-full"
     )}>
       <div className="flex items-center justify-between">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-2.5">
           <CosteARLogo className="h-8 w-auto text-granate" />
-          <span className="text-base font-extrabold tracking-tight text-ink font-syne">CosteAR</span>
+          <span className="text-base font-extrabold tracking-tight text-ink font-outfit">CosteAR</span>
         </div>
 
         {/* Desktop Navigation Links */}

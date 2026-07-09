@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 /*
@@ -39,9 +39,7 @@
   --radius-xl: 32px;
 }
 
-.font-syne {
-  font-family: 'Syne', sans-serif;
-}
+
 .font-outfit {
   font-family: 'Outfit', sans-serif;
 }

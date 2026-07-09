@@ -2,7 +2,7 @@ import { ArrowUpRight } from 'lucide-react';
 
 export function MetricsSection() {
   return (
-    <section className="relative z-30 bg-transparent py-6">
+    <section className="relative z-30 bg-transparent -mt-16 pb-6 md:mt-0 md:py-6">
       <div className="mx-auto max-w-5xl px-6">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           
