@@ -19,7 +19,10 @@ import { TopBar } from "@/components/layout/TopBar";
 
 const NAV = [
   { to: "/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { to: "/companies", label: "Clientes", icon: Building2 },
+  // Las estructuras de costos viven en /cost-structures/:id (ruta top-level,
+  // no anidada bajo /companies) pero conceptualmente son parte del flujo de
+  // Clientes — el nav debe seguir marcando "Clientes" ahí adentro.
+  { to: "/companies", label: "Clientes", icon: Building2, matchAlso: ["/cost-structures"] },
   {
     to: "/validaciones",
     label: "Validaciones",
@@ -28,6 +31,12 @@ const NAV = [
   },
   { to: "/alerts", label: "Alertas", icon: Bell },
 ] as const;
+
+function isNavActive(pathname: string, item: (typeof NAV)[number]): boolean {
+  if (pathname.startsWith(item.to)) return true;
+  const matchAlso = "matchAlso" in item ? item.matchAlso : undefined;
+  return matchAlso?.some((prefix) => pathname.startsWith(prefix)) ?? false;
+}
 
 export function AppShell({
   children,
@@ -42,7 +51,7 @@ export function AppShell({
   const { data: pendingCount = 0 } = usePendingCount();
 
   const activeIndex = NAV.findIndex((item) =>
-    location.pathname.startsWith(item.to),
+    isNavActive(location.pathname, item),
   );
   const [prevIndex, setPrevIndex] = useState(activeIndex);
   const [isMoving, setIsMoving] = useState(false);
@@ -125,8 +134,9 @@ export function AppShell({
             <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] pointer-events-none" />
           </div>
 
-          {NAV.map(({ to, label, icon: Icon, ...rest }) => {
-            const active = location.pathname.startsWith(to);
+          {NAV.map((navItem) => {
+            const { to, label, icon: Icon, ...rest } = navItem;
+            const active = isNavActive(location.pathname, navItem);
             const showBadge = "badge" in rest && rest.badge && pendingCount > 0;
             return (
               <div
@@ -273,8 +283,9 @@ export function AppShell({
 
       {/* MOBILE FLOATING TAB BAR (same dock language as the desktop sidebar) */}
       <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-30 grid grid-cols-4 gap-1 rounded-[28px] bg-granate p-2 shadow-[0_16px_40px_rgba(74,21,27,0.18)] lg:hidden">
-        {NAV.map(({ to, label, icon: Icon, ...rest }) => {
-          const active = location.pathname.startsWith(to);
+        {NAV.map((navItem) => {
+          const { to, label, icon: Icon, ...rest } = navItem;
+          const active = isNavActive(location.pathname, navItem);
           const showBadge = "badge" in rest && rest.badge && pendingCount > 0;
           return (
             <Link
