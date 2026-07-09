@@ -192,7 +192,7 @@ export function CompaniesPage() {
       ) : (
         <div className="space-y-4">
           <div className="hidden items-center justify-between sm:flex">
-            <h2 className="font-syne text-sm font-extrabold uppercase tracking-wide text-ink-soft">
+            <h2 className="text-sm font-extrabold uppercase tracking-wide text-ink-soft">
               {companies.length} cliente{companies.length !== 1 ? "s" : ""} en
               tu cartera
             </h2>
