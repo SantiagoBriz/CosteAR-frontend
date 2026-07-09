@@ -31,7 +31,7 @@ function LinuxIcon() {
 
 export function PlatformSection() {
   return (
-    <section className="bg-transparent py-12 border-t border-line/40">
+    <section className="bg-transparent py-8 border-t border-line/40">
       <div className="mx-auto max-w-5xl px-6">
 
         {/* Header compacto */}

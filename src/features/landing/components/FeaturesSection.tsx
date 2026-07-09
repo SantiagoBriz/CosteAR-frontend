@@ -2,11 +2,11 @@ import { FileSpreadsheet, Calculator, TrendingUp, Building2, UploadCloud, Radar 
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="bg-transparent py-24 pb-36">
+    <section id="features" className="bg-transparent py-12 pb-16">
       <div className="mx-auto max-w-7xl px-6">
         
         {/* Header Block */}
-        <div className="mx-auto max-w-3xl text-center mb-20">
+        <div className="mx-auto max-w-3xl text-center mb-10">
           <p className="mb-2 text-xs font-bold uppercase tracking-widest text-granate">Los 3 Elementos del Costo</p>
           <h2 className="text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
             Cálculo científico del costo unitario
@@ -16,11 +16,11 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        {/* Staggered Dynamic Grid Layout */}
-        <div className="grid gap-8 lg:grid-cols-3 lg:items-start">
+        {/* Mobile: carousel con scroll snap | Desktop: grid escalonado */}
+        <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hidden lg:grid lg:grid-cols-3 lg:items-start lg:gap-8 lg:overflow-visible lg:pb-0">
           
-          {/* Tarjeta 1: Materia Prima (Offset: 0) */}
-          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] lg:translate-y-0">
+          {/* Tarjeta 1: Materia Prima */}
+          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[82vw] snap-center lg:w-auto lg:translate-y-0">
             <div>
               <div className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-granate-tenue text-granate">
                 <FileSpreadsheet className="size-6" />
@@ -52,8 +52,8 @@ export function FeaturesSection() {
             </div>
           </div>
 
-          {/* Tarjeta 2: Mano de Obra (Offset: Shifted down slightly) */}
-          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] lg:translate-y-6">
+          {/* Tarjeta 2: Mano de Obra */}
+          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[82vw] snap-center lg:w-auto lg:translate-y-6">
             <div>
               <div className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-granate-tenue text-granate">
                 <Calculator className="size-6" />
@@ -85,8 +85,8 @@ export function FeaturesSection() {
             </div>
           </div>
 
-          {/* Tarjeta 3: Carga Indirecta (Offset: Shifted down further) */}
-          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] lg:translate-y-12">
+          {/* Tarjeta 3: Carga Indirecta */}
+          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[82vw] snap-center lg:w-auto lg:translate-y-12">
             <div>
               <div className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-granate-tenue text-granate">
                 <TrendingUp className="size-6" />
@@ -131,7 +131,7 @@ export function FeaturesSection() {
         </div>
 
         {/* Mini features (3 columnas) */}
-        <div className="mx-auto mt-28 grid max-w-5xl gap-8 border-t border-line/60 pt-16 sm:grid-cols-3">
+        <div className="mx-auto mt-10 grid max-w-5xl gap-8 border-t border-line/60 pt-10 sm:grid-cols-3">
           <div className="flex gap-3">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-granate-tenue text-granate">
               <Building2 className="size-4" />
