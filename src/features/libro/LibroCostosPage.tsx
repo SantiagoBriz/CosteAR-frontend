@@ -60,7 +60,7 @@ const SECTION_ICONS: Record<string, typeof Boxes> = {
   VENTAS: TrendingUp,
 };
 
-const selectClass = 'h-11 rounded-xl border border-line bg-surface px-3.5 text-[13px] font-semibold text-ink shadow-sm transition-colors focus:border-granate focus:outline-none';
+const selectClass = 'h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[13px] font-semibold text-ink shadow-sm transition-colors focus:border-granate focus:outline-none sm:w-auto';
 
 function periodLabel(p: string): string {
   const [y, m] = p.split('-');
@@ -100,7 +100,7 @@ export function LibroCostosPage() {
       />
 
       {/* Filtros */}
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-[28px] border border-line bg-surface p-5 shadow-[0_10px_30px_rgba(74,21,27,0.015)]">
+      <div className="mb-6 flex flex-col gap-3 rounded-[28px] border border-line bg-surface p-5 shadow-[0_10px_30px_rgba(74,21,27,0.015)] sm:flex-row sm:flex-wrap sm:items-center">
         <select
           className={selectClass}
           value={companyId}
@@ -121,7 +121,7 @@ export function LibroCostosPage() {
             <option key={p} value={p}>{periodLabel(p)}</option>
           ))}
         </select>
-        <div className="ml-auto flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
           <Button size="sm" variant="ghost" onClick={() => setAdding(true)} title={companyId ? '' : 'Elegí una empresa para cargar manual'}>
             <Plus className="size-4" /> Agregar manual
           </Button>
@@ -226,59 +226,63 @@ function LedgerRow({ entry, onZoom, onEdit, onDelete }: {
 }) {
   const isImage = entry.sourceImageUrl && /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(entry.sourceImageUrl);
   return (
-    <div className="flex items-center gap-3.5 px-6 py-4 transition-colors hover:bg-zinc-50/40">
-      {/* Origen: miniatura o ícono, clickeable */}
-      {entry.sourceImageUrl ? (
-        isImage ? (
-          <button type="button" onClick={() => onZoom(entry.sourceImageUrl!)} className="shrink-0">
-            <img src={entry.sourceImageUrl} alt="comprobante" className="size-11 rounded-xl border border-line object-cover shadow-sm transition-opacity hover:opacity-80" />
-          </button>
+    <div className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-zinc-50/40 sm:flex-row sm:items-center sm:gap-3.5 sm:px-6">
+      <div className="flex items-center gap-3.5 sm:contents">
+        {/* Origen: miniatura o ícono, clickeable */}
+        {entry.sourceImageUrl ? (
+          isImage ? (
+            <button type="button" onClick={() => onZoom(entry.sourceImageUrl!)} className="shrink-0">
+              <img src={entry.sourceImageUrl} alt="comprobante" className="size-11 rounded-xl border border-line object-cover shadow-sm transition-opacity hover:opacity-80" />
+            </button>
+          ) : (
+            <a href={entry.sourceImageUrl} target="_blank" rel="noopener noreferrer" className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-alt text-ink-soft shadow-sm hover:bg-surface">
+              <FileText className="size-4" />
+            </a>
+          )
         ) : (
-          <a href={entry.sourceImageUrl} target="_blank" rel="noopener noreferrer" className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-alt text-ink-soft shadow-sm hover:bg-surface">
-            <FileText className="size-4" />
-          </a>
-        )
-      ) : (
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-alt text-ink-soft/40">
-          <ImageIcon className="size-4" />
-        </div>
-      )}
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface-alt text-ink-soft/40">
+            <ImageIcon className="size-4" />
+          </div>
+        )}
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-bold text-ink">{entry.description}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-soft">
-          <span className="font-semibold">{entry.docDate ? formatDate(entry.docDate) : periodLabel(entry.period)}</span>
-          {entry.wasCorrected && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200/60 bg-blue-50 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-blue-700 shadow-sm">
-              <PenLine className="size-3" /> corregido
-            </span>
-          )}
-          {entry.aiUsed && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-purple-700 shadow-sm">
-              <Bot className="size-3" /> auto
-            </span>
-          )}
-          {entry.confidence != null && entry.confidence < 72 && (
-            <StatusBadge status="warn">conf. {entry.confidence}%</StatusBadge>
-          )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-bold text-ink">{entry.description}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-ink-soft">
+            <span className="font-semibold">{entry.docDate ? formatDate(entry.docDate) : periodLabel(entry.period)}</span>
+            {entry.wasCorrected && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-blue-200/60 bg-blue-50 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-blue-700 shadow-sm">
+                <PenLine className="size-3" /> corregido
+              </span>
+            )}
+            {entry.aiUsed && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-purple-200/60 bg-purple-50 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-purple-700 shadow-sm">
+                <Bot className="size-3" /> auto
+              </span>
+            )}
+            {entry.confidence != null && entry.confidence < 72 && (
+              <StatusBadge status="warn">conf. {entry.confidence}%</StatusBadge>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="shrink-0 text-right">
-        <p className="font-mono-jb text-[14px] font-bold tabular-nums text-ink">
-          {entry.currency !== 'ARS' && <span className="text-[11px] font-semibold text-ink-soft">{entry.currency} </span>}
-          {formatMoney(entry.amount)}
-        </p>
-      </div>
+      <div className="flex items-center justify-between gap-3 sm:contents">
+        <div className="shrink-0 text-right">
+          <p className="font-mono-jb text-[14px] font-bold tabular-nums text-ink">
+            {entry.currency !== 'ARS' && <span className="text-[11px] font-semibold text-ink-soft">{entry.currency} </span>}
+            {formatMoney(entry.amount)}
+          </p>
+        </div>
 
-      {/* Editar / borrar */}
-      <div className="flex shrink-0 items-center gap-1">
-        <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded-xl p-2 text-ink-soft transition-colors hover:bg-granate-tenue hover:text-granate">
-          <Pencil className="size-3.5" />
-        </button>
-        <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded-xl p-2 text-ink-soft transition-colors hover:bg-danger/10 hover:text-danger">
-          <Trash2 className="size-3.5" />
-        </button>
+        {/* Editar / borrar */}
+        <div className="flex shrink-0 items-center gap-1">
+          <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded-xl p-2 text-ink-soft transition-colors hover:bg-granate-tenue hover:text-granate">
+            <Pencil className="size-3.5" />
+          </button>
+          <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded-xl p-2 text-ink-soft transition-colors hover:bg-danger/10 hover:text-danger">
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

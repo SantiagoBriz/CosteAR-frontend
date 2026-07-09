@@ -83,31 +83,33 @@ export function ClientReport({
           </div>
 
           {/* Resumen de costos */}
-          <table className="mb-6 w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-ink/10 text-left text-[10.5px] font-extrabold uppercase tracking-wider text-ink-soft">
-                <th className="pb-2.5">Elemento del costo</th>
-                <th className="pb-2.5 text-right">Importe</th>
-                <th className="pb-2.5 text-right">% del costo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {costSections.map((s) => (
-                <tr key={s} className="border-b border-ink/5">
-                  <td className="py-2.5 text-ink">{SECTION_LABELS[s] ?? s}</td>
-                  <td className="py-2.5 text-right tabular-nums text-ink">{formatMoney(totalsBySection[s])}</td>
-                  <td className="py-2.5 text-right tabular-nums text-ink-soft">
-                    {totalCosts > 0 ? `${Math.round(((totalsBySection[s] ?? 0) / totalCosts) * 100)}%` : '—'}
-                  </td>
+          <div className="mb-6 overflow-x-auto print:overflow-visible">
+            <table className="w-full min-w-[420px] text-sm">
+              <thead>
+                <tr className="border-b-2 border-ink/10 text-left text-[10.5px] font-extrabold uppercase tracking-wider text-ink-soft">
+                  <th className="pb-2.5">Elemento del costo</th>
+                  <th className="pb-2.5 text-right">Importe</th>
+                  <th className="pb-2.5 text-right">% del costo</th>
                 </tr>
-              ))}
-              <tr className="border-t-2 border-ink/20 font-extrabold text-granate-deep">
-                <td className="py-2.5">Costo total</td>
-                <td className="py-2.5 text-right tabular-nums">{formatMoney(totalCosts)}</td>
-                <td className="py-2.5 text-right text-ink-soft">100%</td>
-              </tr>
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {costSections.map((s) => (
+                  <tr key={s} className="border-b border-ink/5">
+                    <td className="py-2.5 text-ink">{SECTION_LABELS[s] ?? s}</td>
+                    <td className="py-2.5 text-right tabular-nums text-ink">{formatMoney(totalsBySection[s])}</td>
+                    <td className="py-2.5 text-right tabular-nums text-ink-soft">
+                      {totalCosts > 0 ? `${Math.round(((totalsBySection[s] ?? 0) / totalCosts) * 100)}%` : '—'}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-ink/20 font-extrabold text-granate-deep">
+                  <td className="py-2.5">Costo total</td>
+                  <td className="py-2.5 text-right tabular-nums">{formatMoney(totalCosts)}</td>
+                  <td className="py-2.5 text-right text-ink-soft">100%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           {/* Ventas y margen, si hay */}
           {totalSales > 0 && (
