@@ -331,11 +331,11 @@ export function EmpresaPortalPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-surface-alt">
+    <div className="flex h-screen bg-surface-alt font-sans">
       {/* Overlay del drawer — solo mobile */}
       {mobileNavOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 sm:hidden"
+          className="fixed inset-0 z-30 bg-ink/40 sm:hidden"
           onClick={() => setMobileNavOpen(false)}
         />
       )}
@@ -350,7 +350,7 @@ export function EmpresaPortalPage() {
       >
         <div className="flex h-16 items-center gap-2.5 border-b border-white/10 px-4">
           <CosteARLogo className="h-6 w-auto text-white" animate={false} />
-          <span className="flex-1 text-base font-extrabold tracking-tight text-white">CosteAR</span>
+          <span className="flex-1 text-base font-extrabold tracking-tight text-white font-outfit">CosteAR</span>
           <button
             type="button"
             onClick={() => setMobileNavOpen(false)}
@@ -362,7 +362,7 @@ export function EmpresaPortalPage() {
 
         {/* Mis empresas */}
         <div className="flex-1 overflow-y-auto p-2.5">
-          <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-white/40">Mis empresas</p>
+          <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-widest text-white/40">Mis empresas</p>
           {companies.length === 0 && (
             <p className="px-2 text-[12px] text-white/40">Sin empresas aún</p>
           )}
@@ -433,7 +433,7 @@ export function EmpresaPortalPage() {
           >
             <LogOut className="size-3.5" /> Cerrar sesión
           </button>
-          <div className="px-2 pt-1">
+          <div className="px-2 pt-1 border-t border-white/5 mt-2">
             <p className="text-[10px] uppercase tracking-wide text-white/40">Portal de empresa</p>
             <p className="truncate text-[12px] font-semibold text-white/90">{user?.name}</p>
           </div>
@@ -441,14 +441,14 @@ export function EmpresaPortalPage() {
       </aside>
 
       {/* Chat area */}
-      <main className="flex flex-1 flex-col min-w-0">
+      <main className="flex flex-1 flex-col min-w-0 bg-surface-alt">
         {/* Header */}
-        <div className="flex h-14 items-center gap-2 border-b border-gray-200 bg-white px-3 sm:px-5">
+        <div className="flex h-16 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6 shadow-sm">
           {/* Abrir drawer — solo mobile */}
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 sm:hidden"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-alt sm:hidden"
           >
             <Menu className="size-5" />
           </button>
@@ -457,51 +457,51 @@ export function EmpresaPortalPage() {
             {activeCompany ? (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-[15px] font-semibold text-gray-900">
+                  <span className="text-base font-extrabold tracking-tight text-ink">
                     {activeCompany.connection.company.name}
                   </span>
                   {companies.length > 1 && (
                     <button
                       type="button"
                       onClick={() => setShowCompanyPicker(true)}
-                      className="text-[12px] text-gray-400 hover:text-gray-600"
+                      className="text-xs text-action-soft hover:text-action transition-colors"
                     >
                       <ChevronDown className="inline size-3.5" /> cambiar
                     </button>
                   )}
                 </div>
                 {activeStructureName ? (
-                  <p className="flex items-center gap-1 text-[12px] text-granate">
+                  <p className="flex items-center gap-1 text-xs text-granate font-medium">
                     <Package className="size-3" /> Cargando datos para: <span className="font-semibold">{activeStructureName}</span>
                   </p>
                 ) : (
-                  <p className="text-[12px] text-gray-400">Todos los productos · elegí uno en el menú para separar sus datos</p>
+                  <p className="text-xs text-ink-soft">Todos los productos · elegí uno en el menú para separar sus datos</p>
                 )}
               </>
             ) : (
-              <span className="text-[14px] text-gray-400">Seleccioná una empresa</span>
+              <span className="text-sm text-ink-soft">Seleccioná una empresa</span>
             )}
           </div>
-          <p className="hidden shrink-0 text-[13px] text-gray-500 sm:block">
+          <p className="hidden shrink-0 text-xs text-ink-soft sm:block">
             Los mensajes van directo a{' '}
-            <span className="font-bold text-gray-900">
+            <span className="font-bold text-ink">
               {activeCompany?.connection.costist?.name ?? 'tu costista'}
             </span>
           </p>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 sm:px-6">
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 sm:px-8">
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-500">
+              <div className="text-center max-w-sm">
+                <p className="text-sm font-semibold text-ink-soft">
                   {activeConnectionId
                     ? 'No hay envíos todavía. Mandá tu primer dato.'
                     : 'Seleccioná una empresa desde el menú lateral.'}
                 </p>
-                <p className="mt-1 text-[12px] text-gray-400">
-                  Podés enviar texto, fotos de facturas o PDFs.
+                <p className="mt-1.5 text-xs text-ink-soft/70">
+                  Podés enviar texto, fotos de facturas o archivos PDF para que tu costista los procese.
                 </p>
               </div>
             </div>
@@ -517,8 +517,8 @@ export function EmpresaPortalPage() {
 
           {/* Burbuja de envío en curso */}
           {sending && (
-            <div className="flex justify-end">
-              <div className="flex items-center gap-2 rounded-2xl rounded-tr-sm bg-[#6B1D1D]/80 px-4 py-2.5 text-sm text-white">
+            <div className="flex justify-end animate-pulse">
+              <div className="flex items-center gap-2 rounded-2xl rounded-tr-none bg-granate/80 px-4 py-2.5 text-sm text-white shadow-sm">
                 <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 Enviando…
               </div>
@@ -530,36 +530,36 @@ export function EmpresaPortalPage() {
 
         {/* Error */}
         {sendError && (
-          <div className="mx-3 mb-2 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-600 sm:mx-5">
-            {sendError}
-            <button type="button" onClick={() => setSendError(null)} className="ml-2 text-red-400 hover:text-red-600"><X className="inline size-3.5" /></button>
+          <div className="mx-4 mb-2 rounded-xl bg-danger/10 px-4 py-2.5 text-xs text-danger sm:mx-8 flex items-center justify-between">
+            <span className="truncate">{sendError}</span>
+            <button type="button" onClick={() => setSendError(null)} className="text-danger hover:text-danger/80"><X className="size-4" /></button>
           </div>
         )}
 
         {/* File preview */}
         {file && (
-          <div className="mx-3 mb-1 flex items-center gap-2 rounded-lg border border-[#6B1D1D]/20 bg-[#6B1D1D]/5 px-3 py-2 sm:mx-5">
+          <div className="mx-4 mb-2 flex items-center gap-3 rounded-xl border border-granate/20 bg-granate-tenue px-4 py-2.5 sm:mx-8">
             {file.type.startsWith('image/') ? (
-              <img src={URL.createObjectURL(file)} alt="preview" className="size-10 rounded object-cover" />
+              <img src={URL.createObjectURL(file)} alt="preview" className="size-10 rounded-lg object-cover border border-line" />
             ) : (
-              <FileText className="size-5 text-[#6B1D1D]" />
+              <FileText className="size-6 text-granate" />
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-gray-700">{file.name}</p>
-              <p className="text-[11px] text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+              <p className="truncate text-xs font-semibold text-ink">{file.name}</p>
+              <p className="text-[10px] text-ink-soft">{(file.size / 1024).toFixed(0)} KB</p>
             </div>
-            <button type="button" onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-gray-400 hover:text-red-500">
+            <button type="button" onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-ink-soft hover:text-danger transition-colors">
               <X className="size-4" />
             </button>
           </div>
         )}
-        {fileError && <p className="mx-3 mb-1 text-[12px] text-red-500 sm:mx-5">{fileError}</p>}
+        {fileError && <p className="mx-4 mb-2 text-xs text-danger sm:mx-8">{fileError}</p>}
 
         {/* Composer */}
-        <div className="border-t border-gray-200 bg-white px-3 py-3 sm:px-4">
-          <div className="flex items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-[#6B1D1D]/40">
+        <div className="border-t border-line bg-surface px-4 py-4 sm:px-6 shadow-[0_-4px_16px_rgba(0,0,0,0.02)]">
+          <div className="flex items-end gap-3 rounded-2xl border border-line bg-surface-alt px-4 py-3 focus-within:border-action/40 focus-within:ring-1 focus-within:ring-action/40 transition-all">
             {/* Attach */}
-            <label className="shrink-0 cursor-pointer text-gray-400 hover:text-[#6B1D1D] mb-1">
+            <label className="shrink-0 cursor-pointer text-ink-soft hover:text-action transition-colors mb-1">
               <Paperclip className="size-5" />
               <input
                 ref={fileInputRef}
@@ -573,7 +573,7 @@ export function EmpresaPortalPage() {
             {/* Textarea */}
             <textarea
               ref={textareaRef}
-              className="flex-1 resize-none bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none max-h-32 min-h-[36px]"
+              className="flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-soft/45 focus:outline-none max-h-32 min-h-[38px]"
               placeholder={
                 activeConnectionId
                   ? 'Escribí un dato, adjuntá una foto de factura o un PDF… (Enter para enviar)'
@@ -597,14 +597,14 @@ export function EmpresaPortalPage() {
               type="button"
               onClick={handleSend}
               disabled={(!text.trim() && !file) || sending || !activeConnectionId}
-              className="mb-0.5 flex shrink-0 size-8 items-center justify-center rounded-lg bg-[#6B1D1D] text-white transition-opacity disabled:opacity-40"
+              className="mb-0.5 flex shrink-0 size-8 items-center justify-center rounded-xl bg-action text-white hover:bg-action-soft hover:shadow-md transition-all active:scale-95 disabled:opacity-30 disabled:scale-100"
             >
               {sending
                 ? <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 : <Send className="size-4" />}
             </button>
           </div>
-          <p className="mt-1.5 text-center text-[11px] text-gray-400">
+          <p className="mt-2 text-center text-[10px] text-ink-soft/60">
             Shift+Enter para salto de línea · máx. 4.5 MB por archivo
           </p>
         </div>
@@ -612,37 +612,37 @@ export function EmpresaPortalPage() {
 
       {/* Modal: aceptar código de invitación */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl border border-line">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-900">Unirme a una empresa</h2>
-              <button type="button" onClick={() => setShowInviteModal(false)} className="text-gray-400 hover:text-gray-600"><X className="size-5" /></button>
+              <h2 className="text-base font-extrabold tracking-tight text-ink">Unirme a una empresa</h2>
+              <button type="button" onClick={() => setShowInviteModal(false)} className="text-ink-soft hover:text-ink"><X className="size-5" /></button>
             </div>
 
             {inviteSuccess ? (
               <div className="text-center py-4">
-                <CheckCircle2 className="mx-auto mb-2 size-10 text-green-500" />
-                <p className="text-sm font-medium text-gray-800">{inviteSuccess}</p>
-                <button type="button" onClick={() => setShowInviteModal(false)} className="mt-4 text-sm text-[#6B1D1D] hover:underline">Cerrar</button>
+                <CheckCircle2 className="mx-auto mb-2 size-10 text-ok animate-bounce" />
+                <p className="text-sm font-semibold text-ink">{inviteSuccess}</p>
+                <button type="button" onClick={() => setShowInviteModal(false)} className="mt-4 text-xs font-bold uppercase tracking-wider text-action hover:text-action-soft">Cerrar</button>
               </div>
             ) : (
               <>
-                <p className="mb-4 text-[13px] text-gray-500">
-                  Ingresá el código que te envió el costista por email para unirte a la empresa.
+                <p className="mb-4 text-xs text-ink-soft">
+                  Ingresá el código que te envió el costista por email para vincular tu usuario a la empresa.
                 </p>
                 <input
                   type="text"
                   placeholder="Ej: THIBAUT-X7K2"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-lg tracking-widest text-gray-900 placeholder:font-sans placeholder:text-[13px] placeholder:tracking-normal focus:border-[#6B1D1D] focus:outline-none"
+                  className="w-full rounded-xl border border-line px-4 py-3 font-mono text-lg tracking-widest text-ink placeholder:font-sans placeholder:text-xs placeholder:tracking-normal focus:border-action focus:ring-1 focus:ring-action focus:outline-none"
                 />
-                {inviteError && <p className="mt-2 text-[12px] text-red-600">{inviteError}</p>}
+                {inviteError && <p className="mt-2 text-xs text-danger">{inviteError}</p>}
                 <button
                   type="button"
                   onClick={() => acceptInvite.mutate(inviteCode.trim())}
                   disabled={inviteCode.trim().length < 5 || acceptInvite.isPending}
-                  className="mt-4 w-full rounded-lg bg-[#6B1D1D] py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                  className="mt-4 w-full rounded-xl bg-action py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-action-soft disabled:opacity-40 transition-colors shadow-sm"
                 >
                   {acceptInvite.isPending ? 'Verificando…' : 'Aceptar invitación'}
                 </button>
@@ -654,22 +654,22 @@ export function EmpresaPortalPage() {
 
       {/* Modal: elegir empresa (multi-empresa) */}
       {showCompanyPicker && companies.length > 1 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-base font-semibold text-gray-900">¿Qué empresa querés ver?</h2>
-            <div className="space-y-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl border border-line">
+            <h2 className="mb-4 text-base font-extrabold tracking-tight text-ink">¿Qué empresa querés ver?</h2>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
               {companies.map((c) => (
                 <button
                   key={c.connectionId}
                   type="button"
                   onClick={() => { setActiveConnectionId(c.connectionId); setShowCompanyPicker(false); }}
-                  className="flex w-full items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left hover:border-[#6B1D1D]/40 hover:bg-[#6B1D1D]/5"
+                  className="flex w-full items-center gap-3 rounded-xl border border-line px-4 py-3 text-left hover:border-action/40 hover:bg-granate-tenue transition-all"
                 >
-                  <Building2 className="size-5 text-[#6B1D1D]" />
+                  <Building2 className="size-5 text-action" />
                   <div>
-                    <p className="text-[14px] font-medium text-gray-800">{c.connection.company.name}</p>
+                    <p className="text-sm font-bold text-ink">{c.connection.company.name}</p>
                     {c.connection.company.industry && (
-                      <p className="text-[12px] text-gray-400">{c.connection.company.industry}</p>
+                      <p className="text-xs text-ink-soft">{c.connection.company.industry}</p>
                     )}
                   </div>
                 </button>
@@ -691,41 +691,41 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
 
   return (
     <div className="flex justify-end">
-      <div className="max-w-[88%] space-y-1 sm:max-w-[75%]">
-        <div className="rounded-2xl rounded-tr-sm bg-[#6B1D1D] text-sm text-white overflow-hidden">
+      <div className="max-w-[88%] space-y-1.5 sm:max-w-[70%]">
+        <div className="rounded-2xl rounded-tr-none bg-granate text-sm text-white overflow-hidden shadow-sm shadow-granate/10 hover:shadow-md transition-shadow">
           {/* Imagen desde Cloudinary */}
           {isImage && msg.fileUrl && (
             <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
               <img
                 src={msg.fileUrl}
                 alt={msg.fileName ?? 'imagen'}
-                className="w-full max-h-48 object-cover"
+                className="w-full max-h-56 object-cover border-b border-white/10"
               />
             </a>
           )}
-          <div className="px-4 py-2.5">
+          <div className="px-4 py-3">
             {/* Archivo sin preview (PDF o imagen sin URL) */}
             {msg.fileName && !(isImage && msg.fileUrl) && (
-              <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2">
-                {isImage ? <Image className="size-4 shrink-0" /> : <FileText className="size-4 shrink-0" />}
-                <span className="truncate text-[12px] font-medium">{msg.fileName}</span>
+              <div className="mb-2 flex items-center gap-3 rounded-xl bg-white/10 px-3.5 py-2.5">
+                {isImage ? <Image className="size-5 shrink-0" /> : <FileText className="size-5 shrink-0" />}
+                <span className="truncate text-xs font-semibold">{msg.fileName}</span>
                 {isPdf && msg.fileUrl && (
-                  <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[10px] bg-white/20 rounded px-1.5 py-0.5 hover:bg-white/30">
+                  <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-wider bg-white/20 rounded-lg px-2.5 py-1 hover:bg-white/30 transition-colors">
                     Ver PDF
                   </a>
                 )}
-                {isPdf && !msg.fileUrl && <span className="shrink-0 text-[10px] bg-white/20 rounded px-1.5 py-0.5">PDF</span>}
+                {isPdf && !msg.fileUrl && <span className="ml-auto shrink-0 text-[10px] font-bold uppercase tracking-wider bg-white/20 rounded-lg px-2.5 py-1">PDF</span>}
               </div>
             )}
-            {msg.text && !msg.fileName && <p className="whitespace-pre-wrap">{msg.text}</p>}
+            {msg.text && !msg.fileName && <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>}
           </div>
         </div>
 
         {/* Estado */}
         <div className="flex items-center justify-end gap-2">
-          <span className="text-[11px] text-gray-400">{formatDate(msg.createdAt)}</span>
+          <span className="text-[10px] text-ink-soft/70 font-mono">{formatDate(msg.createdAt)}</span>
           {st && (
-            <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', st.color)}>
+            <span className={cn('rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border', st.color)}>
               {st.label}
             </span>
           )}
@@ -733,8 +733,8 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
 
         {/* Nota del Costista (Rechazo / Aprobación / Corrección) */}
         {msg.costistaNote && (
-          <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-700 shadow-sm leading-relaxed mt-1 text-left">
-            <p className="font-semibold text-gray-800 mb-0.5">Nota de revisión:</p>
+          <div className="rounded-xl border border-line bg-surface p-4 text-xs text-ink-soft shadow-sm leading-relaxed mt-2 text-left border-l-4 border-l-action animate-rise">
+            <p className="font-bold text-ink mb-1">Nota de revisión de tu costista:</p>
             <p className="italic">"{msg.costistaNote}"</p>
           </div>
         )}
@@ -775,18 +775,18 @@ function CompanyStructures({
   });
 
   return (
-    <div className="ml-3.5 mt-0.5 space-y-0.5 border-l border-zinc-800 py-1 pl-2">
-      {isLoading && <p className="px-2 py-1 text-[11px] text-zinc-500">Cargando productos…</p>}
+    <div className="ml-3.5 mt-0.5 space-y-0.5 border-l border-white/15 py-1 pl-2">
+      {isLoading && <p className="px-2 py-1 text-[11px] text-white/30">Cargando productos…</p>}
       {!isLoading && structures.length === 0 && (
-        <p className="px-2 py-1 text-[11px] text-zinc-500">Sin productos cargados</p>
+        <p className="px-2 py-1 text-[11px] text-white/30">Sin productos cargados</p>
       )}
       {structures.length > 0 && (
         <button
           type="button"
           onClick={onClearStructure}
           className={cn(
-            'flex w-full items-center rounded px-2 py-1 text-left text-[12px] transition-colors',
-            activeStructureId === null ? 'font-medium text-zinc-200' : 'text-zinc-500 hover:text-zinc-200',
+            'flex w-full items-center rounded-lg px-2 py-1.5 text-left text-[12px] transition-colors',
+            activeStructureId === null ? 'font-medium text-white' : 'text-white/40 hover:text-white',
           )}
         >
           Todos los productos
@@ -798,16 +798,16 @@ function CompanyStructures({
           type="button"
           onClick={() => onSelectStructure(s.id, s.productName)}
           className={cn(
-            'flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[12px] transition-colors',
+            'flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[12px] transition-colors',
             activeStructureId === s.id
-              ? 'bg-granate/40 font-medium text-white'
-              : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
+              ? 'bg-white/10 font-medium text-white shadow-inner'
+              : 'text-white/60 hover:bg-white/5 hover:text-white',
           )}
           title={`${s.productName} · ${s.period}`}
         >
           <Package className="size-3 shrink-0 opacity-70" />
           <span className="truncate">{s.productName}</span>
-          <span className="ml-auto shrink-0 text-[10px] text-zinc-500">{s.period}</span>
+          <span className="ml-auto shrink-0 text-[10px] text-white/30">{s.period}</span>
         </button>
       ))}
     </div>
