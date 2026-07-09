@@ -234,9 +234,9 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             </Button>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
+        <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
+          <table className="block w-full text-sm sm:table">
+            <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">ID</th>
                 <th className="px-3 py-2 text-left font-medium">Nombre</th>
@@ -244,28 +244,28 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-line">
+            <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
               {centers.map((f, i) => (
-                <tr key={f.id}>
-                  <td className="px-2 py-1.5">
-                    <input className="w-24 rounded border border-line bg-surface px-2 py-1 text-sm font-mono text-ink focus:border-granate focus:outline-none" placeholder="prod1" {...register(`centers.${i}.id`)} />
+                <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+                  <td data-label="ID" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                    <input className="w-full rounded border border-line bg-surface px-2 py-1 text-sm font-mono text-ink focus:border-granate focus:outline-none sm:w-24" placeholder="prod1" {...register(`centers.${i}.id`)} />
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td data-label="Nombre" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Nombre del centro" {...register(`centers.${i}.name`)} />
                   </td>
-                  <td className="px-2 py-1.5">
-                    <select className="rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`centers.${i}.type`)}>
+                  <td data-label="Tipo" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                    <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none sm:w-auto" {...register(`centers.${i}.type`)}>
                       <option value="productive">Productivo</option>
                       <option value="service">Servicio</option>
                     </select>
                   </td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                     <button type="button" onClick={() => removeCenter(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                   </td>
                 </tr>
               ))}
               {centers.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-[13px] text-ink-soft">Agregá al menos un centro productivo.</td></tr>
+                <tr className="block sm:table-row"><td colSpan={4} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Agregá al menos un centro productivo.</td></tr>
               )}
             </tbody>
           </table>
@@ -304,9 +304,9 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             </div>
           </div>
         )}
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
+        <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
+          <table className="block w-full text-sm sm:table">
+            <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Concepto</th>
                 <th className="px-3 py-2 text-right font-medium">Fijo $</th>
@@ -317,30 +317,30 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-line">
+            <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
               {concepts.map((f, i) => (
-                <tr key={f.id}>
-                  <td className="px-2 py-1.5">
+                <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+                  <td data-label="Concepto" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Alquiler, Energía…" {...register(`concepts.${i}.name`)} />
                   </td>
-                  <td className="px-2 py-1.5">
-                    <input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`concepts.${i}.amount.fixed`, { valueAsNumber: true })} />
+                  <td data-label="Fijo $" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                    <input type="number" step="0.01" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-28" {...register(`concepts.${i}.amount.fixed`, { valueAsNumber: true })} />
                   </td>
-                  <td className="px-2 py-1.5">
-                    <input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`concepts.${i}.amount.variable`, { valueAsNumber: true })} />
+                  <td data-label="Variable $" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                    <input type="number" step="0.01" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-28" {...register(`concepts.${i}.amount.variable`, { valueAsNumber: true })} />
                   </td>
                   {watchedCenters?.map((c) => (
-                    <td key={c.id} className="px-2 py-1.5">
-                      <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
+                    <td key={c.id} data-label={`${c.name || c.id} %`} className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                      <input type="number" step="any" min="0" max="100" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
                     </td>
                   ))}
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                     <button type="button" onClick={() => removeConcept(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                   </td>
                 </tr>
               ))}
               {concepts.length === 0 && (
-                <tr><td colSpan={5 + (watchedCenters?.length ?? 0)} className="px-4 py-6 text-center text-[13px] text-ink-soft">Sin conceptos. Agregá los costos indirectos de fabricación.</td></tr>
+                <tr className="block sm:table-row"><td colSpan={5 + (watchedCenters?.length ?? 0)} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin conceptos. Agregá los costos indirectos de fabricación.</td></tr>
               )}
             </tbody>
           </table>
@@ -356,9 +356,9 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
               Prorrateo secundario — distribución de servicios (%)
             </h4>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
+          <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
+            <table className="block w-full text-sm sm:table">
+              <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
                 <tr>
                   <th className="w-40 px-3 py-2 text-left font-medium" rowSpan={2}>Centro de servicio</th>
                   {productiveCenters.map((c) => (
@@ -375,10 +375,10 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
                 {serviceDists.map((f, i) => (
-                  <tr key={f.id}>
-                    <td className="px-2 py-1.5">
+                  <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+                    <td data-label="Centro de servicio" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                       <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`serviceDistributions.${i}.serviceCenterId`)}>
                         <option value="">Elegir…</option>
                         {serviceCenters
@@ -394,21 +394,21 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                     </td>
                     {productiveCenters.map((c) => (
                       <Fragment key={c.id}>
-                        <td className="px-1 py-1.5 text-center">
-                          <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />
+                        <td data-label={`${c.name || c.id} — Fijo %`} className="block text-left before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
+                          <input type="number" step="any" min="0" max="100" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />
                         </td>
-                        <td className="px-1 py-1.5 text-center">
-                          <input type="number" step="any" min="0" max="100" className="w-20 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />
+                        <td data-label={`${c.name || c.id} — Var %`} className="block text-left before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
+                          <input type="number" step="any" min="0" max="100" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />
                         </td>
                       </Fragment>
                     ))}
-                    <td className="px-2 py-1.5 text-center">
+                    <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                       <button type="button" onClick={() => removeServiceDist(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                     </td>
                   </tr>
                 ))}
                 {serviceDists.length === 0 && (
-                  <tr><td colSpan={1 + productiveCenters.length * 2 + 1} className="px-4 py-6 text-center text-[13px] text-ink-soft">Cargando distribuciones…</td></tr>
+                  <tr className="block sm:table-row"><td colSpan={1 + productiveCenters.length * 2 + 1} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Cargando distribuciones…</td></tr>
                 )}
               </tbody>
             </table>
@@ -432,9 +432,9 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
               Cuotas y variaciones por centro productivo
             </h4>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
+          <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
+            <table className="block w-full text-sm sm:table">
+              <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Centro</th>
                   <th className="bg-surface-alt/60 px-3 py-2 text-right font-medium text-action">
@@ -453,11 +453,11 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
                 {prodSettings.map((f, i) => (
-                  <tr key={f.id}>
-                    <td className="px-2 py-1.5">
-                      <select className="rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.centerId`)}>
+                  <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+                    <td data-label="Centro" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                      <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none sm:w-auto" {...register(`productiveSettings.${i}.centerId`)}>
                         <option value="">Elegir…</option>
                         {productiveCenters
                           .filter(c => {
@@ -470,30 +470,30 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                           ))}
                       </select>
                     </td>
-                    <td className="bg-surface-alt/40 px-2 py-1.5">
-                      <div className="flex w-28 items-center justify-end gap-1 rounded border border-dashed border-action/30 bg-surface-alt px-2 py-1 text-right font-mono text-sm text-ink-soft" title="Calculado automáticamente por el prorrateo (no editable)">
+                    <td data-label="Presup. fijo $ (calculado, no editable)" className="block rounded-lg bg-surface-alt/40 p-1.5 before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-action before:content-[attr(data-label)] sm:table-cell sm:rounded-none sm:bg-surface-alt/40 sm:px-2 sm:py-1.5 sm:before:hidden">
+                      <div className="flex w-full items-center justify-end gap-1 rounded border border-dashed border-action/30 bg-surface-alt px-2 py-1 text-right font-mono text-sm text-ink-soft sm:w-28" title="Calculado automáticamente por el prorrateo (no editable)">
                         <Lock className="size-3 shrink-0 text-action/50" />
                         <span>{fmtBudget(watchedProdSettings?.[i]?.budget?.fixed)}</span>
                       </div>
                       <input type="hidden" {...register(`productiveSettings.${i}.budget.fixed`, { valueAsNumber: true })} />
                     </td>
-                    <td className="bg-surface-alt/40 px-2 py-1.5">
-                      <div className="flex w-28 items-center justify-end gap-1 rounded border border-dashed border-action/30 bg-surface-alt px-2 py-1 text-right font-mono text-sm text-ink-soft" title="Calculado automáticamente por el prorrateo (no editable)">
+                    <td data-label="Presup. variable $ (calculado, no editable)" className="block rounded-lg bg-surface-alt/40 p-1.5 before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-action before:content-[attr(data-label)] sm:table-cell sm:rounded-none sm:bg-surface-alt/40 sm:px-2 sm:py-1.5 sm:before:hidden">
+                      <div className="flex w-full items-center justify-end gap-1 rounded border border-dashed border-action/30 bg-surface-alt px-2 py-1 text-right font-mono text-sm text-ink-soft sm:w-28" title="Calculado automáticamente por el prorrateo (no editable)">
                         <Lock className="size-3 shrink-0 text-action/50" />
                         <span>{fmtBudget(watchedProdSettings?.[i]?.budget?.variable)}</span>
                       </div>
                       <input type="hidden" {...register(`productiveSettings.${i}.budget.variable`, { valueAsNumber: true })} />
                     </td>
-                    <td className="px-2 py-1.5"><input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.normalCapacity`, { valueAsNumber: true })} /></td>
-                    <td className="px-2 py-1.5"><input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.actualActivity`, { valueAsNumber: true })} /></td>
-                    <td className="px-2 py-1.5"><input type="number" step="0.01" className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`productiveSettings.${i}.actualCip`, { valueAsNumber: true })} /></td>
-                    <td className="px-2 py-1.5 text-center">
+                    <td data-label="Cap. normal (hs)" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden"><input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-24" {...register(`productiveSettings.${i}.normalCapacity`, { valueAsNumber: true })} /></td>
+                    <td data-label="Actividad real (hs)" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden"><input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-24" {...register(`productiveSettings.${i}.actualActivity`, { valueAsNumber: true })} /></td>
+                    <td data-label="CIP real $" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden"><input type="number" step="0.01" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-28" {...register(`productiveSettings.${i}.actualCip`, { valueAsNumber: true })} /></td>
+                    <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                       <button type="button" onClick={() => removeProdSetting(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                     </td>
                   </tr>
                 ))}
                 {prodSettings.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-6 text-center text-[13px] text-ink-soft">Cargando centros…</td></tr>
+                  <tr className="block sm:table-row"><td colSpan={7} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Cargando centros…</td></tr>
                 )}
               </tbody>
             </table>

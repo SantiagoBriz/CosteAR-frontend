@@ -161,7 +161,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
           <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
             Lote óptimo de Wilson
           </h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input label="Demanda anual (R)" type="number" step="1" numeric placeholder="Ej: 15000" info="Unidades totales de materia prima que consumís en el año. Número entero." {...register('wilson.annualDemand', { valueAsNumber: true })} />
             <Input label="Costo de pedido (S) $" type="number" step="0.01" numeric placeholder="Ej: 8500" info="Costo fijo de emitir una orden de compra (gestión, flete fijo, etc.). En pesos." {...register('wilson.orderCost', { valueAsNumber: true })} />
             <Input label="Tasa de mantenimiento (K)" type="number" step="0.1" numeric suffix="%" placeholder="Ej: 30" info="Costo anual de mantener stock como porcentaje del valor del inventario. Se escribe en porcentaje (ej: 30 = 30%)." {...register('wilson.holdingRate', { valueAsNumber: true })} />
@@ -175,7 +175,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
         <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
           Política de stock
         </h4>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Input label="Consumo mínimo/día (Cm)" type="number" step="0.1" numeric placeholder="Ej: 30" info="Consumo más bajo esperado por día. Sirve para el cálculo del stock de seguridad." {...register('stockPolicy.minConsumption', { valueAsNumber: true })} />
           <Input label="Consumo máximo/día (CM)" type="number" step="0.1" numeric placeholder="Ej: 60" info="Consumo más alto esperado por día." {...register('stockPolicy.maxConsumption', { valueAsNumber: true })} />
           <Input label="Plazo mín. reposición (días)" type="number" step="1" numeric placeholder="Ej: 4" info="Días mínimos que tarda en llegar un pedido. Número entero." {...register('stockPolicy.minLeadTime', { valueAsNumber: true })} />
@@ -189,7 +189,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
         <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
           Existencia inicial
         </h4>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label="Cantidad inicial" type="number" step="1" numeric placeholder="Ej: 400" info="Unidades de materia prima en stock al inicio del período. Número entero." {...register('initialStock.quantity', { valueAsNumber: true })} />
           <Input label="Costo unitario inicial $" type="number" step="0.01" numeric placeholder="Ej: 1150" info="Costo por unidad de la existencia inicial. En pesos." {...register('initialStock.unitCost', { valueAsNumber: true })} />
         </div>
@@ -240,9 +240,13 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
+        <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
+          {/* Desktop/tablet: tabla clásica. Mobile (<640px): las mismas filas se
+              redibujan con display block y cada celda muestra su label vía CSS
+              (content: attr(data-label)) — los mismos inputs/binding de siempre,
+              solo cambia cómo se dibujan. */}
+          <table className="block w-full text-sm sm:table">
+            <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Fecha</th>
                 <th className="px-3 py-2 text-left font-medium">Tipo</th>
@@ -252,37 +256,37 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
                 <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-line">
+            <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
               {movements.map((field, i) => {
                 const isConsumption = watch(`movements.${i}.type`) === 'consumption';
                 return (
-                  <tr key={field.id}>
-                    <td className="px-2 py-1.5">
+                  <tr key={field.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+                    <td data-label="Fecha" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                       <input type="date" className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.date`)} />
                     </td>
-                    <td className="px-2 py-1.5">
-                      <select className="rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.type`)}>
+                    <td data-label="Tipo" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                      <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none sm:w-auto" {...register(`movements.${i}.type`)}>
                         <option value="purchase">Compra</option>
                         <option value="consumption">Consumo</option>
                       </select>
                     </td>
-                    <td className="px-2 py-1.5">
+                    <td data-label="Detalle" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                       <input className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Detalle…" {...register(`movements.${i}.detail`)} />
                     </td>
-                    <td className="px-2 py-1.5">
-                      <input type="number" step="1" className="w-24 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.quantity`, { valueAsNumber: true })} />
+                    <td data-label="Cantidad" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                      <input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-24" {...register(`movements.${i}.quantity`, { valueAsNumber: true })} />
                     </td>
-                    <td className="px-2 py-1.5">
+                    <td data-label="Costo unit. $" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                       <input
                         type="number"
                         step="0.01"
                         disabled={isConsumption}
-                        className="w-28 rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none disabled:opacity-50 disabled:bg-surface-alt"
+                        className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none disabled:opacity-50 disabled:bg-surface-alt sm:w-28"
                         placeholder={isConsumption ? 'PPP' : 'Monto...'}
                         {...register(`movements.${i}.unitCost`, { valueAsNumber: true })}
                       />
                     </td>
-                    <td className="px-2 py-1.5 text-center">
+                    <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                       <button type="button" onClick={() => remove(i)} className="text-ink-soft hover:text-danger">
                         <Trash2 className="size-4" />
                       </button>
@@ -291,7 +295,7 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
                 );
               })}
               {movements.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-[13px] text-ink-soft">Sin movimientos — agregá compras y consumos.</td></tr>
+                <tr className="block sm:table-row"><td colSpan={6} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin movimientos — agregá compras y consumos.</td></tr>
               )}
             </tbody>
           </table>

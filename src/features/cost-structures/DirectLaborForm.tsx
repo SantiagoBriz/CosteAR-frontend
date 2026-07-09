@@ -154,18 +154,18 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
         <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
           Distribución del año
         </h4>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Input label="Total días/año" type="number" step="1" numeric placeholder="Ej: 365" info="Días totales del año (normalmente 365). Número entero. De acá se descuentan las ausencias." {...register('workingDays.totalDaysPerYear', { valueAsNumber: true })} />
         </div>
         <p className="mt-2 mb-1 text-[11px] text-ink-soft font-medium">Ausencias no remuneradas</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Input label="Domingos" type="number" step="1" numeric {...register('workingDays.unpaidAbsence.sundays', { valueAsNumber: true })} />
           <Input label="Sábados" type="number" step="1" numeric {...register('workingDays.unpaidAbsence.saturdays', { valueAsNumber: true })} />
           <Input label="Lic. injustificadas" type="number" step="1" numeric {...register('workingDays.unpaidAbsence.unjustifiedAbsences', { valueAsNumber: true })} />
           <Input label="Feriados en finde" type="number" step="1" numeric {...register('workingDays.unpaidAbsence.holidaysOnWeekend', { valueAsNumber: true })} />
         </div>
         <p className="mt-2 mb-1 text-[11px] text-ink-soft font-medium">Ausencias remuneradas</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Input label="Feriados" type="number" step="1" numeric {...register('workingDays.paidAbsence.holidays', { valueAsNumber: true })} />
           <Input label="Vacaciones" type="number" step="1" numeric {...register('workingDays.paidAbsence.vacations', { valueAsNumber: true })} />
           <Input label="Enfermedad" type="number" step="1" numeric {...register('workingDays.paidAbsence.sickness', { valueAsNumber: true })} />
@@ -179,7 +179,7 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
         <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
           ITCS — Índice Total de Cargas Sociales
         </h4>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label="Base de derivación" type="number" step="0.1" numeric suffix="%" placeholder="Ej: 27" info="Contribuciones patronales + ART variable, base para derivar cargas. En porcentaje (ej: 27 = 27%)." {...register('itcs.derivationBase', { valueAsNumber: true })} />
           <Input label="ART fija" type="number" step="0.01" numeric suffix="%" placeholder="Ej: 1.5" info="Alícuota fija de ART. En porcentaje (ej: 1.5 = 1,5%)." {...register('itcs.fixedArt', { valueAsNumber: true })} />
         </div>
@@ -192,13 +192,15 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
             </Button>
           </div>
           {remFields.map((f, i) => (
-            <div key={f.id} className="mb-2 flex items-center gap-2">
-              <input className="flex-1 rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Nombre (ej: Antigüedad)" {...register(`itcs.uncertainRemunerative.${i}.name`)} />
-              <div className="relative w-28">
-                <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 5" title="Coeficiente en porcentaje (ej: 5 = 5%)" {...register(`itcs.uncertainRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
-                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+            <div key={f.id} className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none sm:flex-1" placeholder="Nombre (ej: Antigüedad)" {...register(`itcs.uncertainRemunerative.${i}.name`)} />
+              <div className="flex items-center gap-2 sm:contents">
+                <div className="relative w-28">
+                  <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 5" title="Coeficiente en porcentaje (ej: 5 = 5%)" {...register(`itcs.uncertainRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+                  <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+                </div>
+                <button type="button" onClick={() => removeRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
               </div>
-              <button type="button" onClick={() => removeRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
             </div>
           ))}
         </div>
@@ -211,13 +213,15 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
             </Button>
           </div>
           {nonRemFields.map((f, i) => (
-            <div key={f.id} className="mb-2 flex items-center gap-2">
-              <input className="flex-1 rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Nombre (ej: Viandas)" {...register(`itcs.uncertainNonRemunerative.${i}.name`)} />
-              <div className="relative w-28">
-                <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 2" title="Coeficiente en porcentaje (ej: 2 = 2%)" {...register(`itcs.uncertainNonRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
-                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+            <div key={f.id} className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none sm:flex-1" placeholder="Nombre (ej: Viandas)" {...register(`itcs.uncertainNonRemunerative.${i}.name`)} />
+              <div className="flex items-center gap-2 sm:contents">
+                <div className="relative w-28">
+                  <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 2" title="Coeficiente en porcentaje (ej: 2 = 2%)" {...register(`itcs.uncertainNonRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+                  <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+                </div>
+                <button type="button" onClick={() => removeNonRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
               </div>
-              <button type="button" onClick={() => removeNonRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
             </div>
           ))}
         </div>
@@ -231,9 +235,9 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
             <Plus className="size-3" /> Agregar
           </Button>
         </div>
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
+        <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
+          <table className="block w-full text-sm sm:table">
+            <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Departamento</th>
                 <th className="px-3 py-2 text-right font-medium">Remuneración básica $</th>
@@ -241,25 +245,25 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
                 <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-line">
+            <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
               {deptFields.map((f, i) => (
-                <tr key={f.id}>
-                  <td className="px-2 py-1.5">
+                <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+                  <td data-label="Departamento" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Nombre del dpto." {...register(`departments.${i}.name`)} />
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td data-label="Remuneración básica $" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input type="number" step="0.01" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`departments.${i}.basicRemuneration`, { valueAsNumber: true })} />
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td data-label="Horas trabajadas" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`departments.${i}.hoursWorked`, { valueAsNumber: true })} />
                   </td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                     <button type="button" onClick={() => removeDept(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                   </td>
                 </tr>
               ))}
               {deptFields.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-[13px] text-ink-soft">Sin departamentos — agregá al menos uno.</td></tr>
+                <tr className="block sm:table-row"><td colSpan={4} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin departamentos — agregá al menos uno.</td></tr>
               )}
             </tbody>
           </table>

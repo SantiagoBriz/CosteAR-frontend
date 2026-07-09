@@ -94,7 +94,7 @@ export function CostStructurePage() {
     <AppShell wide>
       <FullScreenCalculatorLoader active={calculate.isPending} />
       {/* Header */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:justify-between">
         <div>
           <Link
             to="/companies/$id"
@@ -118,9 +118,9 @@ export function CostStructurePage() {
 
       {/* Error */}
       {error && (
-        <div className="mb-4 flex items-center justify-between rounded-xl bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
-          <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} className="ml-3 text-danger/60 hover:text-danger">✕</button>
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
+          <span className="min-w-0 flex-1 break-words">{error}</span>
+          <button type="button" onClick={() => setError(null)} className="shrink-0 text-danger/60 hover:text-danger">✕</button>
         </div>
       )}
 
@@ -447,7 +447,7 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
         )}
         <Card>
           <CardHeader title="Desglose de costos" />
-          <CardBody className="p-0">
+          <CardBody className="overflow-x-auto p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
@@ -732,7 +732,7 @@ function HistoryPanel({ structureId }: { structureId: string }) {
   return (
     <Card>
       <CardHeader title="Historial de cálculos" description="Últimos 50 snapshots" />
-      <CardBody className="p-0">
+      <CardBody className="overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
@@ -806,7 +806,7 @@ function ReconciliationCard({ companyId, period, structureCosts }: {
         title="Reconciliación con documentos"
         description={`Tu estructura vs lo que suman los comprobantes aprobados del período ${period}`}
       />
-      <CardBody className="p-0">
+      <CardBody className="overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
