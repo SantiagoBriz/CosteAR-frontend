@@ -83,13 +83,13 @@ function HistorialRow({ entry }: { entry: DataEntry }) {
   const Icon = cfg?.icon ?? CheckCircle2;
 
   return (
-    <li className="flex items-start justify-between gap-4 px-6 py-4.5 hover:bg-zinc-50/40 transition-colors">
+    <li className="flex items-start justify-between gap-4 px-4 py-4 hover:bg-zinc-50/40 transition-colors sm:px-6 sm:py-4.5">
       <div className="flex items-start gap-3 min-w-0">
         <div className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border shadow-sm', cfg?.className, cfg?.border)}>
           <Icon className="size-4" />
         </div>
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
             <span className="font-extrabold text-[13px] text-ink">{entry.connection.company.name}</span>
             <span
               className={cn(
@@ -107,7 +107,7 @@ function HistorialRow({ entry }: { entry: DataEntry }) {
           {entry.reviewNote && (
             <p className="mt-0.5 text-[11.5px] text-ink-soft/70 italic">"{entry.reviewNote}"</p>
           )}
-          <div className="mt-1 flex items-center gap-3 text-[10.5px] font-semibold text-ink-soft/60">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold text-ink-soft/60">
             <span>Cargada: {formatDate(entry.createdAt)}</span>
             {entry.reviewedAt && <span>Revisada: {formatDate(entry.reviewedAt)}</span>}
           </div>

@@ -1,15 +1,33 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
-  ClipboardCheck, Clock, CheckCircle2, XCircle, PenLine,
-  ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  Building2, FileText, Image, AlertTriangle, Bot,
-} from 'lucide-react';
-import { AppShell, PageHeader } from '@/components/layout/AppShell';
-import { Card, CardBody } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
-import { usePendingEntries, useReviewEntry, useAccuracyStats, useBulkApprove, type DataEntry } from './validaciones-hooks';
-import { formatDate } from '@/lib/utils';
+  ClipboardCheck,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  PenLine,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Building2,
+  FileText,
+  Image,
+  AlertTriangle,
+  Bot,
+  TrendingUp,
+} from "lucide-react";
+import { AppShell } from "@/components/layout/AppShell";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
+import {
+  usePendingEntries,
+  useReviewEntry,
+  useAccuracyStats,
+  useBulkApprove,
+  type DataEntry,
+} from "./validaciones-hooks";
+import { formatDate } from "@/lib/utils";
 
 // Intentar parsear el reviewNote como análisis de IA
 interface AIAnalysis {
@@ -25,7 +43,11 @@ function parseAIAnalysis(reviewNote: string | null): AIAnalysis | null {
   if (!reviewNote) return null;
   try {
     const parsed = JSON.parse(reviewNote);
-    if (parsed && typeof parsed === 'object' && (parsed.documentType || parsed.message)) {
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      (parsed.documentType || parsed.message)
+    ) {
       return parsed as AIAnalysis;
     }
     return null;
@@ -35,29 +57,33 @@ function parseAIAnalysis(reviewNote: string | null): AIAnalysis | null {
 }
 
 const SECTION_LABELS: Record<string, string> = {
-  MATERIA_PRIMA: 'Materia Prima',
-  MANO_DE_OBRA: 'Mano de Obra',
-  COSTOS_INDIRECTOS: 'Costos Indirectos',
-  VENTAS: 'Ventas',
-  MULTIPLE: 'Múltiples Secciones',
-  DESCONOCIDO: 'Sin clasificar',
+  MATERIA_PRIMA: "Materia Prima",
+  MANO_DE_OBRA: "Mano de Obra",
+  COSTOS_INDIRECTOS: "Costos Indirectos",
+  VENTAS: "Ventas",
+  MULTIPLE: "Múltiples Secciones",
+  DESCONOCIDO: "Sin clasificar",
 };
 
 // Opciones canónicas (MAYÚSCULA) para el selector de reclasificación.
 const DOC_TYPE_OPTIONS: Record<string, string> = {
-  FACTURA_COMPRA: 'Factura de compra',
-  FACTURA_VENTA: 'Factura de venta',
-  REMITO: 'Remito',
-  LIQUIDACION_MOD: 'Liquidación de sueldos',
-  PLANILLA_HORAS: 'Planilla de horas',
-  NOTA_DEBITO: 'Nota de débito',
-  NOTA_CREDITO: 'Nota de crédito',
-  DESCONOCIDO: 'Sin clasificar',
+  FACTURA_COMPRA: "Factura de compra",
+  FACTURA_VENTA: "Factura de venta",
+  REMITO: "Remito",
+  LIQUIDACION_MOD: "Liquidación de sueldos",
+  PLANILLA_HORAS: "Planilla de horas",
+  NOTA_DEBITO: "Nota de débito",
+  NOTA_CREDITO: "Nota de crédito",
+  DESCONOCIDO: "Sin clasificar",
 };
 
 function fmt(n?: number | null) {
   if (n == null) return null;
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -72,86 +98,125 @@ export function ValidacionesPage() {
 
   // Cuántas entradas el sistema clasificó con confianza (no requieren revisión).
   const confidentCount = (data?.items ?? []).filter(
-    (e) => e.classificationAudits?.[0] && !e.classificationAudits[0].requiresReview,
+    (e) =>
+      e.classificationAudits?.[0] && !e.classificationAudits[0].requiresReview,
   ).length;
 
   const handleBulkApprove = async () => {
     const res = await bulkApprove.mutateAsync(undefined);
     setBulkMsg(
       res.approved > 0
-        ? `Aprobaste ${res.approved} ${res.approved === 1 ? 'entrada' : 'entradas'} de confianza alta. ${res.skipped > 0 ? `Quedan ${res.skipped} para revisar a mano.` : ''}`
-        : 'No había entradas de confianza alta para aprobar en bloque.',
+        ? `Aprobaste ${res.approved} ${res.approved === 1 ? "entrada" : "entradas"} de confianza alta. ${res.skipped > 0 ? `Quedan ${res.skipped} para revisar a mano.` : ""}`
+        : "No había entradas de confianza alta para aprobar en bloque.",
     );
   };
 
-  const [reviewing, setReviewing] = useState<{ entry: DataEntry; action: 'APPROVED' | 'REJECTED' | 'CORRECTED' } | null>(null);
-  const [note, setNote] = useState('');
-  const [correctedContent, setCorrectedContent] = useState('');
+  const [reviewing, setReviewing] = useState<{
+    entry: DataEntry;
+    action: "APPROVED" | "REJECTED" | "CORRECTED";
+  } | null>(null);
+  const [note, setNote] = useState("");
+  const [correctedContent, setCorrectedContent] = useState("");
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [correctedType, setCorrectedType] = useState<string>('');
-  const [correctedSection, setCorrectedSection] = useState<string>('');
+  const [correctedType, setCorrectedType] = useState<string>("");
+  const [correctedSection, setCorrectedSection] = useState<string>("");
 
-  const handleReview = async (status: 'APPROVED' | 'REJECTED' | 'CORRECTED') => {
+  const handleReview = async (
+    status: "APPROVED" | "REJECTED" | "CORRECTED",
+  ) => {
     if (!reviewing) return;
     await review.mutateAsync({
       entryId: reviewing.entry.id,
       status,
       note: note || undefined,
-      correctedContent: status === 'CORRECTED' ? correctedContent : undefined,
-      correctedDocumentType: status === 'CORRECTED' && correctedType ? correctedType : undefined,
-      correctedCostSection: status === 'CORRECTED' && correctedSection ? correctedSection : undefined,
+      correctedContent: status === "CORRECTED" ? correctedContent : undefined,
+      correctedDocumentType:
+        status === "CORRECTED" && correctedType ? correctedType : undefined,
+      correctedCostSection:
+        status === "CORRECTED" && correctedSection
+          ? correctedSection
+          : undefined,
     });
     setReviewing(null);
-    setNote('');
-    setCorrectedContent('');
-    setCorrectedType('');
-    setCorrectedSection('');
+    setNote("");
+    setCorrectedContent("");
+    setCorrectedType("");
+    setCorrectedSection("");
   };
 
   // Agrupar por empresa
-  const byCompany = (data?.items ?? []).reduce<Map<string, { name: string; industry: string | null; entries: DataEntry[] }>>(
-    (map, entry) => {
-      const { id, name, industry } = entry.connection.company;
-      if (!map.has(id)) map.set(id, { name, industry, entries: [] });
-      map.get(id)!.entries.push(entry);
-      return map;
-    },
-    new Map(),
-  );
+  const byCompany = (data?.items ?? []).reduce<
+    Map<string, { name: string; industry: string | null; entries: DataEntry[] }>
+  >((map, entry) => {
+    const { id, name, industry } = entry.connection.company;
+    if (!map.has(id)) map.set(id, { name, industry, entries: [] });
+    map.get(id)!.entries.push(entry);
+    return map;
+  }, new Map());
 
   return (
-    <AppShell>
-      <PageHeader
-        title="Validaciones"
-        description="Revisá los datos enviados por tus clientes antes de aplicarlos"
-      />
-
-      {/* Panel de precisión del clasificador */}
-      {accuracy && accuracy.total >= 3 && (
-        <div className="mb-6 grid grid-cols-2 gap-3.5 sm:grid-cols-4">
-          <AccuracyCard
-            label="Precisión"
-            value={accuracy.accuracy != null ? `${accuracy.accuracy}%` : '—'}
-            hint={`${accuracy.correct}/${accuracy.total} sin corregir`}
-            accent
-          />
-          <AccuracyCard
-            label="Cuando está seguro"
-            value={accuracy.confidentAccuracy != null ? `${accuracy.confidentAccuracy}%` : '—'}
-            hint="acierto sin pedir revisión"
-          />
-          <AccuracyCard
-            label="Reglas"
-            value={accuracy.rules.accuracy != null ? `${accuracy.rules.accuracy}%` : '—'}
-            hint={`${accuracy.rules.total} casos`}
-          />
-          <AccuracyCard
-            label="Auto-clasificados"
-            value={accuracy.ai.accuracy != null ? `${accuracy.ai.accuracy}%` : '—'}
-            hint={`${accuracy.ai.total} casos`}
-          />
+    <AppShell wide>
+      {/* Hero Section */}
+      <div className="mb-10 rounded-[28px] border border-line bg-white p-8 flex flex-col justify-between relative overflow-hidden shadow-[0_10px_30px_rgba(74,21,27,0.015)] hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20 transition-all duration-300">
+        <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-action/10 blur-3xl" />
+        <div className="space-y-4 relative z-10">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-granate/15 bg-granate-tenue px-3.5 py-1 text-[11px] font-bold text-granate tracking-wide">
+              <ClipboardCheck className="size-3.5" /> Valida documentos
+            </span>
+          </div>
+          <h1 className="text-[36px] font-extrabold leading-[1.1] text-granate-deep tracking-tight">
+            Revisa documentos
+          </h1>
+          <p className="text-[14px] leading-relaxed text-ink-soft max-w-2xl">
+            Validá los datos cargados por tus clientes. El clasificador te ayuda
+            identificando documentos, pero vos eres el experto en el negocio.
+          </p>
         </div>
-      )}
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-line/60 relative z-10 sm:flex sm:flex-wrap sm:items-center sm:gap-6">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-granate-tenue text-granate">
+              <FileText className="size-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-soft/80">
+                Pendientes
+              </p>
+              <p className="text-[20px] font-extrabold text-granate-deep leading-none mt-1">
+                {data?.total ?? 0}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+              <TrendingUp className="size-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-soft/80">
+                Precisión
+              </p>
+              <p className="text-[20px] font-extrabold text-emerald-700 leading-none mt-1">
+                {accuracy?.accuracy != null ? `${accuracy.accuracy}%` : "—"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700 border border-violet-200/50">
+              <Building2 className="size-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-soft/80">
+                Empresas
+              </p>
+              <p className="text-[20px] font-extrabold text-violet-700 leading-none mt-1">
+                {byCompany.size}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Modal de revisión */}
       {reviewing && (
@@ -160,11 +225,13 @@ export function ValidacionesPage() {
           onClick={() => setReviewing(null)}
         >
           <div
-            className="w-full max-w-2xl rounded-[28px] border border-line bg-surface p-7 shadow-[0_25px_60px_rgba(74,21,27,0.15)] animate-rise max-h-[92vh] overflow-y-auto"
+            className="w-full max-w-2xl rounded-[28px] border border-line bg-surface p-5 shadow-[0_25px_60px_rgba(74,21,27,0.15)] animate-rise max-h-[92vh] overflow-y-auto sm:p-7"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <h3 className="text-[17px] font-extrabold text-granate-deep">Revisar entrada</h3>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-[17px] font-extrabold text-granate-deep">
+                Revisar entrada
+              </h3>
               {/* Empresa prominente: evita aplicar un costo al cliente equivocado */}
               <span className="flex items-center gap-1.5 rounded-full border border-granate/15 bg-granate-tenue px-3.5 py-1.5 text-[12px] font-bold text-granate shadow-sm">
                 <Building2 className="size-3.5" />
@@ -175,55 +242,74 @@ export function ValidacionesPage() {
             {/* Monto que se registrará — verificá contra el comprobante antes de aprobar */}
             {(() => {
               const ai = parseAIAnalysis(reviewing.entry.reviewNote);
-              const ed = ai?.extractedData as Record<string, unknown> | undefined;
+              const ed = ai?.extractedData as
+                | Record<string, unknown>
+                | undefined;
               const amt = ed?.totalAmount ?? ed?.netAmount;
-              if (amt == null || typeof amt !== 'number' || amt <= 0) return null;
+              if (amt == null || typeof amt !== "number" || amt <= 0)
+                return null;
               return (
                 <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-amber-700">Se registrará en el libro de costos</p>
-                  <p className="mt-0.5 font-mono-jb text-lg font-bold tabular-nums text-amber-900">{fmt(amt)}</p>
-                  <p className="text-[11px] text-amber-700">Verificá que coincida con el comprobante antes de aprobar.</p>
+                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-amber-700">
+                    Se registrará en el libro de costos
+                  </p>
+                  <p className="mt-0.5 font-mono-jb text-lg font-bold tabular-nums text-amber-900">
+                    {fmt(amt)}
+                  </p>
+                  <p className="text-[11px] text-amber-700">
+                    Verificá que coincida con el comprobante antes de aprobar.
+                  </p>
                 </div>
               );
             })()}
 
             {/* Preview del archivo */}
-            {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) && reviewing.entry.fileMimeType?.startsWith('image/') && (
-              <button
-                type="button"
-                onClick={() => setLightboxSrc(reviewing.entry.fileUrl ?? `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`)}
-                className="mb-4 w-full focus:outline-none"
-              >
-                <img
-                  src={reviewing.entry.fileUrl ?? `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`}
-                  alt={reviewing.entry.fileName ?? 'documento'}
-                  className="w-full rounded-2xl object-contain max-h-64 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
-                />
-              </button>
-            )}
-            {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) && reviewing.entry.fileMimeType === 'application/pdf' && (
-              <div className="mb-4 flex items-center gap-2 rounded-2xl border border-line bg-surface-alt p-3.5">
-                <FileText className="size-5 text-ink-soft" />
-                <a
-                  href={reviewing.entry.fileUrl ?? '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[13px] font-semibold text-action hover:underline"
+            {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) &&
+              reviewing.entry.fileMimeType?.startsWith("image/") && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLightboxSrc(
+                      reviewing.entry.fileUrl ??
+                        `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`,
+                    )
+                  }
+                  className="mb-4 w-full focus:outline-none"
                 >
-                  {reviewing.entry.fileName}
-                </a>
-              </div>
-            )}
+                  <img
+                    src={
+                      reviewing.entry.fileUrl ??
+                      `data:${reviewing.entry.fileMimeType};base64,${reviewing.entry.fileData}`
+                    }
+                    alt={reviewing.entry.fileName ?? "documento"}
+                    className="w-full rounded-2xl object-contain max-h-64 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
+                  />
+                </button>
+              )}
+            {(reviewing.entry.fileUrl ?? reviewing.entry.fileData) &&
+              reviewing.entry.fileMimeType === "application/pdf" && (
+                <div className="mb-4 flex items-center gap-2 rounded-2xl border border-line bg-surface-alt p-3.5">
+                  <FileText className="size-5 text-ink-soft" />
+                  <a
+                    href={reviewing.entry.fileUrl ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[13px] font-semibold text-action hover:underline"
+                  >
+                    {reviewing.entry.fileName}
+                  </a>
+                </div>
+              )}
 
             <div className="mb-4 rounded-2xl border border-line bg-zinc-50/60 p-4 text-sm text-ink whitespace-pre-wrap">
               {reviewing.entry.rawContent}
             </div>
 
-            {reviewing.action === 'CORRECTED' && (
+            {reviewing.action === "CORRECTED" && (
               <>
                 {/* Reclasificación: tipo + sección correctos. Esto entrena al
                     clasificador — la próxima vez acierta solo. */}
-                <div className="mb-4 grid grid-cols-2 gap-3">
+                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="block text-[12px] font-medium uppercase tracking-wide text-ink-soft mb-1.5">
                       Tipo correcto
@@ -235,7 +321,9 @@ export function ValidacionesPage() {
                     >
                       <option value="">— sin cambiar —</option>
                       {Object.entries(DOC_TYPE_OPTIONS).map(([v, l]) => (
-                        <option key={v} value={v}>{l}</option>
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -250,7 +338,9 @@ export function ValidacionesPage() {
                     >
                       <option value="">— sin cambiar —</option>
                       {Object.entries(SECTION_LABELS).map(([v, l]) => (
-                        <option key={v} value={v}>{l}</option>
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -260,7 +350,7 @@ export function ValidacionesPage() {
                     Contenido corregido
                   </label>
                   <textarea
-                    className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink transition-colors focus:border-granate focus:outline-none min-h-[80px]"
+                    className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink transition-colors focus:border-granate focus:outline-none min-h-20"
                     placeholder="Escribí la versión corregida del dato…"
                     value={correctedContent}
                     onChange={(e) => setCorrectedContent(e.target.value)}
@@ -282,8 +372,13 @@ export function ValidacionesPage() {
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-line/60 pt-4">
-              <Button variant="ghost" size="sm" onClick={() => setReviewing(null)}>
+            <div className="flex flex-col-reverse gap-2 border-t border-line/60 pt-4 sm:flex-row sm:items-center sm:justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setReviewing(null)}
+                className="w-full sm:w-auto"
+              >
                 Cancelar
               </Button>
               <Button
@@ -291,14 +386,18 @@ export function ValidacionesPage() {
                 onClick={() => handleReview(reviewing.action)}
                 loading={review.isPending}
                 className={cn(
-                  reviewing.action === 'APPROVED' && 'bg-green-600 hover:bg-green-700',
-                  reviewing.action === 'REJECTED' && 'bg-danger hover:bg-danger/90',
-                  reviewing.action === 'CORRECTED' && 'bg-action hover:bg-action/90',
+                  "w-full sm:w-auto",
+                  reviewing.action === "APPROVED" &&
+                    "bg-green-600 hover:bg-green-700",
+                  reviewing.action === "REJECTED" &&
+                    "bg-danger hover:bg-danger/90",
+                  reviewing.action === "CORRECTED" &&
+                    "bg-action hover:bg-action/90",
                 )}
               >
-                {reviewing.action === 'APPROVED' && 'Confirmar aprobación'}
-                {reviewing.action === 'REJECTED' && 'Confirmar rechazo'}
-                {reviewing.action === 'CORRECTED' && 'Guardar corrección'}
+                {reviewing.action === "APPROVED" && "Confirmar aprobación"}
+                {reviewing.action === "REJECTED" && "Confirmar rechazo"}
+                {reviewing.action === "CORRECTED" && "Guardar corrección"}
               </Button>
             </div>
           </div>
@@ -306,7 +405,9 @@ export function ValidacionesPage() {
       )}
 
       {isLoading ? (
-        <div className="py-16 text-center text-[13px] font-semibold text-ink-soft">Cargando…</div>
+        <div className="py-16 text-center text-[13px] font-semibold text-ink-soft">
+          Cargando…
+        </div>
       ) : !data?.items.length ? (
         <Card>
           <CardBody className="py-16 text-center">
@@ -314,25 +415,31 @@ export function ValidacionesPage() {
               <ClipboardCheck className="size-6" />
             </div>
             <p className="text-[13px] font-bold text-ink">Todo al día</p>
-            <p className="mt-1 text-[11px] text-ink-soft">No hay datos pendientes de validación.</p>
+            <p className="mt-1 text-[11px] text-ink-soft">
+              No hay datos pendientes de validación.
+            </p>
           </CardBody>
         </Card>
       ) : (
         <>
           {/* Resumen + aprobación masiva */}
-          <div className="mb-4 flex flex-wrap items-center gap-2.5">
+          <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
             <span className="rounded-full border border-action/15 bg-action/10 px-3.5 py-1.5 text-[12px] font-bold text-action shadow-sm">
               {data.total} pendientes
             </span>
-            <span className="text-[12px] font-semibold text-ink-soft">en {byCompany.size} {byCompany.size === 1 ? 'empresa' : 'empresas'}</span>
+            <span className="text-[12px] font-semibold text-ink-soft">
+              en {byCompany.size}{" "}
+              {byCompany.size === 1 ? "empresa" : "empresas"}
+            </span>
             {confidentCount > 0 && (
               <Button
                 size="sm"
                 onClick={handleBulkApprove}
                 loading={bulkApprove.isPending}
-                className="ml-auto bg-green-600 hover:bg-green-700"
+                className="w-full sm:ml-auto sm:w-auto bg-green-600 hover:bg-green-700"
               >
-                <CheckCircle2 className="size-3.5" /> Aprobar {confidentCount} de confianza alta
+                <CheckCircle2 className="size-3.5" /> Aprobar {confidentCount}{" "}
+                de confianza alta
               </Button>
             )}
           </div>
@@ -345,29 +452,44 @@ export function ValidacionesPage() {
 
           {/* Sección por empresa */}
           <div className="space-y-4">
-            {[...byCompany.entries()].map(([companyId, { name, industry, entries }]) => (
-              <CompanySection
-                key={companyId}
-                companyName={name}
-                industry={industry}
-                entries={entries}
-                onApprove={(entry) => setReviewing({ entry, action: 'APPROVED' })}
-                onReject={(entry) => setReviewing({ entry, action: 'REJECTED' })}
-                onCorrect={(entry) => {
-                  setCorrectedContent(entry.rawContent);
-                  setCorrectedType(entry.classificationAudits?.[0]?.documentType ?? '');
-                  setCorrectedSection(entry.classificationAudits?.[0]?.costSection ?? '');
-                  setReviewing({ entry, action: 'CORRECTED' });
-                }}
-                onZoom={setLightboxSrc}
-              />
-            ))}
+            {[...byCompany.entries()].map(
+              ([companyId, { name, industry, entries }]) => (
+                <CompanySection
+                  key={companyId}
+                  companyName={name}
+                  industry={industry}
+                  entries={entries}
+                  onApprove={(entry) =>
+                    setReviewing({ entry, action: "APPROVED" })
+                  }
+                  onReject={(entry) =>
+                    setReviewing({ entry, action: "REJECTED" })
+                  }
+                  onCorrect={(entry) => {
+                    setCorrectedContent(entry.rawContent);
+                    setCorrectedType(
+                      entry.classificationAudits?.[0]?.documentType ?? "",
+                    );
+                    setCorrectedSection(
+                      entry.classificationAudits?.[0]?.costSection ?? "",
+                    );
+                    setReviewing({ entry, action: "CORRECTED" });
+                  }}
+                  onZoom={setLightboxSrc}
+                />
+              ),
+            )}
           </div>
 
           {/* Paginación */}
           {data.total > 20 && (
             <div className="mt-4 flex items-center justify-center gap-2">
-              <Button variant="ghost" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
                 <ChevronLeft className="size-4" />
               </Button>
               <span className="text-[12px] font-semibold text-ink-soft">
@@ -389,7 +511,7 @@ export function ValidacionesPage() {
       {/* Lightbox — ampliar imagen */}
       {lightboxSrc && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           onClick={() => setLightboxSrc(null)}
         >
           <img
@@ -412,19 +534,6 @@ export function ValidacionesPage() {
 }
 
 // ── Tarjeta de métrica de precisión ───────────────────────────────────────────
-
-function AccuracyCard({ label, value, hint, accent }: { label: string; value: string; hint: string; accent?: boolean }) {
-  return (
-    <div className={cn(
-      'rounded-2xl border p-4 shadow-[0_4px_12px_rgba(74,21,27,0.01)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md',
-      accent ? 'border-granate/25 bg-granate-tenue/40' : 'border-line bg-white',
-    )}>
-      <p className="text-[10.5px] font-bold uppercase tracking-wider text-ink-soft/80">{label}</p>
-      <p className={cn('mt-1 font-mono-jb text-2xl font-extrabold tabular-nums', accent ? 'text-granate' : 'text-granate-deep')}>{value}</p>
-      <p className="mt-0.5 text-[10.5px] font-semibold text-ink-soft/70">{hint}</p>
-    </div>
-  );
-}
 
 // ── Sección por empresa ───────────────────────────────────────────────────────
 
@@ -452,25 +561,33 @@ function CompanySection({
       {/* Header empresa */}
       <button
         type="button"
-        className="flex w-full items-center justify-between px-6 py-5 text-left hover:bg-zinc-50/50 transition-colors"
+        className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-zinc-50/50 transition-colors sm:px-6 sm:py-5"
         onClick={() => setCollapsed((v) => !v)}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-granate/10 bg-granate-tenue text-granate shadow-sm">
             <Building2 className="size-4" />
           </div>
-          <div>
-            <p className="text-[14px] font-extrabold text-ink">{companyName}</p>
-            {industry && <p className="text-[11px] font-medium text-ink-soft">{industry}</p>}
+          <div className="min-w-0">
+            <p className="truncate text-[14px] font-extrabold text-ink">
+              {companyName}
+            </p>
+            {industry && (
+              <p className="truncate text-[11px] font-medium text-ink-soft">
+                {industry}
+              </p>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <span className="rounded-full border border-action/15 bg-action/10 px-2.5 py-1 text-[11px] font-bold text-action shadow-sm">
-            {entries.length} {entries.length === 1 ? 'entrada' : 'entradas'}
+            {entries.length} {entries.length === 1 ? "entrada" : "entradas"}
           </span>
-          {collapsed
-            ? <ChevronDown className="size-4 text-ink-soft" />
-            : <ChevronUp className="size-4 text-ink-soft" />}
+          {collapsed ? (
+            <ChevronDown className="size-4 text-ink-soft" />
+          ) : (
+            <ChevronUp className="size-4 text-ink-soft" />
+          )}
         </div>
       </button>
 
@@ -509,30 +626,38 @@ function EntryRow({
   onZoom: (src: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const isImage = entry.fileMimeType?.startsWith('image/');
-  const isPdf = entry.fileMimeType === 'application/pdf';
+  const isImage = entry.fileMimeType?.startsWith("image/");
+  const isPdf = entry.fileMimeType === "application/pdf";
   const aiAnalysis = parseAIAnalysis(entry.reviewNote);
 
   return (
-    <div className="px-6 py-4.5">
+    <div className="px-4 py-4 sm:px-6 sm:py-4.5">
       {/* Cabecera de la fila */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <button
           type="button"
           className="flex items-start gap-3 min-w-0 flex-1 text-left"
           onClick={() => setExpanded((v) => !v)}
         >
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-line bg-zinc-50 text-zinc-400">
-            {isImage ? <Image className="size-3.5" /> : isPdf ? <FileText className="size-3.5" /> : <Clock className="size-3.5" />}
+            {isImage ? (
+              <Image className="size-3.5" />
+            ) : isPdf ? (
+              <FileText className="size-3.5" />
+            ) : (
+              <Clock className="size-3.5" />
+            )}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              {aiAnalysis?.costSection && aiAnalysis.costSection !== 'DESCONOCIDO' && (
-                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10.5px] font-bold text-indigo-700 shadow-sm">
-                  {SECTION_LABELS[aiAnalysis.costSection] ?? aiAnalysis.costSection}
-                </span>
-              )}
-              {aiAnalysis?.quality === 'ilegible' && (
+              {aiAnalysis?.costSection &&
+                aiAnalysis.costSection !== "DESCONOCIDO" && (
+                  <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10.5px] font-bold text-indigo-700 shadow-sm">
+                    {SECTION_LABELS[aiAnalysis.costSection] ??
+                      aiAnalysis.costSection}
+                  </span>
+                )}
+              {aiAnalysis?.quality === "ilegible" && (
                 <span className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10.5px] font-bold text-red-700 shadow-sm">
                   <AlertTriangle className="size-3" /> Ilegible
                 </span>
@@ -542,24 +667,44 @@ function EntryRow({
               {entry.fileName ?? entry.rawContent}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[10.5px] font-semibold text-ink-soft/70">{formatDate(entry.createdAt)}</span>
+              <span className="text-[10.5px] font-semibold text-ink-soft/70">
+                {formatDate(entry.createdAt)}
+              </span>
               <span className="text-[10.5px] text-ink-soft/40">·</span>
               <span className="text-[10.5px] font-bold text-action hover:underline">
-                {expanded ? 'Cerrar' : 'Ver todo'}
+                {expanded ? "Cerrar" : "Ver todo"}
               </span>
             </div>
           </div>
         </button>
 
         {/* Acciones */}
-        <div className="flex shrink-0 items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={onCorrect} className="text-action hover:bg-action/10" title="Corregir y aprobar">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:justify-start">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCorrect}
+            className="text-action hover:bg-action/10"
+            title="Corregir y aprobar"
+          >
             <PenLine className="size-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onApprove} className="text-green-600 hover:bg-green-50" title="Aprobar">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onApprove}
+            className="text-green-600 hover:bg-green-50"
+            title="Aprobar"
+          >
             <CheckCircle2 className="size-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={onReject} className="text-danger hover:bg-danger/10" title="Rechazar">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onReject}
+            className="text-danger hover:bg-danger/10"
+            title="Rechazar"
+          >
             <XCircle className="size-4" />
           </Button>
         </div>
@@ -572,15 +717,25 @@ function EntryRow({
           {isImage && (entry.fileUrl ?? entry.fileData) && (
             <button
               type="button"
-              onClick={() => onZoom(entry.fileUrl ?? `data:${entry.fileMimeType};base64,${entry.fileData}`)}
+              onClick={() =>
+                onZoom(
+                  entry.fileUrl ??
+                    `data:${entry.fileMimeType};base64,${entry.fileData}`,
+                )
+              }
               className="w-full focus:outline-none"
             >
               <img
-                src={entry.fileUrl ?? `data:${entry.fileMimeType};base64,${entry.fileData}`}
-                alt={entry.fileName ?? 'documento'}
+                src={
+                  entry.fileUrl ??
+                  `data:${entry.fileMimeType};base64,${entry.fileData}`
+                }
+                alt={entry.fileName ?? "documento"}
                 className="w-full rounded-2xl object-contain max-h-80 border border-line bg-surface-alt cursor-zoom-in hover:opacity-90 transition-opacity"
               />
-              <p className="text-center text-[10.5px] font-semibold text-ink-soft mt-1.5">Clic para ampliar</p>
+              <p className="text-center text-[10.5px] font-semibold text-ink-soft mt-1.5">
+                Clic para ampliar
+              </p>
             </button>
           )}
 
@@ -589,9 +744,16 @@ function EntryRow({
             <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface-alt p-3.5">
               <FileText className="size-6 text-ink-soft shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-ink truncate">{entry.fileName}</p>
+                <p className="text-[13px] font-bold text-ink truncate">
+                  {entry.fileName}
+                </p>
                 {entry.fileUrl ? (
-                  <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-action hover:underline">
+                  <a
+                    href={entry.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-action hover:underline"
+                  >
                     Ver PDF →
                   </a>
                 ) : (
@@ -602,10 +764,14 @@ function EntryRow({
           )}
 
           {/* Contenido de texto */}
-          {entry.rawContent && !entry.rawContent.startsWith('[Archivo:') && (
+          {entry.rawContent && !entry.rawContent.startsWith("[Archivo:") && (
             <div className="rounded-2xl border border-line bg-zinc-50/60 p-3.5">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-soft/60">Contenido</p>
-              <p className="text-[13px] text-ink whitespace-pre-wrap">{entry.rawContent}</p>
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-soft/60">
+                Contenido
+              </p>
+              <p className="text-[13px] text-ink whitespace-pre-wrap">
+                {entry.rawContent}
+              </p>
             </div>
           )}
 
@@ -614,52 +780,95 @@ function EntryRow({
             <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 shadow-sm space-y-3">
               <div className="flex items-center gap-1.5">
                 <Bot className="size-3.5 text-indigo-500" />
-                <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-indigo-500">Análisis del documento</span>
+                <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-indigo-500">
+                  Análisis del documento
+                </span>
               </div>
 
               {aiAnalysis.qualityNote && (
                 <div className="flex items-start gap-2 rounded-xl bg-yellow-50 border border-yellow-200 px-2.5 py-2">
                   <AlertTriangle className="size-3.5 mt-0.5 shrink-0 text-yellow-600" />
-                  <p className="text-[12px] text-yellow-800">{aiAnalysis.qualityNote}</p>
+                  <p className="text-[12px] text-yellow-800">
+                    {aiAnalysis.qualityNote}
+                  </p>
                 </div>
               )}
 
               {aiAnalysis.message && (
-                <p className="text-[13px] text-indigo-900">{aiAnalysis.message}</p>
+                <p className="text-[13px] text-indigo-900">
+                  {aiAnalysis.message}
+                </p>
               )}
 
               {/* Datos extraídos */}
-              {aiAnalysis.extractedData && (() => {
-                const d = aiAnalysis.extractedData as Record<string, unknown>;
-                const rows: { label: string; value: string }[] = [];
-                if (d.supplier) rows.push({ label: 'Proveedor', value: String(d.supplier) });
-                if (d.invoiceNumber) rows.push({ label: 'Comprobante', value: String(d.invoiceNumber) });
-                if (d.date) rows.push({ label: 'Fecha', value: String(d.date) });
-                if (d.netAmount != null) rows.push({ label: 'Neto', value: fmt(Number(d.netAmount)) ?? '' });
-                if (d.taxAmount != null) rows.push({ label: 'IVA', value: fmt(Number(d.taxAmount)) ?? '' });
-                if (d.totalAmount != null) rows.push({ label: 'Total', value: fmt(Number(d.totalAmount)) ?? '' });
-                if (d.hoursWorked != null) rows.push({ label: 'Horas', value: `${d.hoursWorked} hs` });
-                if (d.department) rows.push({ label: 'Departamento', value: String(d.department) });
-                if (!rows.length) return null;
-                return (
-                  <div className="divide-y divide-indigo-100 rounded-xl border border-indigo-100 bg-white overflow-hidden shadow-sm">
-                    {rows.map((r) => (
-                      <div key={r.label} className="flex justify-between px-3 py-1.5 text-[12px]">
-                        <span className="text-ink-soft">{r.label}</span>
-                        <span className="font-bold text-ink">{r.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
+              {aiAnalysis.extractedData &&
+                (() => {
+                  const d = aiAnalysis.extractedData as Record<string, unknown>;
+                  const rows: { label: string; value: string }[] = [];
+                  if (d.supplier)
+                    rows.push({
+                      label: "Proveedor",
+                      value: String(d.supplier),
+                    });
+                  if (d.invoiceNumber)
+                    rows.push({
+                      label: "Comprobante",
+                      value: String(d.invoiceNumber),
+                    });
+                  if (d.date)
+                    rows.push({ label: "Fecha", value: String(d.date) });
+                  if (d.netAmount != null)
+                    rows.push({
+                      label: "Neto",
+                      value: fmt(Number(d.netAmount)) ?? "",
+                    });
+                  if (d.taxAmount != null)
+                    rows.push({
+                      label: "IVA",
+                      value: fmt(Number(d.taxAmount)) ?? "",
+                    });
+                  if (d.totalAmount != null)
+                    rows.push({
+                      label: "Total",
+                      value: fmt(Number(d.totalAmount)) ?? "",
+                    });
+                  if (d.hoursWorked != null)
+                    rows.push({ label: "Horas", value: `${d.hoursWorked} hs` });
+                  if (d.department)
+                    rows.push({
+                      label: "Departamento",
+                      value: String(d.department),
+                    });
+                  if (!rows.length) return null;
+                  return (
+                    <div className="divide-y divide-indigo-100 rounded-xl border border-indigo-100 bg-white overflow-hidden shadow-sm">
+                      {rows.map((r) => (
+                        <div
+                          key={r.label}
+                          className="flex justify-between px-3 py-1.5 text-[12px]"
+                        >
+                          <span className="text-ink-soft">{r.label}</span>
+                          <span className="font-bold text-ink">{r.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
               {/* Explicación del clasificador */}
               {entry.classificationAudits?.[0] && (
                 <div className="rounded-xl border border-indigo-200 bg-white p-3.5 shadow-sm space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Por qué se clasificó así</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+                    Por qué se clasificó así
+                  </p>
                   {entry.classificationAudits[0].explanation && (
                     <p className="text-[12px] text-ink-soft leading-relaxed">
-                      {entry.classificationAudits[0].explanation.replace(/\.?\s*Confianza:\s*\d+(?:[.,]\d+)?\s*%\.?/i, '').trim()}
+                      {entry.classificationAudits[0].explanation
+                        .replace(
+                          /\.?\s*Confianza:\s*\d+(?:[.,]\d+)?\s*%\.?/i,
+                          "",
+                        )
+                        .trim()}
                     </p>
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
@@ -679,16 +888,28 @@ function EntryRow({
             </div>
           )}
 
-
           {/* Botones de acción al pie del expand */}
-          <div className="flex gap-2 pt-3 border-t border-line/60">
-            <Button size="sm" onClick={onApprove} className="bg-green-600 hover:bg-green-700">
+          <div className="flex flex-col gap-2 pt-3 border-t border-line/60 sm:flex-row">
+            <Button
+              size="sm"
+              onClick={onApprove}
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+            >
               <CheckCircle2 className="size-3.5" /> Aprobar
             </Button>
-            <Button size="sm" onClick={onCorrect} variant="secondary">
+            <Button
+              size="sm"
+              onClick={onCorrect}
+              variant="secondary"
+              className="w-full sm:w-auto"
+            >
               <PenLine className="size-3.5" /> Corregir
             </Button>
-            <Button size="sm" onClick={onReject} className="bg-danger hover:bg-danger/90">
+            <Button
+              size="sm"
+              onClick={onReject}
+              className="w-full sm:w-auto bg-danger hover:bg-danger/90"
+            >
               <XCircle className="size-3.5" /> Rechazar
             </Button>
           </div>
