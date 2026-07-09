@@ -167,14 +167,14 @@ export function ProfilePage() {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface-alt p-4">
+              <div className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-surface-alt p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-idle/20 bg-idle/10 text-idle">
                     <ShieldOff className="size-5" />
                   </div>
                   <span className="text-sm font-semibold text-ink-soft">2FA no configurado</span>
                 </div>
-                <Button variant="secondary" size="sm" onClick={startSetup}>
+                <Button variant="secondary" size="sm" onClick={startSetup} className="w-full sm:w-auto">
                   Activar 2FA
                 </Button>
               </div>

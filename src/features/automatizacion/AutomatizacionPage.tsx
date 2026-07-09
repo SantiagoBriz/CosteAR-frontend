@@ -10,10 +10,14 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   FileText, Image, MessageSquare, FileInput, Clock, CheckCircle2,
-  XCircle, RotateCcw, Webhook, BrainCircuit, ShieldCheck, Bell,
-  ArrowRight, Zap, AlertTriangle, Cpu, RefreshCw,
+  Webhook, BrainCircuit, ShieldCheck, Bell,
+  ArrowRight, Zap, Cpu, RefreshCw,
 } from 'lucide-react';
-import { AppShell } from '@/components/layout/AppShell';
+import { AppShell, PageHeader } from '@/components/layout/AppShell';
+import { Card, CardHeader, CardBody } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -54,11 +58,11 @@ interface FeedResponse {
 
 // ─── config visual ──────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<DataEntryStatus, { label: string; bg: string; text: string; icon: typeof Clock }> = {
-  PENDING:   { label: 'Pendiente',  bg: 'bg-amber-50',   text: 'text-amber-700',  icon: Clock },
-  APPROVED:  { label: 'Aprobado',   bg: 'bg-emerald-50', text: 'text-emerald-700',icon: CheckCircle2 },
-  REJECTED:  { label: 'Rechazado',  bg: 'bg-red-50',     text: 'text-red-700',    icon: XCircle },
-  CORRECTED: { label: 'Corregido',  bg: 'bg-blue-50',    text: 'text-blue-700',   icon: RotateCcw },
+const STATUS_META: Record<DataEntryStatus, { label: string; status: 'ok' | 'warn' | 'idle' | 'danger' }> = {
+  PENDING:   { label: 'Pendiente', status: 'warn' },
+  APPROVED:  { label: 'Aprobado',  status: 'ok' },
+  REJECTED:  { label: 'Rechazado', status: 'danger' },
+  CORRECTED: { label: 'Corregido', status: 'idle' },
 };
 
 const SOURCE_CONFIG: Record<DataEntrySourceType, { label: string; icon: typeof FileText }> = {
@@ -77,11 +81,11 @@ const SECTION_LABELS: Record<string, string> = {
 };
 
 const SECTION_COLORS: Record<string, string> = {
-  MATERIA_PRIMA:    'bg-violet-100 text-violet-700',
-  MANO_DE_OBRA:     'bg-blue-100 text-blue-700',
-  COSTOS_INDIRECTOS:'bg-orange-100 text-orange-700',
-  VENTAS:           'bg-emerald-100 text-emerald-700',
-  DESCONOCIDO:      'bg-gray-100 text-gray-500',
+  MATERIA_PRIMA:    'border-violet-200 bg-violet-50 text-violet-700',
+  MANO_DE_OBRA:     'border-blue-200 bg-blue-50 text-blue-700',
+  COSTOS_INDIRECTOS:'border-orange-200 bg-orange-50 text-orange-700',
+  VENTAS:           'border-emerald-200 bg-emerald-50 text-emerald-700',
+  DESCONOCIDO:      'border-line bg-zinc-50 text-ink-soft',
 };
 
 // ─── pipeline steps ──────────────────────────────────────────────────────────
@@ -124,9 +128,9 @@ function formatTime(iso: string) {
 }
 
 function confidenceColor(c: number) {
-  if (c >= 80) return 'text-emerald-600 bg-emerald-50';
-  if (c >= 60) return 'text-amber-600 bg-amber-50';
-  return 'text-red-600 bg-red-50';
+  if (c >= 80) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (c >= 60) return 'border-amber-200 bg-amber-50 text-amber-700';
+  return 'border-red-200 bg-red-50 text-red-700';
 }
 
 // ─── componente principal ───────────────────────────────────────────────────
@@ -151,189 +155,138 @@ export function AutomatizacionPage() {
 
   return (
     <AppShell>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');`}</style>
-      <div style={{ fontFamily: "'IBM Plex Sans', system-ui, sans-serif" }} className="pb-8">
-
-        {/* ── Header ────────────────────────────────────────────────────────── */}
-        <div className="mb-8 flex items-end justify-between border-b border-gray-200 pb-6">
-          <div>
-            <p className="text-[12px] font-medium uppercase tracking-wide text-gray-400">Pipeline</p>
-            <h1
-              className="mt-0.5 text-[28px] font-extrabold text-gray-900"
-              style={{ fontFamily: "'Syne', sans-serif" }}
-            >
-              Centro de Automatización
-            </h1>
-            <p className="mt-1 text-[13px] text-gray-500">
-              Documentos clasificados automáticamente · actualiza cada 30s
-            </p>
-          </div>
-          <button
+      <PageHeader
+        title="Centro de Automatización"
+        description="Documentos clasificados automáticamente por IA · actualiza cada 30s"
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => refetch()}
-            className={cn(
-              'flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-[12px] font-medium text-gray-600 hover:bg-gray-50 transition-colors',
-              isFetching && 'opacity-60 pointer-events-none',
-            )}
+            disabled={isFetching}
           >
             <RefreshCw className={cn('size-3.5', isFetching && 'animate-spin')} />
             Actualizar
-          </button>
-        </div>
+          </Button>
+        }
+      />
 
-        {/* ── Pipeline visual ───────────────────────────────────────────────── */}
-        <div className="mb-8 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-          <div className="border-b border-gray-100 px-5 py-3">
-            <div className="flex items-center gap-2">
-              <span className="flex size-2 rounded-full bg-emerald-500" />
-              <span className="text-[12px] font-semibold text-gray-700">Flujo activo: Ingesta de documentos contables</span>
-            </div>
-          </div>
-          <div className="flex items-center justify-center gap-0 overflow-x-auto px-6 py-6">
-            {PIPELINE_STEPS.map((step, i) => (
-              <div key={step.label} className="flex items-center">
-                <div className="flex flex-col items-center gap-2 min-w-[90px]">
-                  <div className={cn('flex size-12 items-center justify-center rounded-2xl border', step.color)}>
-                    <step.icon className="size-5" />
-                  </div>
-                  <p className="text-[12px] font-semibold text-gray-700">{step.label}</p>
-                  <p className="text-[10px] text-center text-gray-400 max-w-[80px]">{step.sub}</p>
+      {/* ── Pipeline visual ───────────────────────────────────────────────── */}
+      <Card className="mb-6">
+        <CardHeader
+          title="Pipeline activo"
+          description="Ingesta de documentos contables · clasificación automática en cascada"
+          action={
+            <span className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10.5px] font-bold text-emerald-700 shadow-sm">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              En vivo
+            </span>
+          }
+        />
+        <CardBody className="flex items-center justify-start gap-0 overflow-x-auto py-6 sm:justify-center">
+          {PIPELINE_STEPS.map((step, i) => (
+            <div key={step.label} className="flex items-center">
+              <div className="flex min-w-[78px] flex-col items-center gap-2 sm:min-w-[92px]">
+                <div className={cn('flex size-10 items-center justify-center rounded-2xl border shadow-sm sm:size-12', step.color)}>
+                  <step.icon className="size-4 sm:size-5" />
                 </div>
-                {i < PIPELINE_STEPS.length - 1 && (
-                  <ArrowRight className="mx-3 size-4 shrink-0 text-gray-300" />
-                )}
+                <p className="text-[12px] font-bold text-ink">{step.label}</p>
+                <p className="max-w-[76px] text-center text-[10px] text-ink-soft/75 sm:max-w-[84px]">{step.sub}</p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── KPIs ──────────────────────────────────────────────────────────── */}
-        <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <KpiCard label="Total procesados" value={total} sub="en el historial" color="text-gray-800" icon={Zap} />
-          <KpiCard label="Pendientes" value={pending} sub="requieren revisión" color="text-amber-600" icon={Clock} urgent={pending > 0} />
-          <KpiCard label="Aprobados" value={approved} sub="registrados ok" color="text-emerald-600" icon={CheckCircle2} />
-          <KpiCard label="Auto-clasificados" value={withAI} sub={`${autoRate}% auto-clasificados`} color="text-violet-600" icon={Cpu} />
-        </div>
-
-        {/* ── Feed ──────────────────────────────────────────────────────────── */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3.5">
-            <div>
-              <h2 className="text-[14px] font-semibold text-gray-800"
-                style={{ fontFamily: "'Syne', sans-serif" }}>
-                Actividad reciente
-              </h2>
-              <p className="text-[12px] text-gray-400">
-                {total} documento{total !== 1 ? 's' : ''} · se actualiza automáticamente
-              </p>
+              {i < PIPELINE_STEPS.length - 1 && (
+                <ArrowRight className="mx-2.5 size-4 shrink-0 text-ink-soft/30 sm:mx-3" />
+              )}
             </div>
-            {rejected > 0 && (
-              <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1">
-                <AlertTriangle className="size-3 text-red-500" />
-                <span className="text-[11px] font-semibold text-red-700">{rejected} rechazado{rejected !== 1 ? 's' : ''}</span>
-              </div>
-            )}
-          </div>
+          ))}
+        </CardBody>
+      </Card>
 
+      {/* ── KPIs ──────────────────────────────────────────────────────────── */}
+      <div className="mb-6 grid grid-cols-2 gap-3.5 sm:grid-cols-4">
+        <StatCard label="Total procesados" value={total} sub="en el historial" icon={Zap} variant="neutral" />
+        <StatCard label="Pendientes" value={pending} sub="requieren revisión" icon={Clock} variant={pending > 0 ? 'warn' : 'neutral'} />
+        <StatCard label="Aprobados" value={approved} sub="registrados ok" icon={CheckCircle2} variant="ok" />
+        <StatCard label="Auto-clasificados" value={withAI} sub={`${autoRate}% del total`} icon={Cpu} variant="neutral" />
+      </div>
+
+      {/* ── Feed ──────────────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader
+          title="Actividad reciente"
+          description={`${total} documento${total !== 1 ? 's' : ''} · se actualiza automáticamente`}
+          action={rejected > 0 && (
+            <StatusBadge status="danger">{rejected} rechazado{rejected !== 1 ? 's' : ''}</StatusBadge>
+          )}
+        />
+
+        <CardBody>
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
-              <div className="flex items-center gap-2 text-gray-400">
+              <div className="flex items-center gap-2 text-ink-soft">
                 <RefreshCw className="size-4 animate-spin" />
-                <span className="text-[13px]">Cargando actividad…</span>
+                <span className="text-[13px] font-semibold">Cargando actividad…</span>
               </div>
             </div>
           ) : entries.length === 0 ? (
             <div className="flex flex-col items-center py-16 text-center">
-              <div className="mb-3 flex size-14 items-center justify-center rounded-2xl bg-gray-100">
-                <Webhook className="size-7 text-gray-400" />
+              <div className="mb-3 flex size-14 items-center justify-center rounded-2xl border border-line bg-white text-granate shadow-sm">
+                <Webhook className="size-7" />
               </div>
-              <p className="text-[14px] font-semibold text-gray-700">Sin actividad todavía</p>
-              <p className="mt-1 max-w-xs text-[12px] text-gray-400">
+              <p className="text-[13px] font-bold text-ink">Sin actividad todavía</p>
+              <p className="mt-1 max-w-xs text-[11.5px] text-ink-soft">
                 Invitá a un operador desde la página de cada empresa para que empiece a cargar documentación.
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-gray-50">
+            <ul className="space-y-2.5">
               {entries.map((entry) => (
                 <FeedRow key={entry.id} entry={entry} />
               ))}
             </ul>
           )}
-        </div>
-
-      </div>
+        </CardBody>
+      </Card>
     </AppShell>
-  );
-}
-
-// ─── KpiCard ─────────────────────────────────────────────────────────────────
-
-function KpiCard({
-  label, value, sub, color, icon: Icon, urgent,
-}: {
-  label: string;
-  value: number;
-  sub: string;
-  color: string;
-  icon: typeof Zap;
-  urgent?: boolean;
-}) {
-  return (
-    <div className={cn(
-      'relative rounded-2xl border bg-white p-5',
-      urgent ? 'border-amber-200 bg-amber-50/20' : 'border-gray-200',
-    )}>
-      {urgent && <span className="absolute right-4 top-4 size-2 rounded-full bg-amber-500" />}
-      <Icon className={cn('mb-3 size-4', color)} />
-      <p
-        className={cn('text-[32px] font-extrabold leading-none tabular-nums', color)}
-        style={{ fontFamily: "'Syne', sans-serif" }}
-      >
-        {value}
-      </p>
-      <p className="mt-1.5 text-[12px] font-semibold text-gray-700">{label}</p>
-      <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>
-    </div>
   );
 }
 
 // ─── FeedRow ─────────────────────────────────────────────────────────────────
 
 function FeedRow({ entry }: { entry: DataEntry }) {
-  const statusCfg = STATUS_CONFIG[entry.status] ?? STATUS_CONFIG.PENDING;
+  const statusMeta = STATUS_META[entry.status] ?? STATUS_META.PENDING;
   const sourceCfg = SOURCE_CONFIG[entry.sourceType] ?? SOURCE_CONFIG.TEXT;
-  const StatusIcon = statusCfg.icon;
   const SourceIcon = sourceCfg.icon;
   const audit = entry.classificationAudits[0];
 
   return (
-    <li className="grid grid-cols-[auto_1fr_auto] items-start gap-4 px-5 py-4 hover:bg-gray-50/70 transition-colors">
+    <li className="flex items-start gap-2.5 rounded-2xl border border-line bg-white px-3.5 py-3 shadow-[0_2px_8px_rgba(74,21,27,0.005)] transition-colors hover:border-granate/15 sm:gap-3.5 sm:px-4 sm:py-3.5">
       {/* Ícono fuente */}
-      <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
-        <SourceIcon className="size-4" />
+      <div className="mt-0.5 flex size-7.5 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-zinc-400 sm:size-8.5">
+        <SourceIcon className="size-3.5" />
       </div>
 
       {/* Contenido */}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         {/* Empresa + fecha */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[13px] font-semibold text-gray-800">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[12.5px] font-bold text-ink">
             {entry.connection.company.name}
           </span>
           {entry.connection.company.industry && (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+            <span className="rounded-full border border-line bg-zinc-50 px-2 py-0.5 text-[9.5px] font-semibold text-ink-soft">
               {entry.connection.company.industry}
             </span>
           )}
-          <span className="text-[11px] text-gray-400">{formatTime(entry.createdAt)}</span>
+          <span className="text-[10px] text-ink-soft/70">{formatTime(entry.createdAt)}</span>
           {entry.fileName && (
-            <span className="max-w-[160px] truncate text-[11px] text-gray-400">
+            <span className="max-w-[120px] truncate text-[10px] text-ink-soft/60 sm:max-w-[160px]">
               · {entry.fileName}
             </span>
           )}
         </div>
 
         {/* Preview del contenido */}
-        <p className="mt-0.5 line-clamp-1 text-[12px] text-gray-500">
+        <p className="mt-0.5 line-clamp-1 text-[11.5px] text-ink-soft">
           {entry.rawContent}
         </p>
 
@@ -342,32 +295,32 @@ function FeedRow({ entry }: { entry: DataEntry }) {
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {/* Sección de costos */}
             <span className={cn(
-              'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              'rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-sm',
               SECTION_COLORS[audit.costSection] ?? SECTION_COLORS.DESCONOCIDO,
             )}>
               {SECTION_LABELS[audit.costSection] ?? audit.costSection}
             </span>
 
             {/* Tipo de documento */}
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+            <span className="rounded-full border border-line bg-zinc-50 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
               {audit.documentType}
             </span>
 
             {/* Confianza */}
-            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', confidenceColor(audit.confidence))}>
+            <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-sm', confidenceColor(audit.confidence))}>
               {audit.confidence}% conf.
             </span>
 
             {/* IA usada */}
             {audit.aiUsed && (
-              <span className="flex items-center gap-0.5 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
+              <span className="flex items-center gap-0.5 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700 shadow-sm">
                 <Cpu className="size-2.5" /> Auto
               </span>
             )}
 
             {/* Señal definitiva */}
             {audit.definitiveSignal && (
-              <span className="text-[10px] text-gray-400">
+              <span className="text-[10px] text-ink-soft/60">
                 via {audit.definitiveSignal}
               </span>
             )}
@@ -376,19 +329,15 @@ function FeedRow({ entry }: { entry: DataEntry }) {
 
         {/* Nota de revisión */}
         {entry.reviewNote && (
-          <p className="mt-1 text-[11px] font-medium text-blue-600">
+          <p className="mt-1 text-[10.5px] font-semibold text-action">
             Nota: {entry.reviewNote}
           </p>
         )}
       </div>
 
       {/* Badge de estado */}
-      <div className={cn(
-        'mt-0.5 flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold',
-        statusCfg.bg, statusCfg.text,
-      )}>
-        <StatusIcon className="size-3" />
-        {statusCfg.label}
+      <div className="mt-0.5 shrink-0">
+        <StatusBadge status={statusMeta.status}>{statusMeta.label}</StatusBadge>
       </div>
     </li>
   );

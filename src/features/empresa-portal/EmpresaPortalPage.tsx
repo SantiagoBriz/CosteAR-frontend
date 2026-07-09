@@ -3,13 +3,17 @@ import { Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send, Paperclip, X, Building2, CheckCircle2,
-  FileText, Image, ChevronDown, ChevronRight, Package, Plus, LogOut, ArrowLeft,
+  FileText, Image, ChevronDown, ChevronRight, Package, Plus, LogOut, ArrowLeft, Menu,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
 import { api, apiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/utils';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { CosteARLogo } from '@/components/layout/CosteARLogo';
 
 
 
@@ -54,10 +58,10 @@ interface ChatMessage {
 }
 
 const STATUS_CONFIG = {
-  PENDING:   { label: 'Pendiente de revisión', color: 'text-yellow-600 bg-yellow-50' },
-  APPROVED:  { label: 'Aprobado ✓',            color: 'text-green-700 bg-green-50' },
-  REJECTED:  { label: 'Rechazado',              color: 'text-red-600 bg-red-50' },
-  CORRECTED: { label: 'Corregido',              color: 'text-blue-700 bg-blue-50' },
+  PENDING:   { label: 'Pendiente de revisión', color: 'text-warn bg-warn/10 border-warn/20' },
+  APPROVED:  { label: 'Aprobado ✓',            color: 'text-ok bg-ok/10 border-ok/20' },
+  REJECTED:  { label: 'Rechazado',              color: 'text-danger bg-danger/10 border-danger/20' },
+  CORRECTED: { label: 'Corregido',              color: 'text-granate bg-granate-tenue border-granate/20' },
 } as const;
 
 const MAX_FILE_BYTES = 4.5 * 1024 * 1024;
@@ -98,6 +102,8 @@ export function EmpresaPortalPage() {
   // Empresa activa
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
+  // Drawer del sidebar en mobile (el layout de este portal es standalone, sin AppShell/tab bar).
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // Empresa desplegada en el sidebar y producto/estructura activo (aislamiento).
   const [expandedConnectionId, setExpandedConnectionId] = useState<string | null>(null);
   const [activeStructureId, setActiveStructureId] = useState<string | null>(null);
@@ -248,77 +254,72 @@ export function EmpresaPortalPage() {
 
   if (companies.length === 0) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#f6f5f3] px-4">
+      <div className="flex h-screen flex-col items-center justify-center bg-surface-alt px-4">
         <div className="w-full max-w-sm">
           {/* Volver atrás */}
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="mb-4 flex items-center gap-1 text-[13px] text-gray-500 transition-colors hover:text-gray-800"
+            className="mb-4 flex items-center gap-1 text-[13px] text-ink-soft transition-colors hover:text-granate"
           >
             <ArrowLeft className="size-4" /> Volver
           </button>
 
           {/* Logo */}
-          <div className="mb-8 flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-md bg-[#6B1D1D] text-sm font-bold text-white">C</div>
-            <span className="text-lg font-bold tracking-tight text-gray-900">CosteAR</span>
+          <div className="mb-8 flex items-center gap-2.5">
+            <CosteARLogo className="h-8 w-auto text-granate" />
+            <span className="text-lg font-extrabold tracking-tight text-granate">CosteAR</span>
           </div>
 
           {/* Card */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-5 flex size-12 items-center justify-center rounded-xl bg-[#6B1D1D]/10">
-              <svg className="size-6 text-[#6B1D1D]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <Card className="p-6">
+            <div className="mb-5 flex size-12 items-center justify-center rounded-xl bg-granate-tenue">
+              <svg className="size-6 text-granate" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
               </svg>
             </div>
 
-            <h1 className="mb-1 text-[18px] font-bold text-gray-900">Hola, {user?.name?.split(' ')[0] ?? 'operador'}</h1>
-            <p className="mb-5 text-[13px] text-gray-500">
+            <h1 className="mb-1 text-[19px] font-extrabold tracking-tight text-ink">Hola, {user?.name?.split(' ')[0] ?? 'operador'}</h1>
+            <p className="mb-5 text-[13px] text-ink-soft">
               Tu cuenta está activa pero todavía no estás vinculado a ninguna empresa.
               Ingresá el código que te envió tu costista para acceder.
             </p>
 
             {inviteSuccess ? (
-              <div className="rounded-xl bg-emerald-50 px-4 py-3">
-                <p className="text-[13px] font-semibold text-emerald-800">✅ {inviteSuccess}</p>
-                <p className="mt-1 text-[12px] text-emerald-600">Recargando tu acceso…</p>
+              <div className="rounded-2xl border border-ok/20 bg-ok/10 px-4 py-3">
+                <p className="text-[13px] font-semibold text-ok">✅ {inviteSuccess}</p>
+                <p className="mt-1 text-[12px] text-ok/80">Recargando tu acceso…</p>
               </div>
             ) : (
               <div className="space-y-3">
-                <div>
-                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-gray-500">
-                    Código de invitación
-                  </label>
-                  <input
-                    value={inviteCode}
-                    onChange={(e) => { setInviteCode(e.target.value.toUpperCase()); setInviteError(null); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') acceptInvite.mutate(inviteCode.trim()); }}
-                    placeholder="Ej: METAL-A3F2B1"
-                    className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-2.5 font-mono text-[14px] text-gray-800 placeholder-gray-400 outline-none focus:border-[#6B1D1D] focus:bg-white transition-colors"
-                  />
-                  {inviteError && (
-                    <p className="mt-1.5 text-[12px] font-medium text-red-600">{inviteError}</p>
-                  )}
-                </div>
-                <button
+                <Input
+                  label="Código de invitación"
+                  value={inviteCode}
+                  onChange={(e) => { setInviteCode(e.target.value.toUpperCase()); setInviteError(null); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') acceptInvite.mutate(inviteCode.trim()); }}
+                  placeholder="Ej: METAL-A3F2B1"
+                  error={inviteError ?? undefined}
+                  className="font-mono-jb tracking-wide"
+                />
+                <Button
                   onClick={() => acceptInvite.mutate(inviteCode.trim())}
                   disabled={inviteCode.trim().length < 5 || acceptInvite.isPending}
-                  className="w-full rounded-xl bg-[#6B1D1D] py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#5a1818] disabled:opacity-50"
+                  loading={acceptInvite.isPending}
+                  className="w-full"
                 >
                   {acceptInvite.isPending ? 'Verificando…' : 'Acceder a la empresa'}
-                </button>
-                <p className="text-center text-[11px] text-gray-400">
+                </Button>
+                <p className="text-center text-[11px] text-ink-soft/70">
                   No tenés código? Pedíselo al costista que te invitó.
                 </p>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Logout */}
           <button
             onClick={() => { useAuthStore.getState().clear(); window.location.href = '/login'; }}
-            className="mt-4 w-full text-center text-[12px] text-gray-400 hover:text-gray-600 transition-colors"
+            className="mt-4 w-full text-center text-[12px] text-ink-soft/70 hover:text-granate transition-colors"
           >
             Cerrar sesión
           </button>
@@ -330,19 +331,40 @@ export function EmpresaPortalPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-[#f6f5f3]">
-      {/* Sidebar */}
-      <aside className="flex w-56 shrink-0 flex-col bg-zinc-950 border-r border-zinc-800 text-zinc-100">
-        <div className="flex h-14 items-center gap-2 border-b border-zinc-800 px-4">
-          <div className="flex size-7 items-center justify-center rounded-md bg-granate text-sm font-bold text-white">C</div>
-          <span className="text-base font-bold tracking-tight text-white">CosteAR</span>
+    <div className="flex h-screen bg-surface-alt">
+      {/* Overlay del drawer — solo mobile */}
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 sm:hidden"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — drawer deslizable en mobile, columna fija desde sm hacia arriba */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col bg-granate-deep border-r border-white/10 text-white transition-transform duration-200 ease-out',
+          'sm:static sm:translate-x-0',
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="flex h-16 items-center gap-2.5 border-b border-white/10 px-4">
+          <CosteARLogo className="h-6 w-auto text-white" animate={false} />
+          <span className="flex-1 text-base font-extrabold tracking-tight text-white">CosteAR</span>
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(false)}
+            className="flex size-7 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white sm:hidden"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
         {/* Mis empresas */}
-        <div className="flex-1 overflow-y-auto p-2">
-          <p className="mb-1 px-2 text-[10px] uppercase tracking-widest text-zinc-500">Mis empresas</p>
+        <div className="flex-1 overflow-y-auto p-2.5">
+          <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-white/40">Mis empresas</p>
           {companies.length === 0 && (
-            <p className="px-2 text-[12px] text-zinc-500">Sin empresas aún</p>
+            <p className="px-2 text-[12px] text-white/40">Sin empresas aún</p>
           )}
           {companies.map((c) => {
             const isExpanded = expandedConnectionId === c.connectionId;
@@ -356,10 +378,10 @@ export function EmpresaPortalPage() {
                     setExpandedConnectionId(isExpanded ? null : c.connectionId);
                   }}
                   className={cn(
-                    'flex w-full items-center gap-1.5 rounded-md px-2.5 py-2 text-left text-[13px] transition-colors',
+                    'flex w-full items-center gap-1.5 rounded-xl px-2.5 py-2 text-left text-[13px] transition-colors',
                     isActiveCompany
-                      ? 'bg-granate font-semibold text-white'
-                      : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100',
+                      ? 'bg-action font-semibold text-white shadow-sm shadow-action/30'
+                      : 'text-white/60 hover:bg-white/5 hover:text-white',
                   )}
                 >
                   {isExpanded ? <ChevronDown className="size-3.5 shrink-0 opacity-70" /> : <ChevronRight className="size-3.5 shrink-0 opacity-70" />}
@@ -388,11 +410,11 @@ export function EmpresaPortalPage() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-zinc-800 p-3 space-y-2">
+        <div className="border-t border-white/10 p-3 space-y-1">
           {user?.role === 'COSTISTA' && (
             <Link
               to="/dashboard"
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[12px] text-action-soft hover:bg-zinc-900 transition-colors font-medium"
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[12px] text-action-soft hover:bg-white/5 transition-colors font-semibold"
             >
               Volver a Panel Costista
             </Link>
@@ -400,20 +422,20 @@ export function EmpresaPortalPage() {
           <button
             type="button"
             onClick={() => { setShowInviteModal(true); setInviteError(null); setInviteSuccess(null); }}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[12px] text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[12px] text-white/60 hover:bg-white/5 hover:text-white transition-colors"
           >
             <Plus className="size-3.5" /> Unirme a empresa
           </button>
           <button
             type="button"
             onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[12px] text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 transition-colors"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[12px] text-white/60 hover:bg-white/5 hover:text-white transition-colors"
           >
             <LogOut className="size-3.5" /> Cerrar sesión
           </button>
-          <div className="px-2">
-            <p className="text-[10px] text-zinc-500">Portal de empresa</p>
-            <p className="truncate text-[12px] font-medium text-zinc-300">{user?.name}</p>
+          <div className="px-2 pt-1">
+            <p className="text-[10px] uppercase tracking-wide text-white/40">Portal de empresa</p>
+            <p className="truncate text-[12px] font-semibold text-white/90">{user?.name}</p>
           </div>
         </div>
       </aside>
@@ -421,8 +443,17 @@ export function EmpresaPortalPage() {
       {/* Chat area */}
       <main className="flex flex-1 flex-col min-w-0">
         {/* Header */}
-        <div className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-5">
-          <div className="min-w-0">
+        <div className="flex h-14 items-center gap-2 border-b border-gray-200 bg-white px-3 sm:px-5">
+          {/* Abrir drawer — solo mobile */}
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 sm:hidden"
+          >
+            <Menu className="size-5" />
+          </button>
+
+          <div className="min-w-0 flex-1">
             {activeCompany ? (
               <>
                 <div className="flex items-center gap-2">
@@ -451,7 +482,7 @@ export function EmpresaPortalPage() {
               <span className="text-[14px] text-gray-400">Seleccioná una empresa</span>
             )}
           </div>
-          <p className="text-[13px] text-gray-500">
+          <p className="hidden shrink-0 text-[13px] text-gray-500 sm:block">
             Los mensajes van directo a{' '}
             <span className="font-bold text-gray-900">
               {activeCompany?.connection.costist?.name ?? 'tu costista'}
@@ -460,7 +491,7 @@ export function EmpresaPortalPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 sm:px-6">
           {messages.length === 0 && (
             <div className="flex h-full items-center justify-center">
               <div className="text-center">
@@ -499,7 +530,7 @@ export function EmpresaPortalPage() {
 
         {/* Error */}
         {sendError && (
-          <div className="mx-5 mb-2 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-600">
+          <div className="mx-3 mb-2 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-600 sm:mx-5">
             {sendError}
             <button type="button" onClick={() => setSendError(null)} className="ml-2 text-red-400 hover:text-red-600"><X className="inline size-3.5" /></button>
           </div>
@@ -507,7 +538,7 @@ export function EmpresaPortalPage() {
 
         {/* File preview */}
         {file && (
-          <div className="mx-5 mb-1 flex items-center gap-2 rounded-lg border border-[#6B1D1D]/20 bg-[#6B1D1D]/5 px-3 py-2">
+          <div className="mx-3 mb-1 flex items-center gap-2 rounded-lg border border-[#6B1D1D]/20 bg-[#6B1D1D]/5 px-3 py-2 sm:mx-5">
             {file.type.startsWith('image/') ? (
               <img src={URL.createObjectURL(file)} alt="preview" className="size-10 rounded object-cover" />
             ) : (
@@ -522,10 +553,10 @@ export function EmpresaPortalPage() {
             </button>
           </div>
         )}
-        {fileError && <p className="mx-5 mb-1 text-[12px] text-red-500">{fileError}</p>}
+        {fileError && <p className="mx-3 mb-1 text-[12px] text-red-500 sm:mx-5">{fileError}</p>}
 
         {/* Composer */}
-        <div className="border-t border-gray-200 bg-white px-4 py-3">
+        <div className="border-t border-gray-200 bg-white px-3 py-3 sm:px-4">
           <div className="flex items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 focus-within:border-[#6B1D1D]/40">
             {/* Attach */}
             <label className="shrink-0 cursor-pointer text-gray-400 hover:text-[#6B1D1D] mb-1">
@@ -660,7 +691,7 @@ function ChatBubble({ message: msg }: { message: ChatMessage }) {
 
   return (
     <div className="flex justify-end">
-      <div className="max-w-[75%] space-y-1">
+      <div className="max-w-[88%] space-y-1 sm:max-w-[75%]">
         <div className="rounded-2xl rounded-tr-sm bg-[#6B1D1D] text-sm text-white overflow-hidden">
           {/* Imagen desde Cloudinary */}
           {isImage && msg.fileUrl && (

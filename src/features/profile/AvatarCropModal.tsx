@@ -31,10 +31,10 @@ export function AvatarCropModal({ imageSrc, saving, onCancel, onSave }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="w-full max-w-md rounded-[28px] border border-line bg-surface p-7 shadow-[0_24px_60px_rgba(74,21,27,0.18)]">
-        <h3 className="mb-5 text-[13px] font-extrabold uppercase tracking-wider text-granate-deep">Recortá tu foto</h3>
-        <div className="relative h-64 w-full overflow-hidden rounded-2xl border border-line bg-zinc-900">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/40 backdrop-blur-sm px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-5 shadow-[0_24px_60px_rgba(74,21,27,0.18)] sm:rounded-[28px] sm:p-7">
+        <h3 className="mb-4 text-[13px] font-extrabold uppercase tracking-wider text-granate-deep sm:mb-5">Recortá tu foto</h3>
+        <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-line bg-zinc-900 sm:h-64">
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -64,9 +64,9 @@ export function AvatarCropModal({ imageSrc, saving, onCancel, onSave }: Props) {
             {error}
           </p>
         )}
-        <div className="mt-6 flex justify-end gap-2 border-t border-line pt-5">
-          <Button variant="secondary" size="sm" onClick={onCancel} disabled={saving}>Cancelar</Button>
-          <Button size="sm" onClick={handleSave} loading={saving}>Guardar foto</Button>
+        <div className="mt-5 flex flex-col-reverse gap-2 border-t border-line pt-4 sm:mt-6 sm:flex-row sm:justify-end sm:pt-5">
+          <Button variant="secondary" size="sm" onClick={onCancel} disabled={saving} className="w-full sm:w-auto">Cancelar</Button>
+          <Button size="sm" onClick={handleSave} loading={saving} className="w-full sm:w-auto">Guardar foto</Button>
         </div>
       </div>
     </div>

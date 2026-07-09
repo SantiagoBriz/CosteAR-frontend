@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
-  ChevronRight, Zap, ArrowRight,
+  Layers, Zap, ArrowRight,
 } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { StatCard } from '@/components/ui/StatCard';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { apiErrorMessage } from '@/lib/api';
@@ -40,6 +42,8 @@ const PRESETS = [
   { label: 'USD +5%', factor: 1.05, code: 'BCRA', indicatorCode: 'USD_OFICIAL' },
   { label: 'IPC +3%', factor: 1.03, code: 'INDEC', indicatorCode: 'IPC_NACIONAL' },
 ];
+
+const selectClass = 'h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm font-medium text-ink shadow-sm transition-colors focus:border-granate focus:outline-none';
 
 // ─── componente principal ────────────────────────────────────────────────────
 
@@ -90,21 +94,31 @@ export function PropagacionPage() {
     previewMutation.mutate({ changeFactor: factor, indicatorLabel: label });
   };
 
+  const avgMarginDelta = preview
+    ? preview.preview.reduce((acc, p) => acc + p.marginDelta, 0) / Math.max(preview.preview.length, 1)
+    : 0;
+
   if (confirmed) {
     return (
       <AppShell>
-        <div className="flex flex-col items-center gap-4 py-24 text-center">
-          <div className="flex size-16 items-center justify-center rounded-full bg-green-100">
-            <CheckCircle2 className="size-8 text-green-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-ink">Propagación confirmada</h2>
-          <p className="max-w-sm text-sm text-ink-soft">
-            El cambio fue registrado. El motor de recálculo actualizará todas las
-            estructuras afectadas en segundo plano y generará alertas si algún margen cae bajo umbral.
-          </p>
-          <Button onClick={() => { setPreview(null); setConfirmed(false); setChangePct(''); setLabel(''); }}>
-            Nueva propagación
-          </Button>
+        <div className="flex items-center justify-center py-16">
+          <Card className="w-full max-w-md">
+            <CardBody className="flex flex-col items-center gap-4 py-14 text-center">
+              <div className="flex size-16 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-600 shadow-sm">
+                <CheckCircle2 className="size-8" />
+              </div>
+              <div>
+                <h2 className="text-[17px] font-extrabold text-granate-deep">Propagación confirmada</h2>
+                <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-ink-soft">
+                  El cambio fue registrado. El motor de recálculo actualizará todas las
+                  estructuras afectadas en segundo plano y generará alertas si algún margen cae bajo umbral.
+                </p>
+              </div>
+              <Button onClick={() => { setPreview(null); setConfirmed(false); setChangePct(''); setLabel(''); }}>
+                Nueva propagación
+              </Button>
+            </CardBody>
+          </Card>
         </div>
       </AppShell>
     );
@@ -122,11 +136,11 @@ export function PropagacionPage() {
         <CardBody>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-widest text-ink-soft mb-1.5">
+              <label className="block text-[12px] font-medium uppercase tracking-wide text-ink-soft mb-1.5">
                 Tipo de variable
               </label>
               <select
-                className="h-10 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink focus:border-granate focus:outline-none"
+                className={selectClass}
                 value={source}
                 onChange={(e) => setSource(e.target.value as typeof source)}
               >
@@ -136,33 +150,21 @@ export function PropagacionPage() {
                 <option value="ARCA">ARCA — Tarifa / Energía</option>
               </select>
             </div>
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-widest text-ink-soft mb-1.5">
-                Descripción
-              </label>
-              <input
-                className="h-10 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink focus:border-granate focus:outline-none"
-                placeholder="Ej: UATRE paritaria Nov 2025"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-widest text-ink-soft mb-1.5">
-                Variación (%)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.1"
-                  className="h-10 w-full rounded-sm border border-line bg-surface pl-3 pr-8 text-sm text-ink focus:border-granate focus:outline-none"
-                  placeholder="15"
-                  value={changePct}
-                  onChange={(e) => setChangePct(e.target.value)}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-ink-soft">%</span>
-              </div>
-            </div>
+            <Input
+              label="Descripción"
+              placeholder="Ej: UATRE paritaria Nov 2025"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+            <Input
+              label="Variación (%)"
+              type="number"
+              step="0.1"
+              suffix="%"
+              placeholder="15"
+              value={changePct}
+              onChange={(e) => setChangePct(e.target.value)}
+            />
             <div className="flex items-end">
               <Button
                 className="w-full"
@@ -176,14 +178,14 @@ export function PropagacionPage() {
           </div>
 
           {/* Presets */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="text-[12px] text-ink-soft self-center">Accesos rápidos:</span>
+          <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line/60 pt-4">
+            <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-ink-soft/70">Accesos rápidos</span>
             {PRESETS.map((p) => (
               <button
                 key={p.label}
                 type="button"
                 onClick={() => applyPreset(p)}
-                className="rounded-full border border-line px-3 py-1 text-[12px] text-ink hover:border-granate hover:text-granate transition-colors"
+                className="rounded-full border border-line bg-surface px-3.5 py-1.5 text-[12px] font-semibold text-ink shadow-sm transition-colors hover:border-granate hover:bg-granate-tenue hover:text-granate"
               >
                 {p.label}
               </button>
@@ -193,31 +195,37 @@ export function PropagacionPage() {
       </Card>
 
       {error && (
-        <div className="mb-4 rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>
+        <div className="mb-6 flex items-center gap-2.5 rounded-2xl border border-danger/20 bg-danger/5 px-4 py-3 text-[13px] font-semibold text-danger shadow-sm">
+          <AlertTriangle className="size-4 shrink-0" />
+          {error}
+        </div>
       )}
 
       {/* Resultados del preview */}
       {preview && (
         <>
           {/* Resumen */}
-          <div className="mb-4 grid gap-4 sm:grid-cols-3">
-            <SummaryCard
+          <div className="mb-6 grid gap-4 sm:grid-cols-3">
+            <StatCard
               label="Estructuras afectadas"
-              value={String(preview.affectedCount)}
-              icon={ChevronRight}
-              color="text-ink"
+              value={preview.affectedCount}
+              sub="en tu cartera activa"
+              icon={Layers}
+              variant="neutral"
             />
-            <SummaryCard
-              label="Variación promedio precio"
-              value={`+${(Number(changePct) || 0).toFixed(1)}%`}
+            <StatCard
+              label="Variación de precio"
+              value={`${(Number(changePct) || 0) > 0 ? '+' : ''}${(Number(changePct) || 0).toFixed(1)}%`}
+              sub={preview.indicator}
               icon={TrendingUp}
-              color="text-action"
+              variant="neutral"
             />
-            <SummaryCard
+            <StatCard
               label="Impacto en margen"
-              value={`${(preview.preview.reduce((acc, p) => acc + p.marginDelta, 0) / Math.max(preview.preview.length, 1)).toFixed(1)} pts`}
-              icon={TrendingDown}
-              color="text-danger"
+              value={`${avgMarginDelta > 0 ? '+' : ''}${avgMarginDelta.toFixed(1)} pts`}
+              sub="promedio por estructura"
+              icon={avgMarginDelta < 0 ? TrendingDown : TrendingUp}
+              variant={avgMarginDelta < 0 ? 'warn' : 'ok'}
             />
           </div>
 
@@ -226,7 +234,7 @@ export function PropagacionPage() {
               title={`Detalle de propagación — ${preview.indicator}`}
               description="Costo anterior vs. proyectado por estructura. El precio sugerido mantiene el margen actual."
               action={
-                <div className="flex gap-2">
+                <div className="flex min-w-0 flex-wrap justify-end gap-2">
                   <Button variant="ghost" size="sm" onClick={() => setPreview(null)}>
                     Descartar
                   </Button>
@@ -241,16 +249,17 @@ export function PropagacionPage() {
               }
             />
             <CardBody className="p-0">
-              <div className="overflow-x-auto">
+              {/* Tabla — tablet/desktop */}
+              <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-line bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft">
-                      <th className="px-6 py-3 text-left font-medium">Empresa / Producto</th>
-                      <th className="px-4 py-3 text-right font-medium">Costo anterior</th>
-                      <th className="px-4 py-3 text-right font-medium">Costo nuevo</th>
-                      <th className="px-4 py-3 text-right font-medium">Margen ant.</th>
-                      <th className="px-4 py-3 text-right font-medium">Margen nuevo</th>
-                      <th className="px-4 py-3 text-right font-medium">Precio sugerido</th>
+                    <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
+                      <th className="px-6 py-3 text-left font-semibold">Empresa / Producto</th>
+                      <th className="px-4 py-3 text-right font-semibold">Costo anterior</th>
+                      <th className="px-4 py-3 text-right font-semibold">Costo nuevo</th>
+                      <th className="px-4 py-3 text-right font-semibold">Margen ant.</th>
+                      <th className="px-4 py-3 text-right font-semibold">Margen nuevo</th>
+                      <th className="px-4 py-3 text-right font-semibold">Precio sugerido</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -260,6 +269,13 @@ export function PropagacionPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Cards — mobile */}
+              <div className="space-y-3 p-4 sm:hidden">
+                {preview.preview.map((item) => (
+                  <PropagationCard key={item.structureId} item={item} />
+                ))}
+              </div>
             </CardBody>
           </Card>
         </>
@@ -267,8 +283,11 @@ export function PropagacionPage() {
 
       {preview?.affectedCount === 0 && (
         <Card>
-          <CardBody className="py-12 text-center">
-            <p className="text-sm text-ink-soft">
+          <CardBody className="flex flex-col items-center gap-3 py-16 text-center">
+            <div className="flex size-12 items-center justify-center rounded-2xl border border-line bg-zinc-50 text-zinc-300">
+              <Layers className="size-6" />
+            </div>
+            <p className="max-w-sm text-[13px] text-ink-soft">
               No hay estructuras ACTIVAS con configuración completa para simular.
               Activá al menos una estructura en "Clientes".
             </p>
@@ -279,37 +298,19 @@ export function PropagacionPage() {
   );
 }
 
-function SummaryCard({ label, value, icon: Icon, color }: {
-  label: string; value: string; icon: typeof ChevronRight; color: string;
-}) {
-  return (
-    <Card>
-      <CardBody className="flex items-center gap-3">
-        <div className={cn('flex size-10 items-center justify-center rounded-md bg-surface-alt', color)}>
-          <Icon className="size-5" />
-        </div>
-        <div>
-          <div className={cn('text-xl font-bold tabular', color)}>{value}</div>
-          <div className="text-[12px] text-ink-soft">{label}</div>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
 function PropagationRow({ item }: { item: PreviewItem }) {
   const marginDown = item.marginDelta < -1;
 
   return (
-    <tr className="hover:bg-surface-alt/50">
+    <tr className="hover:bg-surface-alt/40">
       <td className="px-6 py-3.5">
-        <div className="font-medium text-ink">{item.companyName}</div>
+        <div className="font-bold text-ink">{item.companyName}</div>
         <div className="text-[12px] text-ink-soft">{item.productName} · {item.period}</div>
       </td>
       <td className="px-4 py-3.5 text-right tabular text-ink">
         ${item.before.productionCost.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
       </td>
-      <td className="px-4 py-3.5 text-right tabular font-medium text-action">
+      <td className="px-4 py-3.5 text-right tabular font-semibold text-action">
         ${item.after.productionCost.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
       </td>
       <td className="px-4 py-3.5 text-right tabular text-ink">
@@ -317,8 +318,8 @@ function PropagationRow({ item }: { item: PreviewItem }) {
       </td>
       <td className="px-4 py-3.5 text-right">
         <span className={cn(
-          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium',
-          marginDown ? 'bg-danger/10 text-danger' : 'bg-green-50 text-green-700',
+          'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold shadow-sm',
+          marginDown ? 'border-danger/20 bg-danger/10 text-danger' : 'border-ok/20 bg-ok/10 text-ok',
         )}>
           {marginDown ? <AlertTriangle className="size-3" /> : <CheckCircle2 className="size-3" />}
           {item.after.grossMarginPct.toFixed(1)}%
@@ -331,5 +332,57 @@ function PropagationRow({ item }: { item: PreviewItem }) {
           : '—'}
       </td>
     </tr>
+  );
+}
+
+function PropagationCard({ item }: { item: PreviewItem }) {
+  const marginDown = item.marginDelta < -1;
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface-alt/40 p-3.5">
+      {/* Dato principal */}
+      <div className="font-bold text-ink">{item.companyName}</div>
+      <div className="text-[12px] text-ink-soft">{item.productName} · {item.period}</div>
+
+      {/* Metadata */}
+      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft/70">Costo anterior</div>
+          <div className="tabular text-[13px] text-ink">
+            ${item.before.productionCost.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft/70">Costo nuevo</div>
+          <div className="tabular text-[13px] font-semibold text-action">
+            ${item.after.productionCost.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft/70">Margen ant.</div>
+          <div className="tabular text-[13px] text-ink">{item.before.grossMarginPct.toFixed(1)}%</div>
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft/70">Margen nuevo</div>
+          <span className={cn(
+            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold shadow-sm',
+            marginDown ? 'border-danger/20 bg-danger/10 text-danger' : 'border-ok/20 bg-ok/10 text-ok',
+          )}>
+            {marginDown ? <AlertTriangle className="size-3" /> : <CheckCircle2 className="size-3" />}
+            {item.after.grossMarginPct.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+
+      {/* Precio sugerido */}
+      <div className="mt-2.5 flex items-center justify-between border-t border-line/60 pt-2.5">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft/70">Precio sugerido</span>
+        <span className="tabular text-[13px] font-semibold text-ink">
+          {item.after.suggestedUnitPrice
+            ? `$${item.after.suggestedUnitPrice.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`
+            : '—'}
+        </span>
+      </div>
+    </div>
   );
 }
