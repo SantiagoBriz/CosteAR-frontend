@@ -113,7 +113,7 @@ export function LoginPage() {
 
         <form onSubmit={onSubmit} className="space-y-6">
           <div className="space-y-1">
-            <h1 className="text-2xl font-extrabold tracking-tight text-ink">Ingresá a tu cuenta</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-granate-deep">Ingresá a tu cuenta</h1>
             <p className="text-xs text-ink-soft">Gestioná las estructuras de costos de tu cartera</p>
           </div>
 
