@@ -52,8 +52,13 @@ export function MacroPage() {
         title="Variables macro"
         description="Tipo de cambio, inflación e índices que impactan tus costos"
         action={
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setShowForm(true)}>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap lg:flex-nowrap">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowForm(true)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="size-4" /> Cargar manual
             </Button>
             <Button
@@ -61,11 +66,12 @@ export function MacroPage() {
               size="sm"
               onClick={() => syncNow.mutate()}
               loading={syncNow.isPending}
+              className="w-full sm:w-auto"
             >
               <RefreshCw className="size-4" /> Sincronizar BCRA/INDEC
             </Button>
-            <Link to="/propagacion">
-              <Button size="sm">
+            <Link to="/propagacion" className="block w-full sm:w-auto">
+              <Button size="sm" className="w-full sm:w-auto">
                 <Zap className="size-4" /> Ver impacto en cartera
               </Button>
             </Link>
@@ -74,7 +80,7 @@ export function MacroPage() {
       />
 
       {syncMsg && (
-        <div className="mb-4 rounded-xl border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] font-medium text-action">
+        <div className="mb-4 w-full rounded-xl border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] font-medium text-action break-words">
           {syncMsg}
         </div>
       )}
@@ -114,7 +120,7 @@ export function MacroPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.map((m) => {
             const cfg = (SOURCE_CONFIG[m.source] ?? SOURCE_CONFIG.BCRA)!;
             const Icon = cfg.icon;
@@ -184,7 +190,7 @@ function ManualEntryForm({ onDone }: { onDone: () => void }) {
         }
       />
       <CardBody>
-        <div className="grid gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-ink-soft">Fuente</label>
             <select
@@ -229,11 +235,11 @@ function ManualEntryForm({ onDone }: { onDone: () => void }) {
           </div>
         </div>
         {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
-        <div className="mt-4 flex gap-2">
-          <Button size="sm" onClick={() => save.mutate()} loading={save.isPending} disabled={!indicatorCode || !value}>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <Button size="sm" onClick={() => save.mutate()} loading={save.isPending} disabled={!indicatorCode || !value} className="w-full sm:w-auto">
             Guardar y recalcular
           </Button>
-          <Button size="sm" variant="ghost" onClick={onDone}>Cancelar</Button>
+          <Button size="sm" variant="ghost" onClick={onDone} className="w-full sm:w-auto">Cancelar</Button>
         </div>
       </CardBody>
     </Card>
