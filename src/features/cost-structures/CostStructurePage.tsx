@@ -131,8 +131,8 @@ export function CostStructurePage() {
         </div>
       )}
 
-      {/* Tab bar */}
-      <div className="mb-8 flex gap-0 overflow-x-auto border-b border-line">
+      {/* Tab bar — con gap entre pestañas para evitar errar de botón al cargar datos */}
+      <div className="mb-8 flex gap-4 overflow-x-auto border-b border-line">
         {(
           [
             { id: 'raw-material'    as SectionTab, label: 'Materia Prima',        icon: Package,    configKey: 'mp'    as const },
