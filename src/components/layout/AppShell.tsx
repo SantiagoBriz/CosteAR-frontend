@@ -281,23 +281,31 @@ export function AppShell({
               key={to}
               to={to}
               viewTransition
-              className={cn(
-                "relative flex flex-col items-center justify-center gap-0.5 rounded-[18px] py-2 transition-colors",
-                active ? "bg-surface-alt text-granate" : "text-white/60",
-              )}
+              className="relative flex flex-col items-center justify-end gap-1 overflow-visible py-1.5"
             >
-              <Icon className="size-[20px]" />
-              <span className="text-[9.5px] font-bold">{label}</span>
-              {showBadge && (
-                <span
-                  className={cn(
-                    "absolute right-2.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-action text-[8px] font-extrabold text-white border",
-                    active ? "border-surface-alt" : "border-granate",
+              {active && (
+                <span className="absolute -top-5 flex size-12 items-center justify-center rounded-full bg-surface-alt shadow-[0_10px_24px_rgba(74,21,27,0.28)]">
+                  <Icon className="size-5 text-granate" />
+                  {showBadge && (
+                    <span className="absolute right-0 top-0 flex size-4 items-center justify-center rounded-full border border-surface-alt bg-action text-[8px] font-extrabold text-white">
+                      {pendingCount > 99 ? "99+" : pendingCount}
+                    </span>
                   )}
-                >
-                  {pendingCount > 99 ? "99+" : pendingCount}
                 </span>
               )}
+              {!active && (
+                <span className="relative">
+                  <Icon className="size-[20px] text-white/60" />
+                  {showBadge && (
+                    <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full border border-granate bg-action text-[8px] font-extrabold text-white">
+                      {pendingCount > 99 ? "99+" : pendingCount}
+                    </span>
+                  )}
+                </span>
+              )}
+              <span className={cn("text-[9.5px] font-bold", active ? "mt-6 text-white" : "text-white/60")}>
+                {label}
+              </span>
             </Link>
           );
         })}
