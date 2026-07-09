@@ -173,8 +173,10 @@ export function CostStructurePage() {
         })}
       </div>
 
-      {/* Tab content */}
-      {activeTab === 'raw-material' && (
+      {/* Tab content — los 4 formularios de carga se mantienen MONTADOS (solo se
+          ocultan con `hidden`). Así lo que cargues sin guardar queda como borrador
+          al cambiar de pestaña y sigue ahí al volver. */}
+      <div className={cn(activeTab !== 'raw-material' && 'hidden')}>
         <SectionShell
           title="Materia Prima"
           description="Lote óptimo de Wilson · Política de stock · Ficha PPP (Precio Promedio Ponderado)"
@@ -187,9 +189,9 @@ export function CostStructurePage() {
             isProcesses={structure?.costingSystem === 'PROCESSES'}
           />
         </SectionShell>
-      )}
+      </div>
 
-      {activeTab === 'direct-labor' && (
+      <div className={cn(activeTab !== 'direct-labor' && 'hidden')}>
         <SectionShell
           title="Mano de Obra Directa"
           description="Días hábiles efectivos · ITCS (Índice Total de Cargas Sociales) · Tarifa horaria por departamento"
@@ -201,9 +203,9 @@ export function CostStructurePage() {
             saving={updateSection.isPending}
           />
         </SectionShell>
-      )}
+      </div>
 
-      {activeTab === 'indirect-costs' && (
+      <div className={cn(activeTab !== 'indirect-costs' && 'hidden')}>
         <SectionShell
           title="Costos Indirectos de Producción"
           description="Centros de costo · Prorrateo primario y secundario · Cuotas por hora y variaciones"
@@ -215,9 +217,9 @@ export function CostStructurePage() {
             saving={updateSection.isPending}
           />
         </SectionShell>
-      )}
+      </div>
 
-      {activeTab === 'sales' && (
+      <div className={cn(activeTab !== 'sales' && 'hidden')}>
         <SalesTab
           defaultPrice={structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined}
           defaultQty={structure?.salesQuantity ? Number(structure.salesQuantity) : undefined}
@@ -233,7 +235,7 @@ export function CostStructurePage() {
           onCalculate={runCalculate}
           calculating={calculate.isPending}
         />
-      )}
+      </div>
 
       {activeTab === 'result' && (
         shown
