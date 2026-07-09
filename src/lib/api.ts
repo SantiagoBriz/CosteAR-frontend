@@ -34,9 +34,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-let refreshing: Promise<string | null> | null = null;
-
-async function refreshAccessToken(): Promise<string | null> {
+async function doRefresh(): Promise<string | null> {
   try {
     const storedRt = getStoredRefreshToken();
     if (!storedRt) { useAuthStore.getState().clear(); return null; }
@@ -54,20 +52,32 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+let refreshing: Promise<string | null> | null = null;
+
+/**
+ * Refresca el access token. Deduplicado a propósito: el refresh token es de
+ * un solo uso (rotación), así que si dos llamadores piden refrescar al mismo
+ * tiempo (ej. el interceptor 401 y el bootstrap de sesión en StrictMode, que
+ * corre el efecto dos veces), la segunda llamada con el token ya consumido
+ * hace que el backend invalide toda la familia de tokens y deja a la usuaria
+ * deslogueada en loop. Por eso TODO llamador pasa por esta misma promesa.
+ */
+export function refreshAccessToken(): Promise<string | null> {
+  refreshing ??= doRefresh().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
 api.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     const original = error.config;
     const status = error.response?.status;
 
-    // Un 401 dispara UN intento de refresh; las peticiones concurrentes
-    // comparten la misma promesa para no spamear /auth/refresh.
     if (status === 401 && original && !(original as { _retried?: boolean })._retried) {
       (original as { _retried?: boolean })._retried = true;
-      refreshing ??= refreshAccessToken().finally(() => {
-        refreshing = null;
-      });
-      const token = await refreshing;
+      const token = await refreshAccessToken();
       if (token) {
         original.headers = original.headers ?? {};
         original.headers.Authorization = `Bearer ${token}`;

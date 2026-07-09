@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import axios from 'axios';
 import { router } from './router';
-import { API_BASE } from './lib/api';
+import { API_BASE, refreshAccessToken } from './lib/api';
 import { useAuthStore, getStoredRefreshToken, type AuthUser } from './stores/auth-store';
 import './index.css';
 
@@ -28,17 +28,18 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
         const storedRt = getStoredRefreshToken();
         if (!storedRt) { setInitialized(); return; }
 
-        const refresh = await axios.post<{ data: { accessToken: string; refreshToken: string } }>(
-          `${API_BASE}/api/v1/auth/refresh`,
-          { refreshToken: storedRt },
-          { withCredentials: true },
-        );
-        const token = refresh.data.data.accessToken;
+        // Pasa por el refresh deduplicado de api.ts: en StrictMode este efecto
+        // corre dos veces seguidas, y sin este singleton cada corrida dispara
+        // su propia llamada a /auth/refresh con el mismo refresh token, lo que
+        // el backend interpreta como reuso (robo de sesión) e invalida toda la
+        // familia de tokens — dejando a la usuaria deslogueada en loop.
+        const token = await refreshAccessToken();
+        if (!token) { setInitialized(); return; }
         const me = await axios.get<{ data: AuthUser }>(`${API_BASE}/api/v1/user/profile`, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         });
-        setAuth(token, me.data.data, refresh.data.data.refreshToken);
+        setAuth(token, me.data.data);
       } catch {
         // Sin sesión válida: seguimos como anónimos.
       } finally {
