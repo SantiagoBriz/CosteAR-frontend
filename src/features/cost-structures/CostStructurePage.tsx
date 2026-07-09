@@ -20,6 +20,7 @@ import {
   useCalculate,
   useLatestCalculation,
   useCalculationHistory,
+  useExportExcel,
 } from './cost-structure-hooks';
 import { useLedger } from '@/features/libro/libro-hooks';
 import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
@@ -44,6 +45,7 @@ export function CostStructurePage() {
   const updateSection = useUpdateCostSection(id);
   const updateSales   = useUpdateSales(id);
   const calculate     = useCalculate(id);
+  const exportExcel   = useExportExcel(id);
   const { data: latest } = useLatestCalculation(id);
 
   const [activeTab, setActiveTab] = useState<SectionTab>('raw-material');
@@ -80,6 +82,13 @@ export function CostStructurePage() {
     } catch (e) { setError(apiErrorMessage(e)); }
   };
 
+  const runExport = async () => {
+    setError(null);
+    try {
+      await exportExcel.mutateAsync();
+    } catch (e) { setError(apiErrorMessage(e)); }
+  };
+
   if (isLoading) {
     return (
       <AppShell>
@@ -107,7 +116,7 @@ export function CostStructurePage() {
           <p className="text-sm text-ink-soft">Período {structure?.period}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" disabled={!allReady}>
+          <Button variant="secondary" size="sm" onClick={runExport} loading={exportExcel.isPending} disabled={!allReady}>
             <Download className="size-4" /> Exportar
           </Button>
           <Button onClick={runCalculate} loading={calculate.isPending} disabled={!allReady}>
