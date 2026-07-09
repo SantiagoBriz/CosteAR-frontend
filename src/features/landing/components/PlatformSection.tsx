@@ -17,7 +17,7 @@ function WindowsIcon() {
 
 function AppleIcon() {
   return (
-    <img src={appleLogo} alt="macOS" className="size-4 object-contain" draggable={false} />
+    <img src={appleLogo} alt="macOS" className="size-5 object-contain" draggable={false} />
   );
 }
 
