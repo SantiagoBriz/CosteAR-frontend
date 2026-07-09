@@ -1,38 +1,58 @@
-import { useState, useEffect, type ReactNode } from 'react';
-import { Link, useRouterState } from '@tanstack/react-router';
-import { LayoutDashboard, Building2, Bell, LogOut, ClipboardCheck, Zap, ShieldCheck } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/stores/auth-store';
-import { useLogout } from '@/features/auth/auth-hooks';
-import { usePendingCount } from '@/features/validaciones/validaciones-hooks';
-import { useAlerts } from '@/features/alerts/alert-hooks';
-import { CosteARLogo } from '@/components/layout/CosteARLogo';
-import { TopBar } from '@/components/layout/TopBar';
+import { useState, useEffect, type ReactNode } from "react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import {
+  LayoutDashboard,
+  Building2,
+  Bell,
+  LogOut,
+  ClipboardCheck,
+  Zap,
+  ShieldCheck,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
+import { useLogout } from "@/features/auth/auth-hooks";
+import { usePendingCount } from "@/features/validaciones/validaciones-hooks";
+import { useAlerts } from "@/features/alerts/alert-hooks";
+import { CosteARLogo } from "@/components/layout/CosteARLogo";
+import { TopBar } from "@/components/layout/TopBar";
 
 const NAV = [
-  { to: '/dashboard', label: 'Inicio', icon: LayoutDashboard },
-  { to: '/companies', label: 'Clientes', icon: Building2 },
-  { to: '/validaciones', label: 'Validaciones', icon: ClipboardCheck, badge: true },
-  { to: '/alerts', label: 'Alertas', icon: Bell },
+  { to: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { to: "/companies", label: "Clientes", icon: Building2 },
+  {
+    to: "/validaciones",
+    label: "Validaciones",
+    icon: ClipboardCheck,
+    badge: true,
+  },
+  { to: "/alerts", label: "Alertas", icon: Bell },
 ] as const;
 
-export function AppShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
+export function AppShell({
+  children,
+  wide = false,
+}: {
+  children: ReactNode;
+  wide?: boolean;
+}) {
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
   const { location } = useRouterState();
   const { data: pendingCount = 0 } = usePendingCount();
 
-
-  const activeIndex = NAV.findIndex((item) => location.pathname.startsWith(item.to));
+  const activeIndex = NAV.findIndex((item) =>
+    location.pathname.startsWith(item.to),
+  );
   const [prevIndex, setPrevIndex] = useState(activeIndex);
   const [isMoving, setIsMoving] = useState(false);
-  const [direction, setDirection] = useState<'up' | 'down' | null>(null);
+  const [direction, setDirection] = useState<"up" | "down" | null>(null);
   const [distance, setDistance] = useState(0);
 
   useEffect(() => {
     if (activeIndex !== -1 && prevIndex !== -1 && activeIndex !== prevIndex) {
       setIsMoving(true);
-      setDirection(activeIndex > prevIndex ? 'down' : 'up');
+      setDirection(activeIndex > prevIndex ? "down" : "up");
       setDistance(Math.abs(activeIndex - prevIndex));
       setPrevIndex(activeIndex);
       const timer = setTimeout(() => {
@@ -47,15 +67,17 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
   }, [activeIndex, prevIndex]);
 
   const stretchFactor = isMoving ? 1 + Math.min(distance * 0.15, 0.35) : 1;
-  const transformOrigin = direction === 'down' ? 'top center' : direction === 'up' ? 'bottom center' : 'center center';
+  const transformOrigin =
+    direction === "down"
+      ? "top center"
+      : direction === "up"
+        ? "bottom center"
+        : "center center";
 
   return (
     <div className="flex h-screen bg-surface-alt font-outfit relative overflow-hidden">
-
-
       {/* FLOATING VERTICAL SIDEBAR DOCK (Bordó Wine Red, Overflow Visible) */}
-      <aside className="fixed top-4 bottom-4 left-4 w-20 bg-granate rounded-[30px] flex flex-col items-center py-6 justify-between shadow-[0_16px_40px_rgba(74,21,27,0.08)] z-30 overflow-visible">
-        
+      <aside className="hidden lg:flex fixed top-4 bottom-4 left-4 w-20 bg-granate rounded-[30px] flex-col items-center py-6 justify-between z-30 overflow-visible">
         {/* Top: Logo in white container */}
         <div className="flex flex-col items-center overflow-visible">
           <div className="flex size-12 items-center justify-center rounded-[18px] bg-surface-alt text-granate shadow-md hover:scale-105 transition-transform duration-300">
@@ -65,44 +87,58 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 
         {/* Center: Main Nav Icons (With smooth liquid sliding indicator) */}
         <nav className="relative flex flex-col gap-4 w-full items-stretch overflow-visible py-5">
-          
           {/* LIQUID SLIDING ACTIVE INDICATOR ASSEMBLY */}
           <div
             className="absolute left-0 right-0 h-12 pointer-events-none z-10 transition-all duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
             style={{
-              top: '20px', // matches padding-top py-5 (20px)
+              top: "20px", // matches padding-top py-5 (20px)
               transform: `translateY(${activeIndex * (48 + 16)}px) scaleY(${stretchFactor})`, // active height (48px) + gap-4 (16px) + liquid stretch
               transformOrigin,
               opacity: activeIndex === -1 ? 0 : 1,
-              viewTransitionName: 'active-nav-tab',
+              viewTransitionName: "active-nav-tab",
             }}
           >
             {/* Background tab shape (inset from the left by 10px) */}
-            <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px]" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-            
+            <div
+              className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px]"
+              style={{ backgroundColor: "var(--color-surface-alt)" }}
+            />
+
             {/* Seamless extension to cover the sidebar-content gap */}
-            <div className="absolute left-20 right-[-16px] top-0 bottom-0" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-            
+            <div
+              className="absolute left-20 right-[-16px] top-0 bottom-0"
+              style={{ backgroundColor: "var(--color-surface-alt)" }}
+            />
+
             {/* Top curve (Concave assembly) */}
-            <div className="absolute right-0 bottom-full w-4 h-4 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+            <div
+              className="absolute right-0 bottom-full w-4 h-4 pointer-events-none"
+              style={{ backgroundColor: "var(--color-surface-alt)" }}
+            />
             <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] pointer-events-none" />
-            
+
             {/* Bottom curve (Concave assembly) */}
-            <div className="absolute right-0 top-full w-4 h-4 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+            <div
+              className="absolute right-0 top-full w-4 h-4 pointer-events-none"
+              style={{ backgroundColor: "var(--color-surface-alt)" }}
+            />
             <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] pointer-events-none" />
           </div>
 
           {NAV.map(({ to, label, icon: Icon, ...rest }) => {
             const active = location.pathname.startsWith(to);
-            const showBadge = 'badge' in rest && rest.badge && pendingCount > 0;
+            const showBadge = "badge" in rest && rest.badge && pendingCount > 0;
             return (
-              <div key={to} className="relative w-full h-12 flex items-center justify-center overflow-visible">
+              <div
+                key={to}
+                className="relative w-full h-12 flex items-center justify-center overflow-visible"
+              >
                 <Link
                   to={to}
                   viewTransition
                   className={cn(
-                    'w-full h-12 relative flex items-center justify-center rounded-l-[24px] z-25 group transition-colors duration-150',
-                    active ? 'text-granate' : 'text-white/70 hover:text-white'
+                    "w-full h-12 relative flex items-center justify-center rounded-l-[24px] z-25 group transition-colors duration-150",
+                    active ? "text-granate" : "text-white/70 hover:text-white",
                   )}
                 >
                   {/* Hover background helper matching the active tab bounds */}
@@ -111,18 +147,20 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                   )}
 
                   <Icon className="size-[20px] shrink-0 z-20" />
-                  
+
                   {/* Hover tooltips */}
                   <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
                     {label}
                   </span>
 
                   {showBadge && (
-                    <span className={cn(
-                      "absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white border z-30",
-                      active ? "border-white" : "border-granate"
-                    )}>
-                      {pendingCount > 99 ? '99+' : pendingCount}
+                    <span
+                      className={cn(
+                        "absolute top-1.5 right-3.5 flex size-4.5 items-center justify-center rounded-full bg-action text-[9px] font-extrabold text-white border z-30",
+                        active ? "border-white" : "border-granate",
+                      )}
+                    >
+                      {pendingCount > 99 ? "99+" : pendingCount}
                     </span>
                   )}
                 </Link>
@@ -147,26 +185,42 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 
           {/* Profile link (Static since it is separated at the bottom) */}
           <div className="relative w-full h-12 flex items-center justify-center overflow-visible">
-            {location.pathname.startsWith('/profile') ? (
+            {location.pathname.startsWith("/profile") ? (
               <Link
                 to="/profile"
                 viewTransition
                 className="w-full h-12 relative flex items-center justify-start text-granate z-20 overflow-visible"
               >
-                <div className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-                <div className="absolute left-20 right-[-16px] top-0 bottom-0 z-10" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
-                <div className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+                <div
+                  className="absolute left-2.5 right-0 top-0 bottom-0 rounded-l-[20px] z-10"
+                  style={{ backgroundColor: "var(--color-surface-alt)" }}
+                />
+                <div
+                  className="absolute left-20 right-[-16px] top-0 bottom-0 z-10"
+                  style={{ backgroundColor: "var(--color-surface-alt)" }}
+                />
+                <div
+                  className="absolute right-0 bottom-full w-4 h-4 z-10 pointer-events-none"
+                  style={{ backgroundColor: "var(--color-surface-alt)" }}
+                />
                 <div className="absolute right-0 bottom-full w-4 h-4 bg-granate rounded-br-[16px] z-20 pointer-events-none" />
-                <div className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none" style={{ backgroundColor: 'var(--color-surface-alt)' }} />
+                <div
+                  className="absolute right-0 top-full w-4 h-4 z-10 pointer-events-none"
+                  style={{ backgroundColor: "var(--color-surface-alt)" }}
+                />
                 <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] z-20 pointer-events-none" />
-                
+
                 {/* Centered avatar or initials */}
                 <div className="absolute left-0 w-20 h-full flex items-center justify-center z-30 pointer-events-none">
                   {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-granate/10" />
+                    <img
+                      src={user.avatarUrl}
+                      alt=""
+                      className="size-8 rounded-full object-cover border border-granate/10"
+                    />
                   ) : (
                     <span className="flex size-8 items-center justify-center rounded-full bg-granate-tenue text-xs font-bold text-granate border border-granate/10">
-                      {user?.name?.[0]?.toUpperCase() ?? 'U'}
+                      {user?.name?.[0]?.toUpperCase() ?? "U"}
                     </span>
                   )}
                 </div>
@@ -181,10 +235,14 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
                 <div className="absolute left-2.5 right-0 top-0 bottom-0 bg-transparent group-hover:bg-white/5 rounded-l-[20px] transition-colors duration-200 z-10 pointer-events-none" />
 
                 {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover border border-white/20 z-20" />
+                  <img
+                    src={user.avatarUrl}
+                    alt=""
+                    className="size-8 rounded-full object-cover border border-white/20 z-20"
+                  />
                 ) : (
                   <span className="flex size-8 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white border border-white/20 z-20">
-                    {user?.name?.[0]?.toUpperCase() ?? 'U'}
+                    {user?.name?.[0]?.toUpperCase() ?? "U"}
                   </span>
                 )}
                 <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
@@ -196,7 +254,13 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
 
           {/* Logout */}
           <button
-            onClick={() => logout.mutate(undefined, { onSettled: () => { window.location.href = '/login'; } })}
+            onClick={() =>
+              logout.mutate(undefined, {
+                onSettled: () => {
+                  window.location.href = "/login";
+                },
+              })
+            }
             className="flex size-12 items-center justify-center rounded-[18px] text-white/70 hover:text-white hover:bg-red-900/40 transition-all duration-200 cursor-pointer relative group"
           >
             <LogOut className="size-[20px]" />
@@ -207,29 +271,65 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
         </div>
       </aside>
 
+      {/* MOBILE BOTTOM TAB BAR */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 border-t border-black/10 bg-granate px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+        {NAV.map(({ to, label, icon: Icon, ...rest }) => {
+          const active = location.pathname.startsWith(to);
+          const showBadge = "badge" in rest && rest.badge && pendingCount > 0;
+          return (
+            <Link
+              key={to}
+              to={to}
+              viewTransition
+              className={cn(
+                "relative flex flex-col items-center justify-center gap-1 rounded-2xl py-1.5 transition-colors",
+                active ? "text-white" : "text-white/60",
+              )}
+            >
+              {active && <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-white" />}
+              <Icon className="size-[20px]" />
+              <span className="text-[9.5px] font-bold">{label}</span>
+              {showBadge && (
+                <span className="absolute right-1/2 top-0 flex size-4 translate-x-3 items-center justify-center rounded-full border border-granate bg-action text-[8px] font-extrabold text-white">
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
       {/* Main Container (Shifted right by pl-28 to clear the floating sidebar) */}
-      <div className="flex-1 flex flex-col pl-28 pt-5 pr-5 relative z-10 overflow-y-auto scrollbar-hidden">
-        
+      <div className="flex-1 flex flex-col pl-4 pr-4 pt-4 pb-20 lg:pl-28 lg:pr-5 lg:pt-5 lg:pb-0 relative z-10 overflow-y-auto scrollbar-hidden bg-surface-alt">
         <TopBar />
 
         {/* Content Area */}
         <main className="flex-1">
-          <div className={cn('mx-auto px-8 pt-10 pb-8', wide ? 'max-w-[90rem]' : 'max-w-6xl')}>{children}</div>
+          <div
+            className={cn(
+              "mx-auto px-0 pt-6 pb-8 lg:px-8 lg:pt-10",
+              wide ? "max-w-[90rem]" : "max-w-6xl",
+            )}
+          >
+            {children}
+          </div>
         </main>
 
         {/* Cohesive Footer */}
-        <footer className="border-t border-line/40 py-6 bg-zinc-50/20">
+        <footer className="hidden lg:block border-t border-line/40 py-6 bg-zinc-50/20">
           <div className="mx-auto max-w-6xl px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center">
             <div className="flex items-center gap-1.5 text-[10.5px] text-ink-soft/75">
               <ShieldCheck className="size-4 text-emerald-600 animate-pulse" />
-              <span>Entorno cifrado y auditado académicamente por la Cátedra</span>
+              <span>
+                Entorno cifrado y auditado académicamente por la Cátedra
+              </span>
             </div>
             <p className="text-[10px] text-ink-soft/60 font-semibold">
-              © {new Date().getFullYear()} CosteAR. Todos los derechos reservados.
+              © {new Date().getFullYear()} CosteAR. Todos los derechos
+              reservados.
             </p>
           </div>
         </footer>
-
       </div>
     </div>
   );
@@ -247,7 +347,9 @@ export function PageHeader({
   return (
     <header className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-line/40 pb-5">
       <div className="space-y-1">
-        <h1 className="font-syne text-[26px] font-extrabold tracking-tight text-granate-deep">{title}</h1>
+        <h1 className="text-[26px] font-extrabold tracking-tight text-granate-deep">
+          {title}
+        </h1>
         {description && <p className="text-xs text-ink-soft">{description}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
