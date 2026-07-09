@@ -25,8 +25,10 @@ export function Navbar({ onAccessClick }: NavbarProps) {
       {/* ── Mobile top bar: brand izquierda | hamburger derecha ── */}
       <div className="flex items-center justify-between md:hidden">
         {/* Brand */}
-        <div className="flex items-center gap-2">
-          <CosteARLogo className="h-7 w-auto text-granate" />
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center">
+            <CosteARLogo className="h-full w-full text-granate" />
+          </span>
           <span className="text-sm font-extrabold tracking-tight text-ink font-outfit">CosteAR</span>
         </div>
 
@@ -44,8 +46,10 @@ export function Navbar({ onAccessClick }: NavbarProps) {
       {/* ── Desktop top bar: flex normal ── */}
       <div className="hidden md:flex items-center justify-between">
         {/* Brand */}
-        <div className="flex items-center gap-2.5">
-          <CosteARLogo className="h-8 w-auto text-granate" />
+        <div className="flex items-center gap-2.5 shrink-0">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+            <CosteARLogo className="h-full w-full text-granate" />
+          </span>
           <span className="text-base font-extrabold tracking-tight text-ink font-outfit">CosteAR</span>
         </div>
 
