@@ -78,13 +78,13 @@ export function CompanyDetailPage() {
 
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 rounded-[28px] border border-line bg-surface p-6 shadow-[0_10px_30px_rgba(74,21,27,0.015)] sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-granate/10 bg-granate-tenue text-lg font-extrabold text-granate shadow-sm">
             {(company?.name ?? 'C')[0]?.toUpperCase()}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-[24px] font-extrabold tracking-tight text-ink">{company?.name ?? 'Cliente'}</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="min-w-0 break-words text-[24px] font-extrabold tracking-tight text-ink">{company?.name ?? 'Cliente'}</h1>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setShowEditModal(true)}
@@ -118,31 +118,33 @@ export function CompanyDetailPage() {
       <AiSuggesterSection companyName={company?.name ?? ''} />
 
       {/* Tabs */}
-      <div className="mb-6 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-line bg-surface p-1.5 shadow-sm">
-        {[
-          { id: 'structures', label: 'Estructuras de Costos', icon: FileSpreadsheet },
-          { id: 'ledger', label: 'Libro de Costos', icon: BookOpen },
-          { id: 'history', label: 'Historial', icon: History },
-          { id: 'operators', label: 'Personal Autorizado', icon: Users },
-        ].map((t) => {
-          const ActiveIcon = t.icon;
-          const active = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as any)}
-              className={cn(
-                'flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-bold transition-colors',
-                active
-                  ? 'bg-granate-tenue text-granate'
-                  : 'text-ink-soft hover:text-ink'
-              )}
-            >
-              <ActiveIcon className="size-4" />
-              {t.label}
-            </button>
-          );
-        })}
+      <div className="mb-6 overflow-x-auto scrollbar-hidden">
+        <div className="inline-flex flex-nowrap items-center gap-1.5 rounded-full border border-line bg-surface p-1.5 shadow-sm">
+          {[
+            { id: 'structures', label: 'Estructuras de Costos', icon: FileSpreadsheet },
+            { id: 'ledger', label: 'Libro de Costos', icon: BookOpen },
+            { id: 'history', label: 'Historial', icon: History },
+            { id: 'operators', label: 'Personal Autorizado', icon: Users },
+          ].map((t) => {
+            const ActiveIcon = t.icon;
+            const active = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id as any)}
+                className={cn(
+                  'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-bold transition-colors',
+                  active
+                    ? 'bg-granate-tenue text-granate'
+                    : 'text-ink-soft hover:text-ink'
+                )}
+              >
+                <ActiveIcon className="size-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tab Contents */}
@@ -169,7 +171,7 @@ export function CompanyDetailPage() {
                             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-zinc-400">
                               <FileSpreadsheet className="size-5" />
                             </span>
-                            <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
+                            <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                               <div className="min-w-0">
                                 <div className="truncate font-bold text-ink-soft line-through">{s.productName}</div>
                                 <div className="text-[12px] text-ink-soft/70">Período {s.period}</div>
@@ -186,7 +188,7 @@ export function CompanyDetailPage() {
                             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-granate/10 bg-granate-tenue text-granate shadow-sm transition-transform duration-300 group-hover:scale-105">
                               <FileSpreadsheet className="size-5" />
                             </span>
-                            <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
+                            <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                               <div className="min-w-0">
                                 <div className="truncate font-bold text-ink transition-colors group-hover:text-granate">{s.productName}</div>
                                 <div className="text-[12px] text-ink-soft">Período {s.period}</div>
@@ -492,7 +494,7 @@ function LedgerTabSection({ companyId, companyName }: { companyId: string; compa
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <select
-          className="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none shadow-sm"
+          className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-granate focus:outline-none shadow-sm sm:w-auto"
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
         >
@@ -602,50 +604,54 @@ function LedgerRow({
   };
 
   return (
-    <div className="flex items-center gap-3 px-5 py-3">
-      {entry.sourceImageUrl ? (
-        isImage ? (
-          <button type="button" onClick={() => onZoom(entry.sourceImageUrl!)} className="shrink-0">
-            <img src={entry.sourceImageUrl} alt="comprobante" className="size-10 rounded-xl object-cover border border-line hover:opacity-80" />
-          </button>
+    <div className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center sm:gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        {entry.sourceImageUrl ? (
+          isImage ? (
+            <button type="button" onClick={() => onZoom(entry.sourceImageUrl!)} className="shrink-0">
+              <img src={entry.sourceImageUrl} alt="comprobante" className="size-10 rounded-xl object-cover border border-line hover:opacity-80" />
+            </button>
+          ) : (
+            <a href={entry.sourceImageUrl} target="_blank" rel="noopener noreferrer" className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-ink-soft hover:bg-granate-tenue hover:text-granate">
+              <FileDown className="size-4" />
+            </a>
+          )
         ) : (
-          <a href={entry.sourceImageUrl} target="_blank" rel="noopener noreferrer" className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-ink-soft hover:bg-granate-tenue hover:text-granate">
-            <FileDown className="size-4" />
-          </a>
-        )
-      ) : (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-idle">
-          <ImageIcon className="size-4" />
-        </div>
-      )}
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-zinc-50 text-idle">
+            <ImageIcon className="size-4" />
+          </div>
+        )}
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-ink">{entry.description}</p>
-        <div className="flex items-center gap-1.5 text-[11px] text-ink-soft">
-          <span>{entry.docDate ? formatDate(entry.docDate) : periodLabel(entry.period)}</span>
-          {entry.wasCorrected && (
-            <span className="flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-blue-700"><PenLine className="size-3" /> corregido</span>
-          )}
-          {entry.aiUsed && (
-            <span className="flex items-center gap-0.5 rounded-full bg-purple-50 px-1.5 py-0.5 text-purple-700">Auto</span>
-          )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-medium text-ink">{entry.description}</p>
+          <div className="flex items-center gap-1.5 text-[11px] text-ink-soft">
+            <span>{entry.docDate ? formatDate(entry.docDate) : periodLabel(entry.period)}</span>
+            {entry.wasCorrected && (
+              <span className="flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-blue-700"><PenLine className="size-3" /> corregido</span>
+            )}
+            {entry.aiUsed && (
+              <span className="flex items-center gap-0.5 rounded-full bg-purple-50 px-1.5 py-0.5 text-purple-700">Auto</span>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="shrink-0 text-right">
-        <p className="text-[14px] font-semibold tabular-nums text-ink">
-          {entry.currency !== 'ARS' && <span className="text-[11px] text-ink-soft">{entry.currency} </span>}
-          {formatMoney(entry.amount)}
-        </p>
-      </div>
+      <div className="flex items-center justify-between gap-3 pl-[52px] sm:pl-0 sm:shrink-0 sm:justify-start">
+        <div className="shrink-0 text-right">
+          <p className="text-[14px] font-semibold tabular-nums text-ink">
+            {entry.currency !== 'ARS' && <span className="text-[11px] text-ink-soft">{entry.currency} </span>}
+            {formatMoney(entry.amount)}
+          </p>
+        </div>
 
-      <div className="flex shrink-0 items-center gap-1">
-        <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded-xl p-1.5 text-ink-soft hover:bg-granate-tenue hover:text-granate transition-colors">
-          <Pencil className="size-3.5" />
-        </button>
-        <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded-xl p-1.5 text-ink-soft hover:bg-danger/10 hover:text-danger transition-colors">
-          <Trash2 className="size-3.5" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button type="button" onClick={() => onEdit(entry)} title="Editar" className="rounded-xl p-1.5 text-ink-soft hover:bg-granate-tenue hover:text-granate transition-colors">
+            <Pencil className="size-3.5" />
+          </button>
+          <button type="button" onClick={() => onDelete(entry)} title="Borrar" className="rounded-xl p-1.5 text-ink-soft hover:bg-danger/10 hover:text-danger transition-colors">
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -692,7 +698,7 @@ function HistoryTabSection({ companyId }: { companyId: string }) {
                   return (
                     <li key={entry.id} className="flex items-start justify-between gap-4 px-6 py-4">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
                           <span className={cn(
                             'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border shadow-sm',
                             cfg?.className
@@ -805,7 +811,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
         {/* Formulario de invitación */}
         {showForm && (
           <div className="mb-5 rounded-2xl border border-line bg-surface-alt p-4 animate-rise space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Input
                 label="Nombre completo"
                 placeholder="Ej: María García"
@@ -852,7 +858,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
             <p className="mb-3 text-[13px] font-semibold text-ink">
               Acceso generado — compartí estas credenciales con el operador. Solo se muestran una vez.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <CredField
                 label="Email / Usuario"
                 value={generatedAccess.email}
@@ -916,7 +922,7 @@ function OperatorsSection({ companyId }: { companyId: string }) {
             <p className="mb-3 text-[13px] font-semibold text-ink">
               Acceso reseteado — compartí las nuevas credenciales con el operador. Solo se muestran una vez.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <CredField
                 label="Email / Usuario"
                 value={resetResult.email}
@@ -964,17 +970,17 @@ function OperatorsSection({ companyId }: { companyId: string }) {
         ) : (
           <ul className="divide-y divide-line">
             {operators.map((op) => (
-              <li key={op.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="flex items-center gap-3.5">
+              <li key={op.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 items-center gap-3.5">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-granate/10 bg-granate-tenue text-granate shadow-sm">
                     <Users className="size-4" />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-ink">{op.name}</p>
-                    <p className="text-[12px] text-ink-soft">{op.email}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-ink">{op.name}</p>
+                    <p className="truncate text-[12px] text-ink-soft">{op.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pl-[50px] sm:pl-0">
                   <StatusBadge status={op.isActive ? 'ok' : 'idle'}>
                     {op.isActive ? 'Activo' : 'Revocado'}
                   </StatusBadge>
