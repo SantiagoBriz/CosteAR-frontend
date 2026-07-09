@@ -271,8 +271,8 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* MOBILE BOTTOM TAB BAR */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 border-t border-black/10 bg-granate px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+      {/* MOBILE FLOATING TAB BAR (same dock language as the desktop sidebar) */}
+      <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-30 grid grid-cols-4 gap-1 rounded-[28px] bg-granate p-2 shadow-[0_16px_40px_rgba(74,21,27,0.18)] lg:hidden">
         {NAV.map(({ to, label, icon: Icon, ...rest }) => {
           const active = location.pathname.startsWith(to);
           const showBadge = "badge" in rest && rest.badge && pendingCount > 0;
@@ -282,15 +282,19 @@ export function AppShell({
               to={to}
               viewTransition
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 rounded-2xl py-1.5 transition-colors",
-                active ? "text-white" : "text-white/60",
+                "relative flex flex-col items-center justify-center gap-0.5 rounded-[18px] py-2 transition-colors",
+                active ? "bg-surface-alt text-granate" : "text-white/60",
               )}
             >
-              {active && <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-white" />}
               <Icon className="size-[20px]" />
               <span className="text-[9.5px] font-bold">{label}</span>
               {showBadge && (
-                <span className="absolute right-1/2 top-0 flex size-4 translate-x-3 items-center justify-center rounded-full border border-granate bg-action text-[8px] font-extrabold text-white">
+                <span
+                  className={cn(
+                    "absolute right-2.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-action text-[8px] font-extrabold text-white border",
+                    active ? "border-surface-alt" : "border-granate",
+                  )}
+                >
                   {pendingCount > 99 ? "99+" : pendingCount}
                 </span>
               )}
@@ -300,7 +304,7 @@ export function AppShell({
       </nav>
 
       {/* Main Container (Shifted right by pl-28 to clear the floating sidebar) */}
-      <div className="flex-1 flex flex-col pl-4 pr-4 pt-4 pb-20 lg:pl-28 lg:pr-5 lg:pt-5 lg:pb-0 relative z-10 overflow-y-auto scrollbar-hidden bg-surface-alt">
+      <div className="flex-1 flex flex-col pl-4 pr-4 pt-4 pb-24 lg:pl-28 lg:pr-5 lg:pt-5 lg:pb-0 relative z-10 overflow-y-auto scrollbar-hidden bg-surface-alt">
         <TopBar />
 
         {/* Content Area */}
