@@ -10,7 +10,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'rounded-[28px] border border-line bg-surface shadow-[0_10px_30px_rgba(74,21,27,0.015)] transition-all duration-300 hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20',
+        'relative rounded-[28px] border border-line bg-surface bg-[radial-gradient(120%_120%_at_100%_0%,rgba(179,25,41,0.055),transparent_55%)] shadow-[0_10px_30px_rgba(74,21,27,0.015)] transition-all duration-300 hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20',
         className,
       )}
       {...props}

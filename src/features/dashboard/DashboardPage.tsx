@@ -181,8 +181,9 @@ export function DashboardPage() {
           {/* Bento 1: Welcome & Indicators (Col: 8) */}
           <div className="lg:col-span-8 rounded-[28px] border border-line bg-white p-8 flex flex-col justify-between relative overflow-hidden shadow-[0_10px_30px_rgba(74,21,27,0.015)] hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20 transition-all duration-300 group">
 
+            {/* Decorative corner glow */}
+            <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-action/10 blur-3xl" />
 
-            
             <div className="space-y-3 relative z-10">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-granate/15 bg-granate-tenue px-3.5 py-1 text-[11px] font-bold text-granate tracking-wide">
                 <ShieldCheck className="size-3.5" /> {today}
