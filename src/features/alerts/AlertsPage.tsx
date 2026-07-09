@@ -13,7 +13,7 @@ import {
 } from './alert-hooks';
 import { useForm } from 'react-hook-form';
 import { useEffect } from 'react';
-import { Mail } from 'lucide-react';
+import { MacroRiskPanel } from './MacroRiskPanel';
 
 interface SettingsForm {
   marginThresholdPct: number;
@@ -126,25 +126,7 @@ export function AlertsPage() {
             </CardBody>
           </Card>
 
-          <Card className="h-fit border-action/20 bg-action/5">
-            <CardBody className="space-y-2">
-              <div className="flex items-center gap-2 text-[12px] font-semibold text-action">
-                <Mail className="size-3.5" /> Configuración de email (servidor)
-              </div>
-              <p className="text-[12px] text-ink-soft leading-relaxed">
-                Para usar Gmail SMTP, configurá estas variables de entorno en el servidor:
-              </p>
-              <pre className="rounded bg-surface-alt px-3 py-2 text-[11px] font-mono text-ink leading-relaxed overflow-x-auto">{`SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=tu@gmail.com
-SMTP_PASS=<contraseña-de-app>
-EMAIL_FROM=tu@gmail.com`}</pre>
-              <p className="text-[11px] text-ink-soft">
-                Usá una <strong>Contraseña de aplicación</strong> de Google (no tu contraseña normal). Activala en tu cuenta Google → Seguridad → Verificación en 2 pasos → Contraseñas de aplicación.
-              </p>
-            </CardBody>
-          </Card>
+          <MacroRiskPanel />
         </div>
       </div>
     </AppShell>

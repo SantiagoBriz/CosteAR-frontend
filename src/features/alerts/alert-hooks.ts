@@ -1,6 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Alert, AlertSetting } from '@/lib/types';
+import type { Alert, AlertSetting, MacroSnapshot } from '@/lib/types';
+
+/** Últimos valores macro (dólar, IPC, etc.) para el semáforo de riesgo. */
+export function useMacroLatest() {
+  return useQuery({
+    queryKey: ['macro', 'latest'],
+    queryFn: async () => {
+      const res = await api.get<{ data: MacroSnapshot[] }>('/macro/latest');
+      return res.data.data;
+    },
+  });
+}
+
+/** Historial de un indicador (para calcular la variación). */
+export function useMacroHistory(indicatorCode: string) {
+  return useQuery({
+    queryKey: ['macro', 'history', indicatorCode],
+    queryFn: async () => {
+      const res = await api.get<{ data: MacroSnapshot[] }>('/macro/history', {
+        params: { indicatorCode },
+      });
+      return res.data.data;
+    },
+    enabled: !!indicatorCode,
+  });
+}
 
 export function useAlerts(unread = false) {
   return useQuery({
