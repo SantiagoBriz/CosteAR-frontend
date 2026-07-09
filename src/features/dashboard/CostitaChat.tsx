@@ -276,7 +276,7 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
       <button
         onClick={() => setOpen(true)}
         className={cn(
-          'fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full px-4 py-3',
+          'fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-40 flex items-center gap-2 rounded-full px-4 py-3',
           'bg-gray-900 text-white shadow-xl hover:bg-gray-800 transition-all hover:scale-105',
           'text-[13px] font-semibold',
           open && 'opacity-0 pointer-events-none',
@@ -298,8 +298,8 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
       <div
         className={cn(
           'fixed bottom-0 right-0 z-50 flex flex-col',
-          'w-full sm:w-[420px] h-[85vh] sm:h-[620px] sm:bottom-6 sm:right-6',
-          'rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl',
+          'w-full lg:w-[420px] h-[85vh] lg:h-[620px] lg:bottom-6 lg:right-6',
+          'rounded-t-2xl lg:rounded-2xl bg-white shadow-2xl',
           'transition-all duration-300 ease-out',
           open ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0 pointer-events-none',
         )}
