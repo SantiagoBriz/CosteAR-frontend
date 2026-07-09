@@ -330,7 +330,7 @@ export function DashboardPage() {
             </div>
 
             {/* Responsive chart container */}
-            <div className="h-[240px] w-full text-[10.5px]">
+            <div className="h-[180px] w-full text-[10.5px] lg:h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={COST_EVOLUTION} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
@@ -473,9 +473,9 @@ export function DashboardPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <div className="min-w-[500px]">
-                  {/* Header */}
-                  <div className="grid grid-cols-[1fr_120px_70px_90px] gap-x-4 px-6 py-3 text-[9.5px] font-bold uppercase tracking-wider text-ink-soft bg-zinc-50/20 border-b border-line">
+                <div className="lg:min-w-[500px]">
+                  {/* Header (desktop column labels only — mobile uses stacked cards) */}
+                  <div className="hidden lg:grid lg:grid-cols-[1fr_120px_70px_90px] gap-x-4 px-6 py-3 text-[9.5px] font-bold uppercase tracking-wider text-ink-soft bg-zinc-50/20 border-b border-line">
                     <span>Empresa</span>
                     <span>Sector</span>
                     <span className="text-center">Modelos</span>
@@ -502,16 +502,16 @@ export function DashboardPage() {
                             <Link
                               to="/companies/$id"
                               params={{ id: c.id }}
-                              className="grid grid-cols-[1fr_120px_70px_90px] items-center gap-x-4 px-6 py-4 hover:bg-zinc-50/15 transition-colors group"
+                              className="flex flex-col items-start gap-3 px-6 py-4 hover:bg-zinc-50/15 transition-colors group lg:grid lg:grid-cols-[1fr_120px_70px_90px] lg:items-center lg:gap-x-4 lg:gap-y-0"
                             >
                               {/* Empresa */}
-                              <div className="flex items-center gap-3.5 min-w-0">
+                              <div className="flex items-center gap-3.5 min-w-0 w-full">
                                 <span
                                   className={cn("flex size-8.5 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold border shadow-sm group-hover:scale-105 transition-transform duration-350", avColorClass)}
                                 >
                                   {c.name[0]?.toUpperCase()}
                                 </span>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <p className="truncate text-[13px] font-bold text-ink group-hover:text-granate transition-colors leading-snug">{c.name}</p>
                                     {pending && (
@@ -526,23 +526,44 @@ export function DashboardPage() {
                                 </div>
                               </div>
 
-                              {/* Sector */}
+                              {/* Mobile/tablet: sector + modelos + salud as a stacked meta row (hidden from lg, where the dedicated columns below take over) */}
+                              <div className="flex flex-wrap items-center gap-2 pl-12 lg:hidden">
+                                <span
+                                  className={cn("inline-block truncate rounded-full px-2.5 py-0.5 text-[8.5px] font-bold border text-center whitespace-nowrap shadow-sm", chipBg)}
+                                >
+                                  {c.industry ?? 'General'}
+                                </span>
+                                <span className={cn(
+                                  'font-mono-jb text-[10.5px] font-bold',
+                                  structs > 0 ? 'text-ink' : 'text-zinc-400',
+                                )}>
+                                  {structs} modelo{structs !== 1 ? 's' : ''}
+                                </span>
+                                <span className="flex items-center gap-1.5 font-bold">
+                                  <span className={cn('size-1.5 rounded-full flex-shrink-0', health.dot)} />
+                                  <span className={cn('text-[9px] font-bold uppercase tracking-wider', health.color)}>
+                                    {health.label}
+                                  </span>
+                                </span>
+                              </div>
+
+                              {/* Sector (desktop column) */}
                               <span
-                                className={cn("inline-block truncate rounded-full px-2.5 py-0.5 text-[8.5px] font-bold border text-center whitespace-nowrap self-center justify-self-start shadow-sm", chipBg)}
+                                className={cn("hidden lg:inline-block truncate rounded-full px-2.5 py-0.5 text-[8.5px] font-bold border text-center whitespace-nowrap self-center justify-self-start shadow-sm", chipBg)}
                               >
                                 {c.industry ?? 'General'}
                               </span>
 
-                              {/* Estructuras */}
+                              {/* Estructuras (desktop column) */}
                               <span className={cn(
-                                'text-center font-mono-jb text-[12.5px] font-bold self-center',
+                                'hidden lg:block text-center font-mono-jb text-[12.5px] font-bold self-center',
                                 structs > 0 ? 'text-ink' : 'text-zinc-400',
                               )}>
                                 {structs}
                               </span>
 
-                              {/* Salud */}
-                              <div className="flex items-center gap-1.5 justify-end self-center font-bold">
+                              {/* Salud (desktop column) */}
+                              <div className="hidden lg:flex items-center gap-1.5 justify-end self-center font-bold">
                                 <span className={cn('size-1.5 rounded-full flex-shrink-0', health.dot)} />
                                 <span className={cn('text-[9px] font-bold uppercase tracking-wider', health.color)}>
                                   {health.label}
