@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLogout } from "@/features/auth/auth-hooks";
 import { usePendingCount } from "@/features/validaciones/validaciones-hooks";
-import { useAlerts } from "@/features/alerts/alert-hooks";
 import { CosteARLogo } from "@/components/layout/CosteARLogo";
 import { TopBar } from "@/components/layout/TopBar";
 
