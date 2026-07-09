@@ -1,6 +1,17 @@
+import { useRef, useState } from 'react';
 import { FileSpreadsheet, Calculator, TrendingUp, Building2, UploadCloud, Radar } from 'lucide-react';
 
 export function FeaturesSection() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeCard, setActiveCard] = useState(0);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = el.scrollWidth / 3;
+    const idx = Math.round(el.scrollLeft / cardWidth);
+    setActiveCard(Math.min(2, Math.max(0, idx)));
+  };
   return (
     <section id="features" className="bg-transparent py-12 pb-16">
       <div className="mx-auto max-w-7xl px-6">
@@ -17,10 +28,14 @@ export function FeaturesSection() {
         </div>
 
         {/* Mobile: carousel con scroll snap | Desktop: grid escalonado */}
-        <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hidden lg:grid lg:grid-cols-3 lg:items-start lg:gap-8 lg:overflow-visible lg:pb-0">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hidden -mx-6 px-6 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-3 lg:items-start lg:gap-8 lg:overflow-visible lg:pb-0"
+        >
           
           {/* Tarjeta 1: Materia Prima */}
-          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[82vw] snap-center lg:w-auto lg:translate-y-0">
+          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[78vw] snap-start lg:w-auto lg:translate-y-0">
             <div>
               <div className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-granate-tenue text-granate">
                 <FileSpreadsheet className="size-6" />
@@ -53,7 +68,7 @@ export function FeaturesSection() {
           </div>
 
           {/* Tarjeta 2: Mano de Obra */}
-          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[82vw] snap-center lg:w-auto lg:translate-y-6">
+          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[78vw] snap-start lg:w-auto lg:translate-y-6">
             <div>
               <div className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-granate-tenue text-granate">
                 <Calculator className="size-6" />
@@ -86,7 +101,7 @@ export function FeaturesSection() {
           </div>
 
           {/* Tarjeta 3: Carga Indirecta */}
-          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[82vw] snap-center lg:w-auto lg:translate-y-12">
+          <div className="group flex flex-col justify-between rounded-3xl border border-line bg-surface p-8 shadow-[0_8px_30px_rgba(0,0,0,0.01)] transition-all duration-300 hover:-translate-y-1.5 hover:border-granate/35 hover:shadow-[0_20px_50px_rgba(74,21,27,0.06)] shrink-0 w-[78vw] snap-start lg:w-auto lg:translate-y-12">
             <div>
               <div className="mb-6 flex size-12 items-center justify-center rounded-2xl bg-granate-tenue text-granate">
                 <TrendingUp className="size-6" />
@@ -128,6 +143,27 @@ export function FeaturesSection() {
             </div>
           </div>
 
+        </div>
+
+        {/* Dots de paginación — solo mobile */}
+        <div className="flex items-center justify-center gap-2 mt-5 lg:hidden">
+          {[0, 1, 2].map((i) => (
+            <button
+              key={i}
+              aria-label={`Ir a tarjeta ${i + 1}`}
+              onClick={() => {
+                const el = scrollRef.current;
+                if (!el) return;
+                const cardWidth = el.scrollWidth / 3;
+                el.scrollTo({ left: cardWidth * i, behavior: 'smooth' });
+              }}
+              className={`rounded-full transition-all duration-300 ${
+                activeCard === i
+                  ? 'w-6 h-2 bg-granate'
+                  : 'w-2 h-2 bg-line-strong hover:bg-ink-soft'
+              }`}
+            />
+          ))}
         </div>
 
         {/* Mini features (3 columnas) */}
