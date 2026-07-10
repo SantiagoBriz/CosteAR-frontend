@@ -31,7 +31,7 @@ import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from '.
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import type { CalculationResult, CostCalculation } from '@/lib/types';
+import type { CalculationResult } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ export function CostStructurePage() {
   const { data: latest } = useLatestCalculation(id);
 
   const [activeTab, setActiveTab] = useState<SectionTab>('raw-material');
-  const [result,    setResult]    = useState<CalculationResult | null>(null);
+  const [result,    setResult]    = useState<{ result: CalculationResult; calculationId: string } | null>(null);
   const [error,     setError]     = useState<string | null>(null);
 
   const configured = {
@@ -59,7 +59,7 @@ export function CostStructurePage() {
     sales: !!(structure?.salesUnitPrice && structure?.salesQuantity),
   };
   const allReady = configured.mp && configured.mod && configured.cip && configured.sales;
-  const shown    = result ?? (latest ? latestToResult(latest) : null);
+  const shown    = result ?? (latest ? { result: latestToResult(latest), calculationId: latest.id } : null);
 
   const saveSection = async (
     section: 'raw-material' | 'direct-labor' | 'indirect-costs',
@@ -77,7 +77,7 @@ export function CostStructurePage() {
     setError(null);
     try {
       const data = await calculate.mutateAsync();
-      setResult(data.result);
+      setResult(data);
       setActiveTab('result');
     } catch (e) { setError(apiErrorMessage(e)); }
   };
@@ -187,6 +187,7 @@ export function CostStructurePage() {
             onSave={(d) => saveSection('raw-material', d)}
             saving={updateSection.isPending}
             isProcesses={structure?.costingSystem === 'PROCESSES'}
+            period={structure?.period}
           />
         </SectionShell>
       </div>
@@ -239,7 +240,7 @@ export function CostStructurePage() {
 
       {activeTab === 'result' && (
         shown
-          ? <ResultPanel result={shown} companyId={structure?.companyId} period={structure?.period} />
+          ? <ResultPanel result={shown.result} runId={shown.calculationId} structureId={id} companyId={structure?.companyId} period={structure?.period} />
           : <EmptyResult />
       )}
 
@@ -422,7 +423,9 @@ function FullScreenCalculatorLoader({ active }: { active: boolean }) {
 
 // ── Result Panel ──────────────────────────────────────────────────────────────
 
-function ResultPanel({ result, companyId, period }: { result: CalculationResult; companyId?: string; period?: string }) {
+import { DerivationTree } from './components/DerivationTree';
+
+function ResultPanel({ result, runId, structureId, companyId, period }: { result: CalculationResult; runId: string; structureId: string; companyId?: string; period?: string }) {
   const rows = [
     { label: 'Materia Prima consumida', value: result.rawMaterialConsumed },
     { label: 'Mano de Obra Directa',    value: result.directLaborTotal },
@@ -491,6 +494,8 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
             </table>
           </CardBody>
         </Card>
+
+        <DerivationTree structureId={structureId} runId={runId} />
 
         {Object.keys(result.detail.indirectCosts.perDepartment).length > 0 && (
           <Card>
@@ -623,15 +628,15 @@ function HistoryPanel({ structureId }: { structureId: string }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {history.map((c, i) => (
+            {history.map((c: any, i) => (
               <tr key={c.id} className={cn('hover:bg-surface-alt/50', i === 0 && 'bg-action/5')}>
                 <td className="px-6 py-3 text-ink">
-                  {formatDate(c.calculatedAt)}
+                  {formatDate(c.executedAt)}
                   {i === 0 && <span className="ml-2 rounded-full bg-action/10 px-2 py-0.5 text-[10px] font-semibold text-action">Último</span>}
                 </td>
-                <td className="px-6 py-3 text-right"><Money value={Number(c.productionCost)} /></td>
-                <td className="px-6 py-3 text-right"><Money value={Number(c.costOfGoodsSold)} /></td>
-                <td className="px-6 py-3 text-right"><Percent value={Number(c.grossMarginPct)} colorize /></td>
+                <td className="px-6 py-3 text-right"><Money value={Number(c.results.productionCost)} /></td>
+                <td className="px-6 py-3 text-right"><Money value={Number(c.results.costOfGoodsSold)} /></td>
+                <td className="px-6 py-3 text-right"><Percent value={Number(c.results.grossMarginPct)} colorize /></td>
               </tr>
             ))}
           </tbody>
@@ -643,17 +648,8 @@ function HistoryPanel({ structureId }: { structureId: string }) {
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
-function latestToResult(latest: CostCalculation): CalculationResult {
-  return {
-    rawMaterialConsumed:  Number(latest.rawMaterialConsumed),
-    directLaborTotal:     Number(latest.directLaborTotal),
-    indirectCostsApplied: Number(latest.indirectCostsApplied),
-    productionCost:       Number(latest.productionCost),
-    costOfGoodsSold:      Number(latest.costOfGoodsSold),
-    grossMargin:          Number(latest.grossMargin),
-    grossMarginPct:       Number(latest.grossMarginPct),
-    detail:               latest.detail,
-  };
+function latestToResult(latest: any): CalculationResult {
+  return latest.results;
 }
 
 // ── Reconciliación: estructura vs documentos (libro de costos) ──────────────────

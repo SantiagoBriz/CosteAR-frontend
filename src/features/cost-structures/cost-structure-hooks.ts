@@ -129,3 +129,29 @@ export function useLatestCalculation(id: string) {
     enabled: !!id,
   });
 }
+
+export function useCalculationTree(id: string, runId: string | undefined) {
+  return useQuery({
+    queryKey: ['cost-structures', id, 'calculations', runId, 'tree'],
+    queryFn: async () => {
+      if (!runId) throw new Error('runId is required');
+      const res = await api.get<{ data: { tree: any[] } }>(
+        `/cost-structures/${id}/calculations/${runId}/tree`,
+      );
+      return res.data.data.tree;
+    },
+    enabled: !!id && !!runId,
+  });
+}
+
+export function useTraceData(versionId: string | null) {
+  return useQuery({
+    queryKey: ['data-point-versions', versionId, 'trace'],
+    queryFn: async () => {
+      if (!versionId) throw new Error('versionId is required');
+      const res = await api.get<{ data: any }>(`/data-point-versions/${versionId}/trace`);
+      return res.data.data;
+    },
+    enabled: !!versionId,
+  });
+}

@@ -4,6 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ImputationModal } from '@/components/ui/ImputationModal';
 import { fractionToPercentInput, percentInputToFraction } from '@/lib/utils';
 import type { RawMaterialConfig } from './cost-structure-types';
 
@@ -12,6 +13,7 @@ interface Props {
   onSave: (data: RawMaterialConfig) => Promise<void>;
   saving: boolean;
   isProcesses?: boolean;
+  period?: string;
 }
 
 function cleanRawMaterialForForm(cfg?: RawMaterialConfig): any {
@@ -75,15 +77,15 @@ function cleanRawMaterialForSubmit(data: any): RawMaterialConfig {
   };
 }
 
-export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: Props) {
+export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses, period }: Props) {
+  const [showImputation, setShowImputation] = useState(false);
+  const [pendingData, setPendingData] = useState<any>(null);
+  const [mismatchedDates, setMismatchedDates] = useState<string[]>([]);
+  
   const { register, control, handleSubmit, reset, watch, formState: { isDirty } } = useForm<RawMaterialConfig>({
     defaultValues: cleanRawMaterialForForm(defaultValues) as any,
   });
 
-  // Cargar los datos persistidos en el formulario SOLO cuando su contenido cambia
-  // de verdad. Sin esta guarda, cualquier re-fetch de la estructura (p. ej. tras
-  // invalidar la query al guardar otra sección o calcular) reseteaba el form por
-  // cambio de referencia y BORRABA la edición en curso sin guardar (BUG-05).
   const loadedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!defaultValues) return;
@@ -94,9 +96,6 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
   }, [defaultValues, reset]);
 
   const { fields: movements, append, remove } = useFieldArray({ control, name: 'movements' });
-
-  // Confirmación previa al guardado (paso explícito).
-  const [pending, setPending] = useState<RawMaterialConfig | null>(null);
 
   // Pegado desde Excel
   const [showPasteArea, setShowPasteArea] = useState(false);
@@ -152,9 +151,41 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
     }
   };
 
+  // Confirmación previa al guardado (paso explícito).
+  const [pending, setPending] = useState<RawMaterialConfig | null>(null);
+
+  const onSubmit = async (data: any) => {
+    const cleaned = cleanRawMaterialForSubmit(data);
+    
+    if (period && cleaned.movements && cleaned.movements.length > 0) {
+      const mismatches: string[] = [];
+      cleaned.movements.forEach(m => {
+        if (m.date && !m.date.startsWith(period)) {
+          mismatches.push(m.date);
+        }
+      });
+      if (mismatches.length > 0) {
+        setMismatchedDates([...new Set(mismatches)]);
+        setPendingData(cleaned);
+        setShowImputation(true);
+        return;
+      }
+    }
+    
+    setPending(cleaned);
+  };
+
+  const confirmImputation = async () => {
+    setShowImputation(false);
+    if (pendingData) {
+      setPending(pendingData);
+      setPendingData(null);
+    }
+  };
+
   return (
     <>
-    <form onSubmit={handleSubmit((data) => setPending(cleanRawMaterialForSubmit(data)))} className="space-y-5 pt-3">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-3">
       {/* Wilson */}
       {!isProcesses && (
         <section>
@@ -241,10 +272,6 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
         )}
 
         <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
-          {/* Desktop/tablet: tabla clásica. Mobile (<640px): las mismas filas se
-              redibujan con display block y cada celda muestra su label vía CSS
-              (content: attr(data-label)) — los mismos inputs/binding de siempre,
-              solo cambia cómo se dibujan. */}
           <table className="block w-full text-sm sm:table">
             <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
               <tr>
@@ -326,6 +353,14 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
         setPending(null);
       }}
       onCancel={() => setPending(null)}
+    />
+
+    <ImputationModal 
+      isOpen={showImputation} 
+      mismatchedDates={mismatchedDates} 
+      currentPeriod={period || ''} 
+      onConfirm={confirmImputation} 
+      onCancel={() => { setShowImputation(false); setPendingData(null); }} 
     />
     </>
   );
