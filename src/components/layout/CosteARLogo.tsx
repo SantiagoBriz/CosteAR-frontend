@@ -1,11 +1,19 @@
+import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 
 interface Props {
   className?: string;
   animate?: boolean;
+  /**
+   * 'pulse': sutil respiración continua (uso en navbars/headers, default).
+   * 'draw': cada barra se dibuja de izquierda a derecha hasta formar el
+   * logo exacto, se sostiene, se borra de izquierda a derecha y vuelve a
+   * dibujarse — para loaders.
+   */
+  mode?: 'pulse' | 'draw';
 }
 
-export function CosteARLogo({ className, animate = true }: Props) {
+export function CosteARLogo({ className, animate = true, mode = 'pulse' }: Props) {
   const W = 210;
   const H = 200;
   const cx = 105;
@@ -49,13 +57,29 @@ export function CosteARLogo({ className, animate = true }: Props) {
     }
   }
 
+  const CYCLE = 2.4; // segundos, igual para todas las barras (todas en fase)
+
   return (
     <div className={cn('relative inline-block overflow-visible', className)}>
-      {animate && (
+      {animate && mode === 'pulse' && (
         <style>{`
           @keyframes eqPulseBar {
             0% { transform: scaleX(0.80); }
             100% { transform: scaleX(1); }
+          }
+        `}</style>
+      )}
+      {mode === 'draw' && (
+        <style>{`
+          @keyframes eqDrawBar {
+            0% { transform-origin: left center; transform: scaleX(0.05); opacity: 0; }
+            10% { opacity: 1; }
+            18% { transform-origin: left center; transform: scaleX(1); opacity: 1; }
+            68% { transform-origin: left center; transform: scaleX(1); opacity: 1; }
+            69% { transform-origin: right center; transform: scaleX(1); opacity: 1; }
+            80% { opacity: 1; }
+            87% { transform-origin: right center; transform: scaleX(0.05); opacity: 0; }
+            100% { transform-origin: right center; transform: scaleX(0.05); opacity: 0; }
           }
         `}</style>
       )}
@@ -64,10 +88,27 @@ export function CosteARLogo({ className, animate = true }: Props) {
         className="w-full h-full overflow-visible text-current"
       >
         {segments.map((seg, idx) => {
-          // Dynamic pulse timings
-          const duration = (2.2 + (idx % 4) * 0.35).toFixed(2);
-          const delay = (-(idx % 5) * 0.5).toFixed(2);
-          
+          let animationStyle: CSSProperties | undefined;
+
+          if (mode === 'draw') {
+            // Cada barra se dibuja de izquierda a derecha (ancla izquierda,
+            // scaleX 0.05->1) y se borra de izquierda a derecha (ancla
+            // derecha, scaleX 1->0.05). Todas las barras sincronizadas.
+            animationStyle = {
+              transformBox: 'fill-box',
+              animation: `eqDrawBar ${CYCLE}s ease-in-out infinite`,
+            };
+          } else if (animate) {
+            // Dynamic pulse timings
+            const duration = (2.2 + (idx % 4) * 0.35).toFixed(2);
+            const delay = (-(idx % 5) * 0.5).toFixed(2);
+            animationStyle = {
+              transformBox: 'fill-box',
+              transformOrigin: 'center center',
+              animation: `eqPulseBar ${duration}s ease-in-out ${delay}s infinite alternate`,
+            };
+          }
+
           return (
             <rect
               key={idx}
@@ -77,15 +118,7 @@ export function CosteARLogo({ className, animate = true }: Props) {
               height={barH}
               rx={(barH / 2).toFixed(1)}
               fill="currentColor"
-              style={
-                animate
-                  ? {
-                      transformBox: 'fill-box',
-                      transformOrigin: 'center center',
-                      animation: `eqPulseBar ${duration}s ease-in-out ${delay}s infinite alternate`,
-                    }
-                  : undefined
-              }
+              style={animationStyle}
             />
           );
         })}
