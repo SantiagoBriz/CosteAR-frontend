@@ -56,20 +56,20 @@ export function MetricsSection() {
             </div>
           </div>
 
-          {/* Card 3: Dólar Oficial */}
+          {/* Card 3: Dólar Blue */}
           <div className="group relative rounded-2xl border border-line/60 bg-surface/70 p-5 shadow-[0_8px_30px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-granate/30 hover:shadow-[0_12px_40px_rgba(74,21,27,0.06)]">
             <div className="flex justify-between items-start">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-ink-soft/70">Dólar Mayorista</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-ink-soft/70">Dólar Blue</span>
               <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                 </span>
-                BCRA
+                Ámbito
               </span>
             </div>
             <div className="mt-4 flex items-baseline gap-1">
-              <span className="font-mono text-3xl font-extrabold text-granate">$924.50</span>
+              <span className="font-mono text-3xl font-extrabold text-granate">$1.509</span>
             </div>
             <div className="mt-3 text-[10px] text-ink-soft/80 flex items-center justify-between border-t border-line/40 pt-2 font-mono">
               <span>Sincronizado</span>
