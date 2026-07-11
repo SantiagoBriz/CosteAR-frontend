@@ -5,13 +5,25 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { fractionToPercentInput, percentInputToFraction } from '@/lib/utils';
-import type { RawMaterialConfig } from './cost-structure-types';
+import { useCreateDataPoint, useImputar } from './trazabilidad-hooks';
+import { proposeImputation } from './imputacion';
+import { ImputacionModal } from './ImputacionModal';
+import type { RawMaterialConfig, StockMovement } from './cost-structure-types';
+import type { ImputacionOption } from './trazabilidad-types';
 
 interface Props {
+  structureId: string;
+  period?: string;
   defaultValues?: RawMaterialConfig;
   onSave: (data: RawMaterialConfig) => Promise<void>;
   saving: boolean;
   isProcesses?: boolean;
+}
+
+interface ImputacionQueueItem {
+  detail: string;
+  options: ImputacionOption[];
+  dataPointIds: string[];
 }
 
 function cleanRawMaterialForForm(cfg?: RawMaterialConfig): any {
@@ -38,7 +50,11 @@ function cleanRawMaterialForForm(cfg?: RawMaterialConfig): any {
     movements: (base.movements ?? []).map((m) => ({
       ...m,
       quantity: m.quantity === 0 ? '' : (m.quantity ?? ''),
-      unitCost: m.unitCost === 0 ? '' : (m.unitCost ?? ''),
+      // Consumo deshabilita el input de costo unitario (es PPP, no se tipea).
+      // React Hook Form reporta `null` en getValues() para un input disabled,
+      // así que el default tiene que ser `null` y no '' — si no, isDirty da
+      // true todo el tiempo aunque nadie tocó nada (comparación '' !== null).
+      unitCost: m.type === 'consumption' ? null : (m.unitCost === 0 ? '' : (m.unitCost ?? '')),
     })),
   };
 }
@@ -75,7 +91,7 @@ function cleanRawMaterialForSubmit(data: any): RawMaterialConfig {
   };
 }
 
-export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: Props) {
+export function RawMaterialForm({ structureId, period, defaultValues, onSave, saving, isProcesses }: Props) {
   const { register, control, handleSubmit, reset, watch, formState: { isDirty } } = useForm<RawMaterialConfig>({
     defaultValues: cleanRawMaterialForForm(defaultValues) as any,
   });
@@ -85,11 +101,16 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
   // invalidar la query al guardar otra sección o calcular) reseteaba el form por
   // cambio de referencia y BORRABA la edición en curso sin guardar (BUG-05).
   const loadedRef = useRef<string | null>(null);
+  // Cuántos movimientos ya existían en el server la última vez que sincronizamos
+  // — todo lo que se agregue por encima de este número en la sesión de edición
+  // actual es "nuevo" y, al guardar, se registra como dato trazable (D.3).
+  const baseMovementsCountRef = useRef(0);
   useEffect(() => {
     if (!defaultValues) return;
     const snapshot = JSON.stringify(defaultValues);
     if (snapshot === loadedRef.current) return;
     loadedRef.current = snapshot;
+    baseMovementsCountRef.current = defaultValues.movements?.length ?? 0;
     reset(cleanRawMaterialForForm(defaultValues));
   }, [defaultValues, reset]);
 
@@ -97,6 +118,71 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
 
   // Confirmación previa al guardado (paso explícito).
   const [pending, setPending] = useState<RawMaterialConfig | null>(null);
+
+  // Trazabilidad de movimientos nuevos (D.3): cada compra/consumo agregado en
+  // esta sesión se registra como DataPoint(s) reales al guardar, y si su
+  // fecha cae fuera del período de costo, se pregunta a qué período imputar.
+  const createDataPoint = useCreateDataPoint(structureId);
+  const imputar = useImputar(structureId);
+  const [imputacionQueue, setImputacionQueue] = useState<ImputacionQueueItem[]>([]);
+  const currentImputacion = imputacionQueue[0];
+
+  async function registerTrazableMovements(saved: RawMaterialConfig) {
+    const baseCount = baseMovementsCountRef.current;
+    const newMovements = saved.movements.slice(baseCount).filter((m) => m.date);
+    const queueItems: ImputacionQueueItem[] = [];
+
+    for (const m of newMovements as StockMovement[]) {
+      try {
+        const movementId = crypto.randomUUID();
+        const label = `${m.type === 'purchase' ? 'Compra' : 'Consumo'} — ${m.detail || '(sin detalle)'}`;
+        const dataPointIds: string[] = [];
+
+        const cantidadDp = await createDataPoint.mutateAsync({
+          element: 'MP',
+          fieldKey: m.type === 'purchase' ? 'mp.compra.cantidad' : 'mp.consumo.cantidad',
+          label,
+          unit: 'u',
+          sourceArea: m.type === 'purchase' ? 'deposito' : 'planta',
+          method: 'manual',
+          valueNum: m.quantity,
+          valueJson: { movementId, role: 'cantidad' },
+          fechaHecho: m.date,
+        });
+        dataPointIds.push(cantidadDp.id);
+
+        if (m.type === 'purchase') {
+          const precioDp = await createDataPoint.mutateAsync({
+            element: 'MP',
+            fieldKey: 'mp.compra.precio',
+            label,
+            unit: '$',
+            sourceArea: 'contaduria',
+            method: 'manual',
+            valueNum: m.unitCost ?? 0,
+            valueJson: { movementId, role: 'precio' },
+            fechaHecho: m.date,
+          });
+          dataPointIds.push(precioDp.id);
+        }
+
+        if (!period) continue;
+        const proposal = proposeImputation(m.date, period);
+        if ('auto' in proposal) {
+          await Promise.all(
+            dataPointIds.map((id) => imputar.mutateAsync({ dataPointId: id, periodo: proposal.auto, sourceArea: 'costista' })),
+          );
+        } else {
+          queueItems.push({ detail: label, options: proposal.options, dataPointIds });
+        }
+      } catch {
+        // Un fallo puntual registrando trazabilidad de ESTE movimiento no
+        // debe tapar que la sección de Materia Prima ya se guardó bien.
+      }
+    }
+
+    if (queueItems.length > 0) setImputacionQueue((q) => [...q, ...queueItems]);
+  }
 
   // Pegado desde Excel
   const [showPasteArea, setShowPasteArea] = useState(false);
@@ -323,9 +409,26 @@ export function RawMaterialForm({ defaultValues, onSave, saving, isProcesses }: 
       onConfirm={async () => {
         if (!pending) return;
         await onSave(pending);
+        reset(cleanRawMaterialForForm(pending)); // limpia "cambios sin guardar" al toque, sin esperar el refetch
+        void registerTrazableMovements(pending);
         setPending(null);
       }}
       onCancel={() => setPending(null)}
+    />
+
+    <ImputacionModal
+      open={!!currentImputacion}
+      detail={currentImputacion?.detail}
+      options={currentImputacion?.options ?? []}
+      loading={imputar.isPending}
+      onChoose={async (periodo) => {
+        if (!currentImputacion) return;
+        await Promise.all(
+          currentImputacion.dataPointIds.map((id) => imputar.mutateAsync({ dataPointId: id, periodo, sourceArea: 'costista' })),
+        );
+        setImputacionQueue((q) => q.slice(1));
+      }}
+      onCancel={() => setImputacionQueue((q) => q.slice(1))}
     />
     </>
   );
