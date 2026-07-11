@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { fractionToPercentInput, percentInputToFraction } from '@/lib/utils';
+import { catedraExample } from './catedra-example';
 import type { DirectLaborConfig } from './cost-structure-types';
 
 interface Props {
@@ -155,6 +156,17 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
   return (
     <>
     <form onSubmit={handleSubmit((data) => setPending(cleanDirectLaborForSubmit(data)))} className="space-y-5 pt-3">
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => reset(cleanDirectLaborForForm(catedraExample.directLabor as unknown as DirectLaborConfig))}
+        >
+          <Sparkles className="size-3.5" /> Cargar ejemplo de la cátedra
+        </Button>
+      </div>
+
       {/* Distribución del año */}
       <section>
         <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">
@@ -300,6 +312,7 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
       onConfirm={async () => {
         if (!pending) return;
         await onSave(pending);
+        reset(cleanDirectLaborForForm(pending)); // limpia "cambios sin guardar" al toque, sin esperar el refetch
         setPending(null);
       }}
       onCancel={() => setPending(null)}

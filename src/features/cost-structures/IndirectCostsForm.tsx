@@ -526,6 +526,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
       onConfirm={async () => {
         if (!pending) return;
         await onSave(pending);
+        reset(cleanIndirectCostsForForm(pending)); // limpia "cambios sin guardar" al toque, sin esperar el refetch
         setPending(null);
       }}
       onCancel={() => setPending(null)}
