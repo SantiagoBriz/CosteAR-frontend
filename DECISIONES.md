@@ -233,3 +233,17 @@ extra). No inventé un endpoint nuevo para esto.
   lectura contable (favorable/desfavorable, ahorro/exceso, sobre/subaplicación,
   capacidad ociosa). Para servicios: qué reparte y su posición en el orden de
   cierre. Todo LEÍDO del cálculo persistido — el front no recalcula.
+
+---
+
+## Sesión 2026-07-11 (cont.) — MOD lista→ficha por departamento (F4, Parte 3.2)
+
+- **LaborDepartmentsView**: el tab Mano de Obra abre en la LISTA de
+  departamentos (remuneración, horas presupuestadas, tarifa, estado) con los
+  datos compartidos de la estructura arriba (días efectivos, IAP, ITCS); toggle
+  "Editar configuración" al formulario. Ficha por departamento: días efectivos,
+  ITCS con su árbol (CSC/B40/F40/B47), tarifa horaria integral con su fórmula,
+  y HORAS presupuestadas vs reales separadas y etiquetadas. Detalle por operario
+  solo si el modelo los tiene.
+- **DirectLaborForm**: columna nueva "Horas reales (fin de mes)" separada de las
+  presupuestadas, opcional. Con esto Parte 3 queda completa (MP, MOD, CIF).

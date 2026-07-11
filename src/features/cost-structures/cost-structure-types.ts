@@ -76,7 +76,13 @@ export interface DirectLaborConfig {
     uncertainRemunerative: Array<{ name: string; coefficient: number }>;
     uncertainNonRemunerative: Array<{ name: string; coefficient: number }>;
   };
-  departments: Array<{ name: string; basicRemuneration: number; hoursWorked: number }>;
+  departments: Array<{
+    name: string;
+    basicRemuneration: number;
+    hoursWorked: number; // horas PRESUPUESTADAS (capacidad normal)
+    realHours?: number; // dato real de fin de mes (no afecta el cálculo)
+    operators?: Array<{ name: string; category?: string; bankedHours?: number; individualAbsenceDays?: number }>;
+  }>;
 }
 
 export interface IndirectCostConfig {

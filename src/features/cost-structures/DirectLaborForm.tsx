@@ -81,6 +81,7 @@ function cleanDirectLaborForForm(cfg?: DirectLaborConfig): any {
       ...d,
       basicRemuneration: d.basicRemuneration === 0 ? '' : (d.basicRemuneration ?? ''),
       hoursWorked: d.hoursWorked === 0 ? '' : (d.hoursWorked ?? ''),
+      realHours: d.realHours === 0 || d.realHours == null ? '' : d.realHours,
     })),
   };
 }
@@ -126,6 +127,7 @@ function cleanDirectLaborForSubmit(data: any): DirectLaborConfig {
       ...d,
       basicRemuneration: fallbackNum(d.basicRemuneration),
       hoursWorked: fallbackNum(d.hoursWorked),
+      realHours: d.realHours === '' || d.realHours == null ? undefined : fallbackNum(d.realHours),
     })),
   };
 }
@@ -267,7 +269,8 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Departamento</th>
                 <th className="px-3 py-2 text-right font-medium">Remuneración básica $</th>
-                <th className="px-3 py-2 text-right font-medium">Horas presupuestadas</th>
+                <th className="px-3 py-2 text-right font-medium text-action">Horas presupuestadas</th>
+                <th className="border-l-2 border-line px-3 py-2 text-right font-medium">Horas reales (fin de mes)</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -283,13 +286,16 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
                   <td data-label="Horas presupuestadas" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`departments.${i}.hoursWorked`, { valueAsNumber: true })} />
                   </td>
+                  <td data-label="Horas reales (fin de mes)" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:border-l-2 sm:border-line sm:px-2 sm:py-1.5 sm:before:hidden">
+                    <input type="number" step="1" placeholder="opcional" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`departments.${i}.realHours`, { valueAsNumber: true })} />
+                  </td>
                   <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                     <button type="button" onClick={() => removeDept(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                   </td>
                 </tr>
               ))}
               {deptFields.length === 0 && (
-                <tr className="block sm:table-row"><td colSpan={4} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin departamentos — agregá al menos uno.</td></tr>
+                <tr className="block sm:table-row"><td colSpan={5} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin departamentos — agregá al menos uno.</td></tr>
               )}
             </tbody>
           </table>

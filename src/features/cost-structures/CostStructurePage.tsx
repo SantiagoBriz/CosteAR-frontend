@@ -28,6 +28,7 @@ import { RawMaterialForm } from './RawMaterialForm';
 import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
 import { CostCentersView } from './CostCentersView';
+import { LaborDepartmentsView } from './LaborDepartmentsView';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
@@ -232,8 +233,9 @@ export function CostStructurePage() {
           description="Días hábiles efectivos · ITCS (Índice Total de Cargas Sociales) · Tarifa horaria por departamento"
           configured={configured.mod}
         >
-          <DirectLaborForm
-            defaultValues={structure?.directLaborConfig as DirectLaborConfig | undefined}
+          <DirectLaborSection
+            config={structure?.directLaborConfig as DirectLaborConfig | undefined}
+            directLabor={shown?.result?.detail?.directLabor}
             onSave={(d) => saveSection('direct-labor', d)}
             saving={updateSection.isPending}
           />
@@ -332,6 +334,43 @@ function IndirectCostsSection({
     <CostCentersView
       config={config ?? { centers: [], concepts: [], serviceDistributions: [], productiveSettings: [] }}
       perDepartment={perDepartment}
+      onEdit={() => setEditing(true)}
+    />
+  );
+}
+
+// ── Mano de Obra: lista de departamentos ↔ configuración (Parte 3.2) ─────────
+function DirectLaborSection({
+  config, directLabor, onSave, saving,
+}: {
+  config?: DirectLaborConfig;
+  directLabor?: CalculationResult['detail']['directLabor'];
+  onSave: (data: DirectLaborConfig) => Promise<void>;
+  saving: boolean;
+}) {
+  const [editing, setEditing] = useState(!config?.departments?.length);
+
+  if (editing) {
+    return (
+      <div className="space-y-2 pt-1">
+        {!!config?.departments?.length && (
+          <button type="button" onClick={() => setEditing(false)} className="inline-flex items-center gap-1 text-[13px] text-granate hover:text-action">
+            <ArrowLeft className="size-3.5" /> Volver a la lista de departamentos
+          </button>
+        )}
+        <DirectLaborForm
+          defaultValues={config}
+          onSave={async (d) => { await onSave(d); setEditing(false); }}
+          saving={saving}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <LaborDepartmentsView
+      config={config ?? { workingDays: { totalDaysPerYear: 0, unpaidAbsence: { sundays: 0, saturdays: 0, unjustifiedAbsences: 0, holidaysOnWeekend: 0 }, paidAbsence: { holidays: 0, vacations: 0, sickness: 0, specialLeaves: 0, workAccidents: 0 } }, itcs: { derivationBase: 0, fixedArt: 0, uncertainRemunerative: [], uncertainNonRemunerative: [] }, departments: [] }}
+      directLabor={directLabor}
       onEdit={() => setEditing(true)}
     />
   );

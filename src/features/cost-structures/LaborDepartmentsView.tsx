@@ -1,0 +1,244 @@
+import { useState, type ReactNode } from 'react';
+import { ArrowLeft, ChevronRight, Users, Pencil, Info } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Money } from '@/components/ui/Money';
+import { cn } from '@/lib/utils';
+import type { DirectLaborConfig } from './cost-structure-types';
+import type { CalculationResult } from '@/lib/types';
+
+type DetailMOD = CalculationResult['detail']['directLabor'];
+
+interface Props {
+  config: DirectLaborConfig;
+  directLabor?: DetailMOD;
+  onEdit: () => void;
+}
+
+const fmt = (n: number | undefined) =>
+  n == null ? '—' : n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const pct = (n: number | undefined) => (n == null ? '—' : `${n.toFixed(2)}%`);
+
+/**
+ * Mano de Obra — LISTA de departamentos → FICHA por departamento (Parte 3.2).
+ * Los días efectivos y el ITCS son de la estructura (compartidos, alimentan la
+ * tarifa de cada depto). La tarifa y el desglose salen del cálculo persistido
+ * (el front no recalcula). Horas presupuestadas vs reales, separadas.
+ */
+export function LaborDepartmentsView({ config, directLabor, onEdit }: Props) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const departments = config.departments ?? [];
+  const hasResult = !!directLabor;
+
+  if (selected !== null && departments[selected]) {
+    return (
+      <DepartmentCard
+        dept={departments[selected]}
+        data={directLabor?.departments?.[selected]}
+        directLabor={directLabor}
+        onBack={() => setSelected(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4 pt-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">Departamentos productivos</h4>
+          <p className="text-[11px] text-ink-soft">Entrá a un departamento para ver su ITCS, tarifa y horas presupuestadas vs reales.</p>
+        </div>
+        <Button type="button" size="sm" variant="secondary" onClick={onEdit}>
+          <Pencil className="size-3" /> Editar configuración
+        </Button>
+      </div>
+
+      {/* Datos compartidos de la estructura (alimentan todas las tarifas) */}
+      {hasResult && (
+        <div className="grid gap-2 sm:grid-cols-3">
+          <MiniStat label="Días hábiles efectivos" value={`${fmt(directLabor!.workingDays)} días`} />
+          <MiniStat label="IAP — Inasistencias pagas" value={pct(directLabor!.iapPercent)} hint={directLabor!.paidDays != null ? `${directLabor!.paidDays} pagos / ${fmt(directLabor!.workingDays)} efectivos` : undefined} />
+          <MiniStat label="ITCS" value={pct(directLabor!.itcsPercent)} hint="CSC + B40 + F40 + B47" />
+        </div>
+      )}
+
+      {!hasResult && (
+        <div className="flex items-start gap-2 rounded-xl bg-warn/10 px-4 py-2.5 text-[12.5px] text-ink">
+          <Info className="mt-0.5 size-4 shrink-0 text-warn" />
+          <span>Presioná <strong>Calcular</strong> para ver la tarifa horaria integral y el desglose de cada departamento.</span>
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-xl border border-line">
+        <table className="w-full text-sm">
+          <thead className="bg-surface-alt text-[10px] uppercase tracking-wide text-ink-soft">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium">Departamento</th>
+              <th className="px-3 py-2 text-right font-medium">Remuneración básica</th>
+              <th className="px-3 py-2 text-right font-medium">Horas presupuestadas</th>
+              <th className="px-3 py-2 text-right font-medium">Tarifa horaria</th>
+              <th className="px-3 py-2 text-center font-medium">Estado</th>
+              <th className="px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {departments.map((d, i) => {
+              const data = directLabor?.departments?.[i];
+              return (
+                <tr key={i} className="cursor-pointer hover:bg-surface-alt/40" onClick={() => setSelected(i)}>
+                  <td className="px-3 py-2 font-medium text-ink">{d.name || `Departamento ${i + 1}`}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-ink"><Money value={d.basicRemuneration} /></td>
+                  <td className="px-3 py-2 text-right tabular-nums text-ink">{fmt(d.hoursWorked)} hs</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-ink">{data ? <Money value={data.hourlyRate} /> : '—'}</td>
+                  <td className="px-3 py-2 text-center">
+                    <span className={cn('inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase',
+                      data ? 'border-ok/20 bg-ok/10 text-ok' : 'border-idle/20 bg-idle/10 text-idle')}>
+                      {data ? 'Calculado' : 'Pendiente'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right"><ChevronRight className="ml-auto size-4 text-ink-soft" /></td>
+                </tr>
+              );
+            })}
+            {departments.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-[13px] text-ink-soft">Sin departamentos cargados.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Ficha de un departamento ─────────────────────────────────────────────────
+
+function DepartmentCard({
+  dept, data, directLabor, onBack,
+}: {
+  dept: DirectLaborConfig['departments'][number];
+  data?: NonNullable<DetailMOD['departments']>[number];
+  directLabor?: DetailMOD;
+  onBack: () => void;
+}) {
+  const bd = directLabor?.itcsBreakdown;
+  const realHours = dept.realHours ?? data?.realHours;
+
+  return (
+    <div className="space-y-4 pt-3">
+      <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-[13px] text-granate hover:text-action">
+        <ArrowLeft className="size-3.5" /> Volver a la lista de departamentos
+      </button>
+      <h3 className="text-lg font-bold text-granate-deep">{dept.name || 'Departamento'}</h3>
+
+      {/* Días efectivos (compartido) */}
+      {directLabor && (
+        <Section title="Días hábiles efectivos (estructura)">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Stat label="Días efectivos" value={`${fmt(directLabor.workingDays)} días`} />
+            <Stat label="IAP — Inasistencias pagas" value={pct(directLabor.iapPercent)} hint={directLabor.paidDays != null ? `${directLabor.paidDays} días pagos / ${fmt(directLabor.workingDays)} efectivos · derivado` : undefined} />
+            <Stat label="ITCS total" value={pct(directLabor.itcsPercent)} hint="CSC + B40 + F40 + B47" />
+          </div>
+        </Section>
+      )}
+
+      {/* ITCS con su árbol */}
+      {bd && (
+        <Section title="ITCS — Índice Total de Cargas Sociales (árbol)">
+          <div className="grid gap-2 sm:grid-cols-4">
+            <Stat label="Cargas ciertas (CSC)" value={pct(bd.certain)} />
+            <Stat label="Inciertas remun. (B40)" value={pct(bd.uncertainRemunerative)} />
+            <Stat label="Derivadas (F40)" value={pct(bd.derived)} />
+            <Stat label="No remun. (B47)" value={pct(bd.uncertainNonRemunerative)} />
+          </div>
+        </Section>
+      )}
+
+      {/* Tarifa horaria integral */}
+      {data ? (
+        <Section title="Tarifa horaria integral = remuneración × (1 + ITCS) ÷ horas presupuestadas">
+          <div className="grid gap-2 sm:grid-cols-4">
+            <Stat label="Remuneración básica" value={<Money value={data.basicRemuneration} />} />
+            <Stat label="Costo cargas sociales" value={<Money value={data.socialChargesCost} />} hint="básica × ITCS" />
+            <Stat label="Costo total MOD" value={<Money value={data.totalMod} />} hint="básica + cargas" />
+            <Stat label="Tarifa horaria" value={<Money value={data.hourlyRate} />} hint={`total ÷ ${fmt(data.budgetedHours)} hs`} />
+          </div>
+        </Section>
+      ) : (
+        <p className="rounded-xl bg-warn/10 px-4 py-2.5 text-[12.5px] text-ink">Calculá la estructura para ver la tarifa horaria integral de este departamento.</p>
+      )}
+
+      {/* Horas presupuestadas vs reales — separadas y etiquetadas (criterio C) */}
+      <Section title="Horas: presupuestadas vs reales">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-lg border border-action/20 bg-action/5 px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-action">Presupuestadas (capacidad normal)</p>
+            <p className="text-[15px] font-semibold text-ink">{fmt(dept.hoursWorked)} hs</p>
+          </div>
+          <div className="rounded-lg border border-line bg-surface px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">Reales (fin de mes)</p>
+            <p className="text-[15px] font-semibold text-ink">{realHours != null ? `${fmt(realHours)} hs` : <span className="text-ink-soft">sin cargar</span>}</p>
+            {realHours != null && dept.hoursWorked > 0 && (
+              <p className={cn('text-[10.5px]', realHours >= dept.hoursWorked ? 'text-ok' : 'text-danger')}>
+                {realHours >= dept.hoursWorked ? 'sobre' : 'bajo'} la capacidad normal · {(((realHours - dept.hoursWorked) / dept.hoursWorked) * 100).toFixed(1)}%
+              </p>
+            )}
+          </div>
+        </div>
+      </Section>
+
+      {/* Operarios individuales — solo si el modelo los tiene (extensión) */}
+      {dept.operators && dept.operators.length > 0 && (
+        <Section title="Detalle por operario">
+          <div className="overflow-x-auto rounded-lg border border-line">
+            <table className="w-full text-[12.5px]">
+              <thead className="bg-surface-alt text-[10px] uppercase tracking-wide text-ink-soft">
+                <tr>
+                  <th className="px-3 py-1.5 text-left"><Users className="mr-1 inline size-3" />Operario</th>
+                  <th className="px-3 py-1.5 text-left">Categoría</th>
+                  <th className="px-3 py-1.5 text-right">Banco de horas</th>
+                  <th className="px-3 py-1.5 text-right">Ausentismo (días)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {dept.operators.map((o, i) => (
+                  <tr key={i}>
+                    <td className="px-3 py-1.5 text-ink">{o.name}</td>
+                    <td className="px-3 py-1.5 text-ink-soft">{o.category ?? '—'}</td>
+                    <td className="px-3 py-1.5 text-right text-ink">{fmt(o.bankedHours)}</td>
+                    <td className="px-3 py-1.5 text-right text-ink">{fmt(o.individualAbsenceDays)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      )}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div>
+      <h4 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">{title}</h4>
+      {children}
+    </div>
+  );
+}
+function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
+  return (
+    <div className="rounded-lg border border-line bg-surface px-3 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">{label}</p>
+      <p className="text-[15px] font-semibold text-ink">{value}</p>
+      {hint && <p className="text-[10.5px] text-ink-soft">{hint}</p>}
+    </div>
+  );
+}
+function MiniStat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-lg border border-line bg-surface-alt/40 px-3 py-1.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">{label}</p>
+      <p className="text-[14px] font-semibold text-ink">{value}</p>
+      {hint && <p className="text-[10px] text-ink-soft">{hint}</p>}
+    </div>
+  );
+}

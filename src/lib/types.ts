@@ -36,7 +36,23 @@ export interface CalculationResult {
   grossMarginPct: number;
   detail: {
     rawMaterial: { optimalLot: number; finalStockQty: number; finalStockValue: number };
-    directLabor: { workingDays: number; paidDays?: number; itcsPercent: number; iapPercent: number; hourlyRates: Record<string, number> };
+    directLabor: {
+      workingDays: number;
+      paidDays?: number;
+      itcsPercent: number;
+      iapPercent: number;
+      hourlyRates: Record<string, number>;
+      itcsBreakdown?: { certain: number; uncertainRemunerative: number; derived: number; uncertainNonRemunerative: number };
+      departments?: Array<{
+        name: string;
+        basicRemuneration: number;
+        socialChargesCost: number;
+        totalMod: number;
+        hourlyRate: number;
+        budgetedHours: number;
+        realHours?: number;
+      }>;
+    };
     indirectCosts: {
       perDepartment: Record<
         string,
