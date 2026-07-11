@@ -19,6 +19,12 @@ export interface StockMovement {
 }
 
 export interface RawMaterialConfig {
+  // Identidad de mercado (criterio C). Opcionales por retrocompat con la MP única.
+  id?: string;
+  code?: string;
+  name?: string;
+  unit?: string;
+  supplier?: string;
   wilson: WilsonConfig;
   stockPolicy: {
     minConsumption: number;
@@ -29,6 +35,21 @@ export interface RawMaterialConfig {
   };
   initialStock: { quantity: number; unitCost: number };
   movements: StockMovement[];
+}
+
+/** Sección de Materia Prima: N materias primas por estructura (Parte 3.1). */
+export interface RawMaterialSection {
+  materials: RawMaterialConfig[];
+}
+
+/** Normaliza la forma legada (MP única plana) o la nueva ({materials}) a lista. */
+export function toMaterialsList(cfg: unknown): RawMaterialConfig[] {
+  if (cfg && typeof cfg === 'object') {
+    const o = cfg as Record<string, unknown>;
+    if (Array.isArray(o.materials)) return o.materials as RawMaterialConfig[];
+    if ('wilson' in o) return [o as unknown as RawMaterialConfig];
+  }
+  return [];
 }
 
 export interface DirectLaborConfig {

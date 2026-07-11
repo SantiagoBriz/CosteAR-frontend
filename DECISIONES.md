@@ -201,3 +201,19 @@ extra). No inventé un endpoint nuevo para esto.
   y activa el motor escalonado. Retrocompatible: con un solo servicio o
   servicios que solo reparten a productivos, el resultado es idéntico al
   directo (no cambia FX1/FX3).
+
+---
+
+## Sesión 2026-07-11 (cont.) — Navegación lista→detalle MP (F4, Parte 3.1)
+
+- **RawMaterialForm** pasó a ser un wrapper LISTA→FICHA: la lista muestra todas
+  las materias primas de la estructura (código, nombre, unidad, proveedor,
+  costo unitario, existencia inicial, estado) con "Agregar materia prima";
+  al hacer click en una se entra a su ficha exclusiva (el form de siempre:
+  Wilson propio, política de stock, ficha PPP de movimientos con trazabilidad),
+  precedida por la sección "Identificación" (codificación real de mercado) y un
+  breadcrumb "Volver a la lista".
+- Retrocompat: `toMaterialsList` normaliza la MP única legada a una fila; el
+  onSave persiste la sección `{ materials: [...] }` que el backend acepta.
+- La lógica de trazabilidad de movimientos nuevos (DataPoints + imputación) se
+  conserva por materia prima dentro de la ficha.

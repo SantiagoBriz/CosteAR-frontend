@@ -30,7 +30,7 @@ import { IndirectCostsForm } from './IndirectCostsForm';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
-import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
+import type { DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -217,7 +217,7 @@ export function CostStructurePage() {
           <RawMaterialForm
             structureId={id}
             period={structure?.period}
-            defaultValues={structure?.rawMaterialConfig as RawMaterialConfig | undefined}
+            defaultValues={structure?.rawMaterialConfig}
             onSave={(d) => saveSection('raw-material', d)}
             saving={updateSection.isPending}
             isProcesses={structure?.costingSystem === 'PROCESSES'}

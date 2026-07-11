@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Package, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -8,14 +8,160 @@ import { fractionToPercentInput, percentInputToFraction } from '@/lib/utils';
 import { useCreateDataPoint, useImputar } from './trazabilidad-hooks';
 import { proposeImputation } from './imputacion';
 import { ImputacionModal } from './ImputacionModal';
-import type { RawMaterialConfig, StockMovement } from './cost-structure-types';
+import { toMaterialsList, type RawMaterialConfig, type RawMaterialSection, type StockMovement } from './cost-structure-types';
 import type { ImputacionOption } from './trazabilidad-types';
+
+// ── Wrapper: LISTA de materias primas → FICHA (Parte 3.1) ────────────────────
+
+interface WrapperProps {
+  structureId: string;
+  period?: string;
+  defaultValues?: unknown; // MP única legada o { materials: [...] }
+  onSave: (data: RawMaterialSection) => Promise<void>;
+  saving: boolean;
+  isProcesses?: boolean;
+}
+
+export function RawMaterialForm({ structureId, period, defaultValues, onSave, saving, isProcesses }: WrapperProps) {
+  const [materials, setMaterials] = useState<RawMaterialConfig[]>(() => toMaterialsList(defaultValues));
+  const [selected, setSelected] = useState<number | null>(null);
+  const [toDelete, setToDelete] = useState<number | null>(null);
+
+  const syncRef = useRef<string | null>(null);
+  useEffect(() => {
+    const snap = JSON.stringify(defaultValues ?? null);
+    if (snap === syncRef.current) return;
+    syncRef.current = snap;
+    setMaterials(toMaterialsList(defaultValues));
+  }, [defaultValues]);
+
+  async function persist(next: RawMaterialConfig[]) {
+    setMaterials(next);
+    await onSave({ materials: next });
+  }
+
+  async function saveMaterial(index: number, mat: RawMaterialConfig) {
+    const next = materials.map((m, i) => (i === index ? mat : m));
+    if (index >= materials.length) next.push(mat);
+    await persist(next);
+  }
+
+  function addMaterial() {
+    const mat = emptyRawMaterial();
+    mat.id = crypto.randomUUID();
+    mat.name = '';
+    setMaterials((ms) => [...ms, mat]);
+    setSelected(materials.length);
+  }
+
+  // Vista FICHA de una materia prima.
+  if (selected !== null && materials[selected]) {
+    return (
+      <MaterialDetailForm
+        key={materials[selected].id ?? selected}
+        structureId={structureId}
+        period={period}
+        index={selected}
+        material={materials[selected]}
+        saving={saving}
+        isProcesses={isProcesses}
+        onBack={() => setSelected(null)}
+        onSaveMaterial={async (mat) => { await saveMaterial(selected, mat); }}
+      />
+    );
+  }
+
+  // Vista LISTA.
+  return (
+    <div className="space-y-4 pt-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">Materias primas de la estructura</h4>
+          <p className="text-[11px] text-ink-soft">Cada materia prima con su codificación real de mercado, su ficha PPP y su lote de Wilson propio.</p>
+        </div>
+        <Button type="button" size="sm" variant="secondary" onClick={addMaterial}>
+          <Plus className="size-3" /> Agregar materia prima
+        </Button>
+      </div>
+
+      {materials.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line py-12 text-center">
+          <Package className="size-8 text-idle" />
+          <p className="text-sm text-ink-soft">Todavía no cargaste materias primas.</p>
+          <Button type="button" size="sm" onClick={addMaterial}><Plus className="size-3" /> Agregar la primera</Button>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-line">
+          <table className="w-full text-sm">
+            <thead className="bg-surface-alt text-[10px] uppercase tracking-wide text-ink-soft">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">Código</th>
+                <th className="px-3 py-2 text-left font-medium">Materia prima</th>
+                <th className="px-3 py-2 text-left font-medium">Unidad</th>
+                <th className="px-3 py-2 text-left font-medium">Proveedor</th>
+                <th className="px-3 py-2 text-right font-medium">Costo unit. (C)</th>
+                <th className="px-3 py-2 text-right font-medium">Ex. inicial</th>
+                <th className="px-3 py-2 text-center font-medium">Estado</th>
+                <th className="px-3 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {materials.map((m, i) => {
+                const complete = (m.wilson?.unitCost ?? 0) > 0 && (m.movements?.length ?? 0) > 0;
+                return (
+                  <tr key={m.id ?? i} className="cursor-pointer hover:bg-surface-alt/40" onClick={() => setSelected(i)}>
+                    <td className="px-3 py-2 font-mono text-[12px] text-ink-soft">{m.code || '—'}</td>
+                    <td className="px-3 py-2 font-medium text-ink">{m.name || <span className="text-ink-soft italic">Sin nombre</span>}</td>
+                    <td className="px-3 py-2 text-ink-soft">{m.unit || '—'}</td>
+                    <td className="px-3 py-2 text-ink-soft">{m.supplier || '—'}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-ink">{m.wilson?.unitCost ? m.wilson.unitCost.toLocaleString('es-AR') : '—'}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-ink-soft">{m.initialStock?.quantity ?? 0}</td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${complete ? 'border-ok/20 bg-ok/10 text-ok' : 'border-idle/20 bg-idle/10 text-idle'}`}>
+                        {complete ? 'Completa' : 'Incompleta'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setToDelete(i); }} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
+                        <ChevronRight className="size-4 text-ink-soft" />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Eliminar materia prima"
+        message="¿Eliminar esta materia prima de la estructura? Sus datos cargados se quitan del cálculo."
+        confirmLabel="Eliminar"
+        loading={saving}
+        onConfirm={async () => {
+          if (toDelete === null) return;
+          const next = materials.filter((_, i) => i !== toDelete);
+          setToDelete(null);
+          await persist(next);
+        }}
+        onCancel={() => setToDelete(null)}
+      />
+    </div>
+  );
+}
+
+// ── Ficha de UNA materia prima (el form de siempre + identidad de mercado) ───
 
 interface Props {
   structureId: string;
   period?: string;
-  defaultValues?: RawMaterialConfig;
-  onSave: (data: RawMaterialConfig) => Promise<void>;
+  index: number;
+  material: RawMaterialConfig;
+  onBack: () => void;
+  onSaveMaterial: (mat: RawMaterialConfig) => Promise<void>;
   saving: boolean;
   isProcesses?: boolean;
 }
@@ -29,6 +175,11 @@ interface ImputacionQueueItem {
 function cleanRawMaterialForForm(cfg?: RawMaterialConfig): any {
   const base = cfg ?? emptyRawMaterial();
   return {
+    id: base.id,
+    code: base.code ?? '',
+    name: base.name ?? '',
+    unit: base.unit ?? '',
+    supplier: base.supplier ?? '',
     wilson: {
       annualDemand: base.wilson?.annualDemand === 0 ? '' : (base.wilson?.annualDemand ?? ''),
       orderCost: base.wilson?.orderCost === 0 ? '' : (base.wilson?.orderCost ?? ''),
@@ -64,7 +215,13 @@ function cleanRawMaterialForSubmit(data: any): RawMaterialConfig {
     if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
     return Number(val);
   };
+  const str = (v: any) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
   return {
+    id: data.id ?? crypto.randomUUID(),
+    code: str(data.code),
+    name: str(data.name),
+    unit: str(data.unit),
+    supplier: str(data.supplier),
     wilson: {
       annualDemand: fallbackNum(data.wilson?.annualDemand),
       orderCost: fallbackNum(data.wilson?.orderCost),
@@ -91,9 +248,9 @@ function cleanRawMaterialForSubmit(data: any): RawMaterialConfig {
   };
 }
 
-export function RawMaterialForm({ structureId, period, defaultValues, onSave, saving, isProcesses }: Props) {
+function MaterialDetailForm({ structureId, period, material, onBack, onSaveMaterial, saving, isProcesses }: Props) {
   const { register, control, handleSubmit, reset, watch, formState: { isDirty } } = useForm<RawMaterialConfig>({
-    defaultValues: cleanRawMaterialForForm(defaultValues) as any,
+    defaultValues: cleanRawMaterialForForm(material) as any,
   });
 
   const loadedRef = useRef<string | null>(null);
@@ -102,13 +259,13 @@ export function RawMaterialForm({ structureId, period, defaultValues, onSave, sa
   // actual es "nuevo" y, al guardar, se registra como dato trazable (D.3).
   const baseMovementsCountRef = useRef(0);
   useEffect(() => {
-    if (!defaultValues) return;
-    const snapshot = JSON.stringify(defaultValues);
+    if (!material) return;
+    const snapshot = JSON.stringify(material);
     if (snapshot === loadedRef.current) return;
     loadedRef.current = snapshot;
-    baseMovementsCountRef.current = defaultValues.movements?.length ?? 0;
-    reset(cleanRawMaterialForForm(defaultValues));
-  }, [defaultValues, reset]);
+    baseMovementsCountRef.current = material.movements?.length ?? 0;
+    reset(cleanRawMaterialForForm(material));
+  }, [material, reset]);
 
   const { fields: movements, append, remove } = useFieldArray({ control, name: 'movements' });
 
@@ -238,9 +395,28 @@ export function RawMaterialForm({ structureId, period, defaultValues, onSave, sa
     setPending(cleanRawMaterialForSubmit(data));
   };
 
+  const nameWatch = watch('name');
+
   return (
     <>
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-3">
+    {/* Breadcrumb lista → ficha (Parte 3.4) */}
+    <button type="button" onClick={onBack} className="mb-1 inline-flex items-center gap-1 text-[13px] text-granate hover:text-action">
+      <ArrowLeft className="size-3.5" /> Volver a la lista de materias primas
+    </button>
+    <h3 className="mb-3 text-lg font-bold text-granate-deep">{nameWatch || 'Nueva materia prima'}</h3>
+
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-1">
+      {/* Identidad de mercado (criterio C) */}
+      <section>
+        <h4 className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">Identificación</h4>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Input label="Código de mercado" placeholder="Ej: MP-001 / SKU real" {...register('code')} />
+          <Input label="Nombre" placeholder="Ej: Chapa BWG 18" {...register('name')} />
+          <Input label="Unidad" placeholder="Ej: kg, u, m²" {...register('unit')} />
+          <Input label="Proveedor habitual" placeholder="Ej: Acindar" {...register('supplier')} />
+        </div>
+      </section>
+
       {/* Wilson */}
       {!isProcesses && (
         <section>
@@ -404,7 +580,7 @@ export function RawMaterialForm({ structureId, period, defaultValues, onSave, sa
       loading={saving}
       onConfirm={async () => {
         if (!pending) return;
-        await onSave(pending);
+        await onSaveMaterial(pending);
         reset(cleanRawMaterialForForm(pending)); // limpia "cambios sin guardar" al toque, sin esperar el refetch
         void registerTrazableMovements(pending);
         setPending(null);
