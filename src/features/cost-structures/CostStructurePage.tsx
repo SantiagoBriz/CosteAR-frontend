@@ -277,6 +277,8 @@ export function CostStructurePage() {
             runId={effectiveRunId}
             isMissingRun={!!tracedError}
             missingRunMessage={tracedError}
+            structureId={id}
+            period={structure?.period}
           />
           {shown
             ? <ResultPanel result={shown.result} companyId={structure?.companyId} period={structure?.period} />

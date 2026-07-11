@@ -98,6 +98,12 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
       actualActivity: fallbackNum(p.actualActivity),
       actualCip: fallbackNum(p.actualCip),
     })),
+    // Orden de cierre = orden de las filas de servicios (Parte 4.4). Activa el
+    // prorrateo escalonado. Retrocompatible: con un solo servicio o servicios
+    // que solo reparten a productivos, el resultado es idéntico al directo.
+    closureOrder: (data.serviceDistributions ?? [])
+      .map((s: any) => s.serviceCenterId)
+      .filter((x: string) => !!x),
   };
 }
 
@@ -119,7 +125,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
 
   const { fields: centers, append: addCenter, remove: removeCenter } = useFieldArray({ control, name: 'centers' });
   const { fields: concepts, append: addConcept, remove: removeConcept } = useFieldArray({ control, name: 'concepts' });
-  const { fields: serviceDists, append: addServiceDist, remove: removeServiceDist } = useFieldArray({ control, name: 'serviceDistributions' });
+  const { fields: serviceDists, append: addServiceDist, remove: removeServiceDist, move: moveServiceDist } = useFieldArray({ control, name: 'serviceDistributions' });
   const { fields: prodSettings, append: addProdSetting, remove: removeProdSetting } = useFieldArray({ control, name: 'productiveSettings' });
 
   // Pegado rápido desde Excel
@@ -171,6 +177,10 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   const watchedServiceDists = useWatch({ control, name: 'serviceDistributions' });
   const productiveCenters = watchedCenters?.filter((c) => c.type === 'productive') ?? [];
   const serviceCenters = watchedCenters?.filter((c) => c.type === 'service') ?? [];
+  // Destinos del secundario = productivos + servicios. Un servicio puede
+  // repartir a otro servicio (que aún no cerró): así funciona el escalonado.
+  // En cada fila, la columna del propio servicio queda deshabilitada.
+  const targetCenters = [...productiveCenters, ...serviceCenters];
 
   // Auto-sync serviceDistributions when service centers change
   const prevServiceKey = useRef('');
@@ -356,18 +366,26 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
               Prorrateo secundario — distribución de servicios (%)
             </h4>
           </div>
+          <p className="mb-2 text-[11px] leading-snug text-ink-soft">
+            <strong className="font-medium text-ink">El orden de las filas es el orden de cierre</strong> (método escalonado):
+            el primero cierra primero. Un servicio puede repartir a otro servicio que <em>todavía no cerró</em> — no puede
+            repartir a uno que ya cerró (por eso su columna aparece bloqueada más abajo). Usá las flechas para reordenar.
+          </p>
           <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
             <table className="block w-full text-sm sm:table">
               <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
                 <tr>
+                  <th className="w-8 px-2 py-2 text-center font-medium" rowSpan={2}>#</th>
                   <th className="w-40 px-3 py-2 text-left font-medium" rowSpan={2}>Centro de servicio</th>
-                  {productiveCenters.map((c) => (
-                    <th key={c.id} className="px-3 py-2 text-center font-medium" colSpan={2}>{c.name || c.id}</th>
+                  {targetCenters.map((c) => (
+                    <th key={c.id} className="px-3 py-2 text-center font-medium" colSpan={2}>
+                      {c.name || c.id}{c.type === 'service' && <span className="ml-1 text-[9px] text-ink-soft">(servicio)</span>}
+                    </th>
                   ))}
                   <th className="w-8 px-3 py-2" rowSpan={2} />
                 </tr>
                 <tr>
-                  {productiveCenters.map((c) => (
+                  {targetCenters.map((c) => (
                     <Fragment key={c.id}>
                       <th className="w-24 px-2 py-1 text-center font-medium text-[10px] text-ink-soft">Fijo %</th>
                       <th className="w-24 px-2 py-1 text-center font-medium text-[10px] text-ink-soft">Var %</th>
@@ -376,8 +394,17 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 </tr>
               </thead>
               <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
-                {serviceDists.map((f, i) => (
+                {serviceDists.map((f, i) => {
+                  const rowServiceId = (watchedServiceDists ?? [])[i]?.serviceCenterId;
+                  return (
                   <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+                    <td data-label="Orden de cierre" className="flex items-center gap-1 before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
+                      <span className="inline-flex size-5 items-center justify-center rounded-full bg-granate-tenue text-[11px] font-bold text-granate-deep">{i + 1}</span>
+                      <span className="flex flex-col">
+                        <button type="button" disabled={i === 0} onClick={() => moveServiceDist(i, i - 1)} className="text-ink-soft hover:text-granate disabled:opacity-20" aria-label="Subir">▲</button>
+                        <button type="button" disabled={i === serviceDists.length - 1} onClick={() => moveServiceDist(i, i + 1)} className="text-ink-soft hover:text-granate disabled:opacity-20" aria-label="Bajar">▼</button>
+                      </span>
+                    </td>
                     <td data-label="Centro de servicio" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                       <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`serviceDistributions.${i}.serviceCenterId`)}>
                         <option value="">Elegir…</option>
@@ -392,23 +419,29 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                           ))}
                       </select>
                     </td>
-                    {productiveCenters.map((c) => (
+                    {targetCenters.map((c) => {
+                      const isSelf = !!rowServiceId && c.id === rowServiceId;
+                      return (
                       <Fragment key={c.id}>
                         <td data-label={`${c.name || c.id} — Fijo %`} className="block text-left before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
-                          <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />
+                          {isSelf ? <span className="block text-center text-ink-soft/40">—</span> :
+                          <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />}
                         </td>
                         <td data-label={`${c.name || c.id} — Var %`} className="block text-left before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
-                          <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />
+                          {isSelf ? <span className="block text-center text-ink-soft/40">—</span> :
+                          <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />}
                         </td>
                       </Fragment>
-                    ))}
+                      );
+                    })}
                     <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                       <button type="button" onClick={() => removeServiceDist(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {serviceDists.length === 0 && (
-                  <tr className="block sm:table-row"><td colSpan={1 + productiveCenters.length * 2 + 1} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Cargando distribuciones…</td></tr>
+                  <tr className="block sm:table-row"><td colSpan={2 + targetCenters.length * 2 + 1} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Cargando distribuciones…</td></tr>
                 )}
               </tbody>
             </table>

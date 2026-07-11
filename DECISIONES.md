@@ -173,3 +173,31 @@ extra). No inventé un endpoint nuevo para esto.
   fórmula derivada ("= N días pagos / M efectivos = X%") y la aclaración
   "derivado, solo lectura". El numerador viene del backend (`paidDays`), no se
   inventa en el front.
+
+---
+
+## Sesión 2026-07-11 (cont.) — Trazabilidad visible + escalonado en la UI
+
+- **Pestaña nueva de trazabilidad (F5, Parte 2.3)**: dos rutas internas nuevas
+  (`/trazabilidad/dato/$id` y `/trazabilidad/calculo/$runId`) que abren una
+  página COMPLETA dentro de la app (mismo layout, mismo login), formato
+  comprobante e imprimible (botón Imprimir → window.print). Nunca un dominio
+  externo ni un modal del navegador. Se agregaron botones "Abrir en pestaña
+  nueva" (target _blank) en el árbol de derivación (encabezado → Ver cálculo)
+  y en la ficha in-place del dato (→ Ver dato). La página de cálculo trae un
+  selector de corrida (cada recálculo es un snapshot) para abrir varias
+  pestañas y comparar; el período de la estructura viaja por query param y se
+  muestra como badge.
+  - Decisión: el "selector de período" se implementó como selector de CORRIDAS
+    reales (las que devuelve `/structures/:id/runs`), que es el eje temporal
+    que existe hoy en los datos. El período de costo (atributo de la estructura)
+    se muestra como badge. Comparar dos PERÍODOS distintos = abrir dos
+    estructuras distintas en dos pestañas (cada una con su período en la URL).
+- **Escalonado usable en la UI (Parte 4.4)**: la tabla del prorrateo secundario
+  ahora permite repartir a productivos Y a otros servicios (un servicio puede
+  entregar a otro que aún no cerró); la columna del propio servicio queda
+  bloqueada. El **orden de las filas es el orden de cierre** (con número y
+  flechas ▲▼ para reordenar). Al guardar, `closureOrder` se deriva de ese orden
+  y activa el motor escalonado. Retrocompatible: con un solo servicio o
+  servicios que solo reparten a productivos, el resultado es idéntico al
+  directo (no cambia FX1/FX3).

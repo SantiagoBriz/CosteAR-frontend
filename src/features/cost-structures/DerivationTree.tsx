@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { ChevronRight, ChevronDown, Calculator, FileText, ExternalLink, ShieldAlert } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -46,10 +47,12 @@ function DataStatusPill({ status }: { status: DataStatus }) {
 
 // ── Árbol de derivación (D.1) ────────────────────────────────────────────────
 
-export function DerivationTree({ runId, isMissingRun, missingRunMessage }: {
+export function DerivationTree({ runId, isMissingRun, missingRunMessage, structureId, period }: {
   runId: string | null;
   isMissingRun?: boolean;
   missingRunMessage?: string | null;
+  structureId?: string;
+  period?: string;
 }) {
   const { data, isLoading } = useCalculationTree(runId);
   const [openDataPointId, setOpenDataPointId] = useState<string | null>(null);
@@ -62,6 +65,20 @@ export function DerivationTree({ runId, isMissingRun, missingRunMessage }: {
           data
             ? `Corrida #${data.runN} · motor ${data.engineVersion} — click en un valor subrayado para ver su origen`
             : 'Trazabilidad total: de dónde sale cada número'
+        }
+        action={
+          data && runId ? (
+            <Link
+              to="/trazabilidad/calculo/$runId"
+              params={{ runId }}
+              search={{ structureId, period }}
+              target="_blank"
+            >
+              <Button type="button" size="sm" variant="secondary">
+                <ExternalLink className="size-3.5" /> Abrir en pestaña nueva
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
       <CardBody className="p-0">
@@ -85,6 +102,7 @@ export function DerivationTree({ runId, isMissingRun, missingRunMessage }: {
                 key={node.id}
                 node={node}
                 depth={0}
+                period={period}
                 openDataPointId={openDataPointId}
                 setOpenDataPointId={setOpenDataPointId}
               />
@@ -97,10 +115,11 @@ export function DerivationTree({ runId, isMissingRun, missingRunMessage }: {
 }
 
 function TreeRow({
-  node, depth, openDataPointId, setOpenDataPointId,
+  node, depth, period, openDataPointId, setOpenDataPointId,
 }: {
   node: TreeNode;
   depth: number;
+  period?: string;
   openDataPointId: string | null;
   setOpenDataPointId: (id: string | null) => void;
 }) {
@@ -155,7 +174,7 @@ function TreeRow({
 
       {isOpen && (
         <div style={{ paddingLeft: `${16 + depth * 20}px` }} className="pb-2 pr-4">
-          <TraceCard dataPointId={dataPointId!} onClose={() => setOpenDataPointId(null)} />
+          <TraceCard dataPointId={dataPointId!} period={period} onClose={() => setOpenDataPointId(null)} />
         </div>
       )}
 
@@ -164,6 +183,7 @@ function TreeRow({
           key={child.id}
           node={child}
           depth={depth + 1}
+          period={period}
           openDataPointId={openDataPointId}
           setOpenDataPointId={setOpenDataPointId}
         />
@@ -174,7 +194,7 @@ function TreeRow({
 
 // ── Ficha del dato (D.2) ─────────────────────────────────────────────────────
 
-function TraceCard({ dataPointId, onClose }: { dataPointId: string; onClose: () => void }) {
+function TraceCard({ dataPointId, period, onClose }: { dataPointId: string; period?: string; onClose: () => void }) {
   const { data: trace, isLoading, error } = useDataPointTrace(dataPointId);
   const pedirRevision = usePedirRevision();
   const [revisionOpen, setRevisionOpen] = useState(false);
@@ -206,6 +226,16 @@ function TraceCard({ dataPointId, onClose }: { dataPointId: string; onClose: () 
               ) : (
                 <span className="text-[11px] text-ink-soft">Sin firmar</span>
               )}
+              <Link
+                to="/trazabilidad/dato/$id"
+                params={{ id: dataPointId }}
+                search={{ period }}
+                target="_blank"
+                title="Abrir ficha completa en pestaña nueva"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-granate hover:text-action"
+              >
+                <ExternalLink className="size-3.5" /> Pestaña nueva
+              </Link>
               <button type="button" onClick={onClose} className="text-ink-soft hover:text-danger">✕</button>
             </div>
           </div>

@@ -78,4 +78,8 @@ export interface IndirectCostConfig {
     actualActivity: number;
     actualCip: number;
   }>;
+  // Orden de cierre del prorrateo secundario escalonado (Parte 4.4). Se deriva
+  // del orden de las filas de "distribución de servicios": el primero cierra
+  // primero y un servicio puede repartir a otro que aún no cerró.
+  closureOrder?: string[];
 }
