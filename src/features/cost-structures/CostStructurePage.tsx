@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
-  ArrowLeft, Calculator, Package, Users, Factory,
+  ArrowLeft, Calculator, Package, Users, Factory, Activity,
   TrendingUp, BarChart2, CheckCircle2, History,
   Download, Loader2,
 } from 'lucide-react';
@@ -29,15 +29,16 @@ import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
+import { ScenarioSimulator } from './components/ScenarioSimulator';
 import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import type { CalculationResult, CostCalculation } from '@/lib/types';
+import type { CalculationResult } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history';
+type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ export function CostStructurePage() {
   const effectiveRunId = tracedRunId ?? runsList?.[0]?.id ?? null;
 
   const [activeTab, setActiveTab] = useState<SectionTab>('raw-material');
-  const [result,    setResult]    = useState<CalculationResult | null>(null);
+  const [result,    setResult]    = useState<{ result: CalculationResult; calculationId: string } | null>(null);
   const [error,     setError]     = useState<string | null>(null);
 
   const configured = {
@@ -71,7 +72,7 @@ export function CostStructurePage() {
     sales: !!(structure?.salesUnitPrice && structure?.salesQuantity),
   };
   const allReady = configured.mp && configured.mod && configured.cip && configured.sales;
-  const shown    = result ?? (latest ? latestToResult(latest) : null);
+  const shown    = result ?? (latest ? { result: latestToResult(latest), calculationId: latest.id } : null);
 
   const saveSection = async (
     section: 'raw-material' | 'direct-labor' | 'indirect-costs',
@@ -90,7 +91,7 @@ export function CostStructurePage() {
     setTracedError(null);
     try {
       const data = await calculate.mutateAsync();
-      setResult(data.result);
+      setResult(data);
       setActiveTab('result');
     } catch (e) { setError(apiErrorMessage(e)); return; }
 
@@ -179,6 +180,7 @@ export function CostStructurePage() {
             { id: 'indirect-costs'  as SectionTab, label: 'Costos Indirectos',     icon: Factory,    configKey: 'cip'   as const },
             { id: 'sales'           as SectionTab, label: 'Venta',                 icon: TrendingUp, configKey: 'sales' as const },
             { id: 'result'          as SectionTab, label: 'Resultado',             icon: BarChart2,  configKey: undefined },
+            { id: 'simulate'        as SectionTab, label: 'Simulador',             icon: Activity,   configKey: undefined },
             { id: 'history'         as SectionTab, label: 'Historial',             icon: History,    configKey: undefined },
           ] as { id: SectionTab; label: string; icon: typeof Package; configKey: keyof typeof configured | undefined }[]
         ).map(({ id: tabId, label, icon: Icon, configKey }) => {
@@ -277,9 +279,13 @@ export function CostStructurePage() {
             missingRunMessage={tracedError}
           />
           {shown
-            ? <ResultPanel result={shown} companyId={structure?.companyId} period={structure?.period} />
+            ? <ResultPanel result={shown.result} companyId={structure?.companyId} period={structure?.period} />
             : <EmptyResult />}
         </div>
+      )}
+
+      {activeTab === 'simulate' && (
+        <ScenarioSimulator structureId={id} currentResult={shown?.result || null} />
       )}
 
       {activeTab === 'history' && (
@@ -663,15 +669,15 @@ function HistoryPanel({ structureId }: { structureId: string }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {history.map((c, i) => (
+            {history.map((c: any, i) => (
               <tr key={c.id} className={cn('hover:bg-surface-alt/50', i === 0 && 'bg-action/5')}>
                 <td className="px-6 py-3 text-ink">
-                  {formatDate(c.calculatedAt)}
+                  {formatDate(c.executedAt)}
                   {i === 0 && <span className="ml-2 rounded-full bg-action/10 px-2 py-0.5 text-[10px] font-semibold text-action">Último</span>}
                 </td>
-                <td className="px-6 py-3 text-right"><Money value={Number(c.productionCost)} /></td>
-                <td className="px-6 py-3 text-right"><Money value={Number(c.costOfGoodsSold)} /></td>
-                <td className="px-6 py-3 text-right"><Percent value={Number(c.grossMarginPct)} colorize /></td>
+                <td className="px-6 py-3 text-right"><Money value={Number(c.results.productionCost)} /></td>
+                <td className="px-6 py-3 text-right"><Money value={Number(c.results.costOfGoodsSold)} /></td>
+                <td className="px-6 py-3 text-right"><Percent value={Number(c.results.grossMarginPct)} colorize /></td>
               </tr>
             ))}
           </tbody>
@@ -683,17 +689,8 @@ function HistoryPanel({ structureId }: { structureId: string }) {
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
-function latestToResult(latest: CostCalculation): CalculationResult {
-  return {
-    rawMaterialConsumed:  Number(latest.rawMaterialConsumed),
-    directLaborTotal:     Number(latest.directLaborTotal),
-    indirectCostsApplied: Number(latest.indirectCostsApplied),
-    productionCost:       Number(latest.productionCost),
-    costOfGoodsSold:      Number(latest.costOfGoodsSold),
-    grossMargin:          Number(latest.grossMargin),
-    grossMarginPct:       Number(latest.grossMarginPct),
-    detail:               latest.detail,
-  };
+function latestToResult(latest: any): CalculationResult {
+  return latest.results;
 }
 
 // ── Reconciliación: estructura vs documentos (libro de costos) ──────────────────

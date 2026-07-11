@@ -92,14 +92,10 @@ export function useExportExcel(id: string) {
 
 export function useSimulate(id: string) {
   return useMutation({
-    mutationFn: async (overrides: {
-      salesUnitPrice?: number;
-      salesQuantity?: number;
-      macroFactor?: number;
-    }) => {
+    mutationFn: async (shocks: { rawMaterial?: number; directLabor?: number; indirectCosts?: number; sales?: number }) => {
       const res = await api.post<{ data: { result: CalculationResult; simulated: boolean } }>(
         `/cost-structures/${id}/simulate`,
-        overrides,
+        shocks,
       );
       return res.data.data.result;
     },
@@ -129,3 +125,4 @@ export function useLatestCalculation(id: string) {
     enabled: !!id,
   });
 }
+

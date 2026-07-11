@@ -96,10 +96,6 @@ export function RawMaterialForm({ structureId, period, defaultValues, onSave, sa
     defaultValues: cleanRawMaterialForForm(defaultValues) as any,
   });
 
-  // Cargar los datos persistidos en el formulario SOLO cuando su contenido cambia
-  // de verdad. Sin esta guarda, cualquier re-fetch de la estructura (p. ej. tras
-  // invalidar la query al guardar otra sección o calcular) reseteaba el form por
-  // cambio de referencia y BORRABA la edición en curso sin guardar (BUG-05).
   const loadedRef = useRef<string | null>(null);
   // Cuántos movimientos ya existían en el server la última vez que sincronizamos
   // — todo lo que se agregue por encima de este número en la sesión de edición
@@ -238,9 +234,13 @@ export function RawMaterialForm({ structureId, period, defaultValues, onSave, sa
     }
   };
 
+  const onSubmit = async (data: any) => {
+    setPending(cleanRawMaterialForSubmit(data));
+  };
+
   return (
     <>
-    <form onSubmit={handleSubmit((data) => setPending(cleanRawMaterialForSubmit(data)))} className="space-y-5 pt-3">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-3">
       {/* Wilson */}
       {!isProcesses && (
         <section>
@@ -327,10 +327,6 @@ export function RawMaterialForm({ structureId, period, defaultValues, onSave, sa
         )}
 
         <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
-          {/* Desktop/tablet: tabla clásica. Mobile (<640px): las mismas filas se
-              redibujan con display block y cada celda muestra su label vía CSS
-              (content: attr(data-label)) — los mismos inputs/binding de siempre,
-              solo cambia cómo se dibujan. */}
           <table className="block w-full text-sm sm:table">
             <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
               <tr>
