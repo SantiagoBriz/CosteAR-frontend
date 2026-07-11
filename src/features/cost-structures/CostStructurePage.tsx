@@ -27,6 +27,8 @@ import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { RawMaterialForm } from './RawMaterialForm';
 import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
+import { DerivationTree } from './DerivationTree';
+import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
 import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -47,6 +49,16 @@ export function CostStructurePage() {
   const calculate     = useCalculate(id);
   const exportExcel   = useExportExcel(id);
   const { data: latest } = useLatestCalculation(id);
+
+  // Trazabilidad Total v1 (D.1): corrida nueva con árbol persistido, en
+  // paralelo a la corrida legada (que sigue alimentando ResultPanel de
+  // abajo sin cambios). Cache-first del último run: si no calculaste en
+  // esta sesión todavía, usamos el último run que ya existía en el server.
+  const calculateTraced = useCalculateTraced(id);
+  const { data: runsList } = useStructureRuns(id);
+  const [tracedRunId, setTracedRunId] = useState<string | null>(null);
+  const [tracedError, setTracedError] = useState<string | null>(null);
+  const effectiveRunId = tracedRunId ?? runsList?.[0]?.id ?? null;
 
   const [activeTab, setActiveTab] = useState<SectionTab>('raw-material');
   const [result,    setResult]    = useState<CalculationResult | null>(null);
@@ -75,11 +87,22 @@ export function CostStructurePage() {
 
   const runCalculate = async () => {
     setError(null);
+    setTracedError(null);
     try {
       const data = await calculate.mutateAsync();
       setResult(data.result);
       setActiveTab('result');
-    } catch (e) { setError(apiErrorMessage(e)); }
+    } catch (e) { setError(apiErrorMessage(e)); return; }
+
+    // Corrida de trazabilidad (árbol persistido): no bloquea ni tapa el
+    // resultado de arriba si falla (ej. hay datos sin imputar) — el aviso
+    // queda solo dentro de la caja del árbol.
+    try {
+      const traced = await calculateTraced.mutateAsync();
+      setTracedRunId(traced.runId);
+    } catch (e) {
+      setTracedError(apiErrorMessage(e));
+    }
   };
 
   const runExport = async () => {
@@ -113,7 +136,14 @@ export function CostStructurePage() {
             <ArrowLeft className="size-3.5" /> Volver a la empresa
           </Link>
           <h1 className="text-2xl font-extrabold tracking-tight text-granate-deep">{structure?.productName ?? 'Estructura de costos'}</h1>
-          <p className="text-sm text-ink-soft">Período {structure?.period}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full border border-granate/20 bg-granate-tenue px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-granate-deep">
+              Período de costo: {structure?.period}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-line bg-surface-alt px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-soft">
+              Captación: continua
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={runExport} loading={exportExcel.isPending} disabled={!allReady}>
@@ -183,6 +213,8 @@ export function CostStructurePage() {
           configured={configured.mp}
         >
           <RawMaterialForm
+            structureId={id}
+            period={structure?.period}
             defaultValues={structure?.rawMaterialConfig as RawMaterialConfig | undefined}
             onSave={(d) => saveSection('raw-material', d)}
             saving={updateSection.isPending}
@@ -238,9 +270,16 @@ export function CostStructurePage() {
       </div>
 
       {activeTab === 'result' && (
-        shown
-          ? <ResultPanel result={shown} companyId={structure?.companyId} period={structure?.period} />
-          : <EmptyResult />
+        <div className="space-y-4">
+          <DerivationTree
+            runId={effectiveRunId}
+            isMissingRun={!!tracedError}
+            missingRunMessage={tracedError}
+          />
+          {shown
+            ? <ResultPanel result={shown} companyId={structure?.companyId} period={structure?.period} />
+            : <EmptyResult />}
+        </div>
       )}
 
       {activeTab === 'history' && (
@@ -356,6 +395,7 @@ function SalesTab({
         onConfirm={async () => {
           if (!pending) return;
           await onSave(pending.p, pending.q);
+          reset({ unitPrice: pending.p, quantity: pending.q }); // limpia "cambios sin guardar" al toque
           setPending(null);
         }}
         onCancel={() => setPending(null)}
