@@ -29,6 +29,7 @@ import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
 import { CostCentersView } from './CostCentersView';
 import { LaborDepartmentsView } from './LaborDepartmentsView';
+import { ConfigHistoryPanel } from './ConfigHistoryPanel';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
@@ -215,6 +216,8 @@ export function CostStructurePage() {
           title="Materia Prima"
           description="Lote óptimo de Wilson · Política de stock · Ficha PPP (Precio Promedio Ponderado)"
           configured={configured.mp}
+          structureId={id}
+          historySection="rawMaterial"
         >
           <RawMaterialForm
             structureId={id}
@@ -232,6 +235,8 @@ export function CostStructurePage() {
           title="Mano de Obra Directa"
           description="Días hábiles efectivos · ITCS (Índice Total de Cargas Sociales) · Tarifa horaria por departamento"
           configured={configured.mod}
+          structureId={id}
+          historySection="directLabor"
         >
           <DirectLaborSection
             config={structure?.directLaborConfig as DirectLaborConfig | undefined}
@@ -247,6 +252,8 @@ export function CostStructurePage() {
           title="Costos Indirectos de Producción"
           description="Centros de costo · Prorrateo primario y secundario · Cuotas por hora y variaciones"
           configured={configured.cip}
+          structureId={id}
+          historySection="indirectCosts"
         >
           <IndirectCostsSection
             config={structure?.indirectCostConfig as IndirectCostConfig | undefined}
@@ -379,12 +386,14 @@ function DirectLaborSection({
 // ── SectionShell ──────────────────────────────────────────────────────────────
 
 function SectionShell({
-  title, description, configured, children,
+  title, description, configured, children, structureId, historySection,
 }: {
   title: string;
   description: string;
   configured: boolean;
   children: React.ReactNode;
+  structureId?: string;
+  historySection?: string;
 }) {
   return (
     <Card>
@@ -401,6 +410,9 @@ function SectionShell({
       />
       <CardBody className="px-6 pb-6 pt-0">
         {children}
+        {structureId && historySection && (
+          <ConfigHistoryPanel structureId={structureId} section={historySection} />
+        )}
       </CardBody>
     </Card>
   );

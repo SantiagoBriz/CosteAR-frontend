@@ -13,6 +13,30 @@ export function useCostStructure(id: string) {
   });
 }
 
+export interface ConfigVersion {
+  id: string;
+  section: string;
+  versionN: number;
+  value: unknown;
+  reason: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+/** Historial append-only de la config del motor (R1). Más nueva primero. */
+export function useConfigHistory(structureId: string, section: string) {
+  return useQuery({
+    queryKey: ['cost-structures', structureId, 'config-history', section],
+    queryFn: async () => {
+      const res = await api.get<{ data: ConfigVersion[] }>(
+        `/cost-structures/${structureId}/config-history?section=${section}`,
+      );
+      return res.data.data;
+    },
+    enabled: !!structureId && !!section,
+  });
+}
+
 export function useCreateCostStructure(companyId: string) {
   const qc = useQueryClient();
   return useMutation({

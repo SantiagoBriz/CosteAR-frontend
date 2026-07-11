@@ -247,3 +247,15 @@ extra). No inventé un endpoint nuevo para esto.
   solo si el modelo los tiene.
 - **DirectLaborForm**: columna nueva "Horas reales (fin de mes)" separada de las
   presupuestadas, opcional. Con esto Parte 3 queda completa (MP, MOD, CIF).
+
+---
+
+## Sesión 2026-07-11 (cont.) — UI del historial de config (R1)
+
+- **ConfigHistoryPanel**: panel colapsable "Historial de cambios · APPEND-ONLY"
+  al pie de cada sección (MP/MOD/CIF), que lee `GET
+  /cost-structures/:id/config-history?section=`. Lista las versiones (más nueva
+  primero) con un resumen legible por sección (N materias primas / N
+  departamentos / N centros·conceptos / precio×cantidad), timestamp en zona
+  America/Argentina/Tucuman, marca "VIGENTE" en la última y JSON expandible del
+  snapshot. Hace visible que la fuente de verdad se versiona y nunca se pisa (R1).
