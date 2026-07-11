@@ -256,13 +256,18 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
             <Plus className="size-3" /> Agregar
           </Button>
         </div>
+        <p className="mb-2 text-[11px] leading-snug text-ink-soft">
+          Las <strong className="font-medium text-ink">horas presupuestadas</strong> son la capacidad normal
+          del departamento (con las que se calcula la tarifa horaria). No son las horas realmente trabajadas:
+          esas son el dato real de fin de mes.
+        </p>
         <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
           <table className="block w-full text-sm sm:table">
             <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Departamento</th>
                 <th className="px-3 py-2 text-right font-medium">Remuneración básica $</th>
-                <th className="px-3 py-2 text-right font-medium">Horas trabajadas</th>
+                <th className="px-3 py-2 text-right font-medium">Horas presupuestadas</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -275,7 +280,7 @@ export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
                   <td data-label="Remuneración básica $" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input type="number" step="0.01" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`departments.${i}.basicRemuneration`, { valueAsNumber: true })} />
                   </td>
-                  <td data-label="Horas trabajadas" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                  <td data-label="Horas presupuestadas" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none" {...register(`departments.${i}.hoursWorked`, { valueAsNumber: true })} />
                   </td>
                   <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">

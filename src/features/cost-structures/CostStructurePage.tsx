@@ -605,7 +605,14 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
           <CardHeader title="Detalle MOD" />
           <CardBody className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-ink-soft">Días hábiles efectivos</span><span className="font-medium">{result.detail.directLabor.workingDays} días</span></div>
-            <div className="flex justify-between"><span className="text-ink-soft">IAP (Índice de Ausentismo Pago)</span><span className="font-medium">{result.detail.directLabor.iapPercent.toFixed(2)}%</span></div>
+            <div className="flex flex-col gap-0.5">
+              <div className="flex justify-between"><span className="text-ink-soft">IAP — Inasistencias pagas</span><span className="font-medium">{result.detail.directLabor.iapPercent.toFixed(2)}%</span></div>
+              {result.detail.directLabor.paidDays != null && (
+                <span className="text-[11px] text-ink-soft">
+                  IAP = {result.detail.directLabor.paidDays} días pagos / {result.detail.directLabor.workingDays} efectivos = {result.detail.directLabor.iapPercent.toFixed(2)}% · derivado, solo lectura
+                </span>
+              )}
+            </div>
             <div className="flex justify-between"><span className="text-ink-soft">ITCS</span><span className="font-medium">{result.detail.directLabor.itcsPercent.toFixed(2)}%</span></div>
             {Object.entries(result.detail.directLabor.hourlyRates).map(([dept, rate]) => (
               <div key={dept} className="flex justify-between">

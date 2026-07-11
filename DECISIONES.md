@@ -146,3 +146,30 @@ extra). No inventé un endpoint nuevo para esto.
   (backend, 193 tests) en verde después de todos los cambios.
 - Verificación manual en Chrome contra el backend local real: ver el resumen
   final de la sesión para el paso a paso.
+
+---
+
+## Sesión 2026-07-11 — Correcciones puntuales (F6, Parte 5)
+
+- **(a) Horas presupuestadas**: en `DirectLaborForm` el campo de horas era
+  "Horas trabajadas"; se renombró a "Horas presupuestadas" (encabezado + celda)
+  y se agregó una nota: son la capacidad normal para la tarifa, no las horas
+  reales (esas son el dato de fin de mes). En `ValidacionesPage` el dato viene
+  del portal del operador y SÍ es real, así que se etiquetó "Horas trabajadas
+  (real)" en vez de renombrar mal (criterio C: real y presupuestado siempre
+  etiquetados).
+- **(b) Real vs presupuestado en CIF**: la tabla de centros productivos ahora
+  tiene un encabezado agrupador ("Presupuestado (calculado)" | "Datos reales
+  (fin de mes)") y un separador vertical entre ambos grupos, para no mezclarlos.
+- **(d) Período de costo**: ya se mostraba como badge dentro de la estructura
+  ("Período de costo: YYYY-MM" + "Captación: continua"); se deja como está.
+- **(e) Líneas bordó sobrantes**: los `focus:border-granate` y los headers
+  `text-granate-deep` son tema de marca (correctos). Se quitó el único artefacto
+  claro: un `border-t` huérfano que dibujaba una línea parcial bajo los
+  subheaders "Fijo %/Var %" del prorrateo secundario. El artefacto exacto que
+  vio el equipo conviene confirmarlo con un screenshot; el resto del granate es
+  intencional.
+- **(5.4) IAP**: en el Resultado se muestra "IAP — Inasistencias pagas" con la
+  fórmula derivada ("= N días pagos / M efectivos = X%") y la aclaración
+  "derivado, solo lectura". El numerador viene del backend (`paidDays`), no se
+  inventa en el front.

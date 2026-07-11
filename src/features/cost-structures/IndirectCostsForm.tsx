@@ -369,8 +369,8 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 <tr>
                   {productiveCenters.map((c) => (
                     <Fragment key={c.id}>
-                      <th className="w-24 px-2 py-1 text-center font-medium text-[10px] text-ink-soft border-t border-line">Fijo %</th>
-                      <th className="w-24 px-2 py-1 text-center font-medium text-[10px] text-ink-soft border-t border-line">Var %</th>
+                      <th className="w-24 px-2 py-1 text-center font-medium text-[10px] text-ink-soft">Fijo %</th>
+                      <th className="w-24 px-2 py-1 text-center font-medium text-[10px] text-ink-soft">Var %</th>
                     </Fragment>
                   ))}
                 </tr>
@@ -435,6 +435,12 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
           <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
             <table className="block w-full text-sm sm:table">
               <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
+                <tr className="text-[10px]">
+                  <th className="px-3 py-1.5" />
+                  <th colSpan={3} className="px-3 py-1.5 text-center font-bold text-action">Presupuestado (calculado)</th>
+                  <th colSpan={2} className="border-l-2 border-line px-3 py-1.5 text-center font-bold text-ink">Datos reales (fin de mes)</th>
+                  <th className="px-3 py-1.5" />
+                </tr>
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Centro</th>
                   <th className="bg-surface-alt/60 px-3 py-2 text-right font-medium text-action">
@@ -448,7 +454,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                     </span>
                   </th>
                   <th className="px-3 py-2 text-right font-medium">Cap. normal (hs)</th>
-                  <th className="px-3 py-2 text-right font-medium">Actividad real (hs)</th>
+                  <th className="border-l-2 border-line px-3 py-2 text-right font-medium">Actividad real (hs)</th>
                   <th className="px-3 py-2 text-right font-medium">CIP real $</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -485,7 +491,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                       <input type="hidden" {...register(`productiveSettings.${i}.budget.variable`, { valueAsNumber: true })} />
                     </td>
                     <td data-label="Cap. normal (hs)" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden"><input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-24" {...register(`productiveSettings.${i}.normalCapacity`, { valueAsNumber: true })} /></td>
-                    <td data-label="Actividad real (hs)" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden"><input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-24" {...register(`productiveSettings.${i}.actualActivity`, { valueAsNumber: true })} /></td>
+                    <td data-label="Actividad real (hs) — fin de mes" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:border-l-2 sm:border-line sm:px-2 sm:py-1.5 sm:before:hidden"><input type="number" step="1" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-24" {...register(`productiveSettings.${i}.actualActivity`, { valueAsNumber: true })} /></td>
                     <td data-label="CIP real $" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden"><input type="number" step="0.01" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-28" {...register(`productiveSettings.${i}.actualCip`, { valueAsNumber: true })} /></td>
                     <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                       <button type="button" onClick={() => removeProdSetting(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
