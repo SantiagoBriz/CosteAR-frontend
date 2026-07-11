@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
-  ArrowLeft, Calculator, Package, Users, Factory,
+  ArrowLeft, Calculator, Package, Users, Factory, Activity,
   TrendingUp, BarChart2, CheckCircle2, History,
   Download, Loader2,
 } from 'lucide-react';
@@ -27,6 +27,7 @@ import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { RawMaterialForm } from './RawMaterialForm';
 import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
+import { ScenarioSimulator } from './components/ScenarioSimulator';
 import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -35,7 +36,7 @@ import type { CalculationResult } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history';
+type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -149,6 +150,7 @@ export function CostStructurePage() {
             { id: 'indirect-costs'  as SectionTab, label: 'Costos Indirectos',     icon: Factory,    configKey: 'cip'   as const },
             { id: 'sales'           as SectionTab, label: 'Venta',                 icon: TrendingUp, configKey: 'sales' as const },
             { id: 'result'          as SectionTab, label: 'Resultado',             icon: BarChart2,  configKey: undefined },
+            { id: 'simulate'        as SectionTab, label: 'Simulador',             icon: Activity,   configKey: undefined },
             { id: 'history'         as SectionTab, label: 'Historial',             icon: History,    configKey: undefined },
           ] as { id: SectionTab; label: string; icon: typeof Package; configKey: keyof typeof configured | undefined }[]
         ).map(({ id: tabId, label, icon: Icon, configKey }) => {
@@ -242,6 +244,10 @@ export function CostStructurePage() {
         shown
           ? <ResultPanel result={shown.result} runId={shown.calculationId} structureId={id} companyId={structure?.companyId} period={structure?.period} />
           : <EmptyResult />
+      )}
+
+      {activeTab === 'simulate' && (
+        <ScenarioSimulator structureId={id} currentResult={shown?.result || null} />
       )}
 
       {activeTab === 'history' && (
