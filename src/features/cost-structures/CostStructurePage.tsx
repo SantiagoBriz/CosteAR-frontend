@@ -27,6 +27,7 @@ import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { RawMaterialForm } from './RawMaterialForm';
 import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
+import { CostCentersView } from './CostCentersView';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
@@ -245,8 +246,9 @@ export function CostStructurePage() {
           description="Centros de costo · Prorrateo primario y secundario · Cuotas por hora y variaciones"
           configured={configured.cip}
         >
-          <IndirectCostsForm
-            defaultValues={structure?.indirectCostConfig as IndirectCostConfig | undefined}
+          <IndirectCostsSection
+            config={structure?.indirectCostConfig as IndirectCostConfig | undefined}
+            perDepartment={shown?.result?.detail?.indirectCosts?.perDepartment}
             onSave={(d) => saveSection('indirect-costs', d)}
             saving={updateSection.isPending}
           />
@@ -294,6 +296,44 @@ export function CostStructurePage() {
         <HistoryPanel structureId={id} />
       )}
     </AppShell>
+  );
+}
+
+// ── Costos Indirectos: lista de centros ↔ configuración (Parte 3.3) ──────────
+function IndirectCostsSection({
+  config, perDepartment, onSave, saving,
+}: {
+  config?: IndirectCostConfig;
+  perDepartment?: CalculationResult['detail']['indirectCosts']['perDepartment'];
+  onSave: (data: IndirectCostConfig) => Promise<void>;
+  saving: boolean;
+}) {
+  // Arranca en la vista de centros si ya hay centros cargados; si no, en edición.
+  const [editing, setEditing] = useState(!config?.centers?.length);
+
+  if (editing) {
+    return (
+      <div className="space-y-2 pt-1">
+        {!!config?.centers?.length && (
+          <button type="button" onClick={() => setEditing(false)} className="inline-flex items-center gap-1 text-[13px] text-granate hover:text-action">
+            <ArrowLeft className="size-3.5" /> Volver a la lista de centros
+          </button>
+        )}
+        <IndirectCostsForm
+          defaultValues={config}
+          onSave={async (d) => { await onSave(d); setEditing(false); }}
+          saving={saving}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <CostCentersView
+      config={config ?? { centers: [], concepts: [], serviceDistributions: [], productiveSettings: [] }}
+      perDepartment={perDepartment}
+      onEdit={() => setEditing(true)}
+    />
   );
 }
 

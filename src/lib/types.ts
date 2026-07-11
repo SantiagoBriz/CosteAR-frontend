@@ -49,6 +49,11 @@ export interface CalculationResult {
           actualActivity?: number;
           quota?: number;
           actualCip?: number;
+          budgetFixed?: number;
+          budgetVariable?: number;
+          quotaFixed?: number;
+          quotaVariable?: number;
+          overUnderApplied?: number;
         }
       >;
     };

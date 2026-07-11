@@ -217,3 +217,19 @@ extra). No inventé un endpoint nuevo para esto.
   onSave persiste la sección `{ materials: [...] }` que el backend acepta.
 - La lógica de trazabilidad de movimientos nuevos (DataPoints + imputación) se
   conserva por materia prima dentro de la ficha.
+
+---
+
+## Sesión 2026-07-11 (cont.) — CIF lista→ficha por centro (F4, Parte 3.3)
+
+- **CostCentersView**: el tab Costos Indirectos ahora abre en la LISTA de
+  centros de costo (tipo productivo/servicio, presupuesto F/V derivado, cuota,
+  estado) con la sobreaplicación neta global visible; "Editar configuración"
+  alterna al formulario de siempre (que sigue teniendo el escalonado, etc.).
+- **Ficha por centro**: conceptos del primario que lo tocan (con su peso),
+  presupuesto derivado (fijo/variable/total), cuota predeterminada con su
+  fórmula (presupuesto ÷ capacidad normal), datos reales (cap. normal /
+  actividad real / CIP real), CIP aplicado y variaciones ETIQUETADAS con su
+  lectura contable (favorable/desfavorable, ahorro/exceso, sobre/subaplicación,
+  capacidad ociosa). Para servicios: qué reparte y su posición en el orden de
+  cierre. Todo LEÍDO del cálculo persistido — el front no recalcula.
