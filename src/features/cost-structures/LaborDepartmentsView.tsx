@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ArrowLeft, ChevronRight, Users, Pencil, Info } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Users, Pencil, Info, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Money } from '@/components/ui/Money';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ interface Props {
   config: DirectLaborConfig;
   directLabor?: DetailMOD;
   onEdit: () => void;
+  onLoadExample?: () => void;
 }
 
 const fmt = (n: number | undefined) =>
@@ -24,7 +25,7 @@ const pct = (n: number | undefined) => (n == null ? '—' : `${n.toFixed(2)}%`);
  * tarifa de cada depto). La tarifa y el desglose salen del cálculo persistido
  * (el front no recalcula). Horas presupuestadas vs reales, separadas.
  */
-export function LaborDepartmentsView({ config, directLabor, onEdit }: Props) {
+export function LaborDepartmentsView({ config, directLabor, onEdit, onLoadExample }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const departments = config.departments ?? [];
   const hasResult = !!directLabor;
@@ -47,9 +48,16 @@ export function LaborDepartmentsView({ config, directLabor, onEdit }: Props) {
           <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-granate-deep">Departamentos productivos</h4>
           <p className="text-[11px] text-ink-soft">Entrá a un departamento para ver su ITCS, tarifa y horas presupuestadas vs reales.</p>
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={onEdit}>
-          <Pencil className="size-3" /> Editar configuración
-        </Button>
+        <div className="flex items-center gap-2">
+          {onLoadExample && (
+            <Button type="button" size="sm" variant="ghost" onClick={onLoadExample}>
+              <Sparkles className="size-3.5" /> Cargar ejemplo de la cátedra
+            </Button>
+          )}
+          <Button type="button" size="sm" variant="secondary" onClick={onEdit}>
+            <Pencil className="size-3" /> Editar configuración
+          </Button>
+        </div>
       </div>
 
       {/* Datos compartidos de la estructura (alimentan todas las tarifas) */}

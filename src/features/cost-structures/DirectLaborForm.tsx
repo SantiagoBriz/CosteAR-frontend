@@ -12,6 +12,8 @@ interface Props {
   defaultValues?: DirectLaborConfig;
   onSave: (data: DirectLaborConfig) => Promise<void>;
   saving: boolean;
+  /** Si viene en true, al montar carga el ejemplo de la cátedra en el form. */
+  autoLoadExample?: boolean;
 }
 
 export function ensureDefaultUncertainConcepts(config?: DirectLaborConfig): DirectLaborConfig {
@@ -132,10 +134,20 @@ function cleanDirectLaborForSubmit(data: any): DirectLaborConfig {
   };
 }
 
-export function DirectLaborForm({ defaultValues, onSave, saving }: Props) {
+export function DirectLaborForm({ defaultValues, onSave, saving, autoLoadExample }: Props) {
   const { register, control, handleSubmit, reset, formState: { isDirty } } = useForm<DirectLaborConfig>({
     defaultValues: cleanDirectLaborForForm(defaultValues) as any,
   });
+
+  // Cargar el ejemplo de la cátedra al abrir el form desde "Cargar ejemplo"
+  // en la lista (cuando la estructura ya tenía datos y el form estaba oculto).
+  const exampleLoadedRef = useRef(false);
+  useEffect(() => {
+    if (autoLoadExample && !exampleLoadedRef.current) {
+      exampleLoadedRef.current = true;
+      reset(cleanDirectLaborForForm(catedraExample.directLabor as unknown as DirectLaborConfig));
+    }
+  }, [autoLoadExample, reset]);
 
   // Recargar el form solo si el contenido persistido cambió de verdad, para no
   // pisar la edición en curso cuando la estructura se re-fetchea por invalidación
