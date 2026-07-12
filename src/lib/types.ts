@@ -73,6 +73,13 @@ export interface CalculationResult {
         }
       >;
     };
+    // Costo unitario de producción — el número final del sistema de costos.
+    // Opcional: los cálculos guardados antes de esta versión no lo tienen.
+    unitCost?: {
+      unitsProduced: number;
+      unitProductionCost: number;
+      unitCostOfGoodsSold: number;
+    };
   };
 }
 

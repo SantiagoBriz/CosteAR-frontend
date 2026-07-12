@@ -684,6 +684,19 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
 
       {/* Derecha: margen + detalles */}
       <div className="space-y-4">
+        {result.detail.unitCost && (
+          <Card>
+            <CardBody className="space-y-2 py-8 text-center">
+              <p className="text-[11px] uppercase tracking-widest text-ink-soft">Costo unitario de producción</p>
+              <Money value={result.detail.unitCost.unitProductionCost} className="block text-5xl font-bold text-ink" />
+              {result.detail.unitCost.unitsProduced > 0 && (
+                <p className="text-[12px] text-ink-soft">
+                  costo de producción ÷ {result.detail.unitCost.unitsProduced.toLocaleString('es-AR')} u producidas
+                </p>
+              )}
+            </CardBody>
+          </Card>
+        )}
         <Card>
           <CardBody className="space-y-3 py-8 text-center">
             <p className="text-[11px] uppercase tracking-widest text-ink-soft">Margen bruto</p>
@@ -792,8 +805,21 @@ function HistoryPanel({ structureId }: { structureId: string }) {
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
+// El endpoint /calculations/latest devuelve la fila CostCalculation (columnas
+// planas + `detail` JSON), NO un objeto `{ results }`. Antes leía `latest.results`
+// (inexistente) → al recargar la página el panel recibía `undefined` y quedaba en
+// blanco/estático. Mapeamos la fila al shape que espera ResultPanel.
 function latestToResult(latest: any): CalculationResult {
-  return latest.results;
+  return {
+    rawMaterialConsumed:  Number(latest.rawMaterialConsumed),
+    directLaborTotal:     Number(latest.directLaborTotal),
+    indirectCostsApplied: Number(latest.indirectCostsApplied),
+    productionCost:       Number(latest.productionCost),
+    costOfGoodsSold:      Number(latest.costOfGoodsSold),
+    grossMargin:          Number(latest.grossMargin),
+    grossMarginPct:       Number(latest.grossMarginPct),
+    detail:               latest.detail,
+  };
 }
 
 // ── Reconciliación: estructura vs documentos (libro de costos) ──────────────────
