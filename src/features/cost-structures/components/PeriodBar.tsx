@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { CalendarDays, Lock, LockOpen, Plus, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Lock, LockOpen, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { apiErrorMessage } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { cn, formatMoney } from '@/lib/utils';
 import {
   usePeriods,
+  usePeriodPreview,
   useOpenNextPeriod,
   useClosePeriod,
   useReopenPeriod,
   type CostPeriod,
+  type PeriodPreview,
 } from '../period-hooks';
 
 interface PeriodBarProps {
@@ -144,36 +146,18 @@ export function PeriodBar({
         </div>
       )}
 
-      {/* Abrir: la receta viene siempre; los importes son opcionales. */}
-      <ConfirmDialog
-        open={dialog === 'open'}
-        title={empty ? 'Abrir el primer período' : 'Abrir el período siguiente'}
-        confirmLabel="Abrir"
-        loading={openNext.isPending}
-        onCancel={() => setDialog(null)}
-        onConfirm={() => void run(() => openNext.mutateAsync(carryAmounts))}
-        message={
-          <div className="space-y-3">
-            <p>
-              Se copia la <strong>receta</strong> (centros, bases, departamentos, capacidad normal).
-              Las compras, los consumos y el cierre del mes anterior <strong>no</strong> se copian:
-              son datos del mes.
-            </p>
-            <label className="flex items-start gap-2">
-              <input
-                type="checkbox"
-                checked={carryAmounts}
-                onChange={(e) => setCarryAmounts(e.target.checked)}
-                className="mt-0.5 size-4 accent-granate"
-              />
-              <span>
-                Traer también los <strong>importes</strong> del período anterior (CIF y sueldos) para
-                revisarlos y corregirlos.
-              </span>
-            </label>
-          </div>
-        }
-      />
+      {/* Abrir (apertura inteligente): antes de tocar nada, se muestra con qué
+          existencia arranca cada MP y qué importes hay para traer. */}
+      {dialog === 'open' && (
+        <OpenPeriodDialog
+          structureId={structureId}
+          carryAmounts={carryAmounts}
+          onCarryAmounts={setCarryAmounts}
+          loading={openNext.isPending}
+          onCancel={() => setDialog(null)}
+          onConfirm={() => void run(() => openNext.mutateAsync(carryAmounts))}
+        />
+      )}
 
       {/* Cerrar: el backend exige actividad real y CIP real en todos los centros. */}
       <ConfirmDialog
@@ -212,6 +196,193 @@ export function PeriodBar({
           }
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * APERTURA INTELIGENTE (problema C — Fase 3).
+ *
+ * Abrir un mes no es crear una carpeta vacía: es decidir con qué arranca. El
+ * diálogo lo muestra ANTES de tocar nada —
+ *
+ *   · la existencia con la que quedó cada materia prima al cerrar el mes
+ *     anterior, valuada al PPP de cierre (se arrastra sola: es la que abre);
+ *   · qué importes hay para traer, si el costista los quiere revisar;
+ *   · y qué NO se copia: las compras, los consumos y el cierre del mes viejo.
+ */
+function OpenPeriodDialog({
+  structureId,
+  carryAmounts,
+  onCarryAmounts,
+  loading,
+  onCancel,
+  onConfirm,
+}: {
+  structureId: string;
+  carryAmounts: boolean;
+  onCarryAmounts: (v: boolean) => void;
+  loading: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { data: preview, isLoading } = usePeriodPreview(structureId, true);
+  // Si la ficha de stock del mes que cierra no cuadra, no hay existencia que
+  // arrastrar: abrir ahora sería arrancar el mes con un número inventado.
+  const blocked = !!preview?.openingStockError;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+      <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-action/10 text-action">
+              <Plus className="size-5" />
+            </div>
+            <h2 className="text-base font-semibold text-ink">
+              {isLoading || !preview
+                ? 'Abrir período'
+                : preview.isFirst
+                  ? `Abrir el primer período (${preview.next.label})`
+                  : `Abrir ${preview.next.label}`}
+            </h2>
+          </div>
+          <button type="button" onClick={onCancel} className="text-ink-soft hover:text-ink">
+            <X className="size-5" />
+          </button>
+        </div>
+
+        {isLoading || !preview ? (
+          <div className="h-24 animate-pulse rounded-lg bg-surface-alt" />
+        ) : (
+          <OpenPeriodBody
+            preview={preview}
+            carryAmounts={carryAmounts}
+            onCarryAmounts={onCarryAmounts}
+          />
+        )}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={onCancel} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button size="sm" onClick={onConfirm} loading={loading} disabled={isLoading || blocked}>
+            {preview && !preview.isFirst ? `Abrir ${preview.next.label}` : 'Abrir período'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OpenPeriodBody({
+  preview,
+  carryAmounts,
+  onCarryAmounts,
+}: {
+  preview: PeriodPreview;
+  carryAmounts: boolean;
+  onCarryAmounts: (v: boolean) => void;
+}) {
+  // El primero no arrastra de ningún lado: fotografía lo que ya está cargado.
+  if (preview.isFirst) {
+    return (
+      <p className="text-[13px] leading-relaxed text-ink-soft">
+        Es el primer período de esta estructura: se guarda como <strong>{preview.next.label}</strong>{' '}
+        lo que ya tenés cargado. No se borra ni se cambia nada de la pantalla. A partir de acá, cada
+        mes queda guardado por separado.
+      </p>
+    );
+  }
+
+  const hasStock = preview.openingStock.some((m) => m.quantity > 0);
+
+  return (
+    <div className="space-y-4 text-[13px] leading-relaxed text-ink-soft">
+      {/* La existencia arrastrada: el dato que antes se copiaba a mano. */}
+      {preview.openingStockError ? (
+        <div className="flex items-start gap-2 rounded-lg bg-danger/10 px-3 py-2.5 text-danger">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="font-semibold">No se puede arrastrar la existencia</p>
+            <p className="mt-0.5 text-[12px]">{preview.openingStockError}</p>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <p>
+            Lo que quedó en depósito al cerrar <strong>{preview.from?.label}</strong> arranca{' '}
+            {preview.next.label} como <strong>existencia inicial</strong>, al precio promedio
+            ponderado con el que cerró:
+          </p>
+          {hasStock ? (
+            <div className="mt-2 overflow-x-auto rounded-lg border border-line">
+              <table className="w-full text-[12px]">
+                <thead className="bg-surface-alt text-[10.5px] uppercase tracking-wide text-ink-soft">
+                  <tr>
+                    <th className="px-3 py-1.5 text-left font-bold">Materia prima</th>
+                    <th className="px-3 py-1.5 text-right font-bold">Existencia</th>
+                    <th className="px-3 py-1.5 text-right font-bold">PPP</th>
+                    <th className="px-3 py-1.5 text-right font-bold">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {preview.openingStock.map((m) => (
+                    <tr key={m.name}>
+                      <td className="px-3 py-1.5 text-ink">{m.name}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-ink">
+                        {m.quantity.toLocaleString('es-AR')}
+                        {m.unit ? ` ${m.unit}` : ''}
+                      </td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-ink">
+                        {formatMoney(m.unitCost)}
+                      </td>
+                      <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-ink">
+                        {formatMoney(m.value)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="mt-2 rounded-lg bg-surface-alt px-3 py-2 text-[12px]">
+              {preview.from?.label} cerró sin existencia en depósito: {preview.next.label} arranca en
+              cero.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Lo que viene siempre y lo que nunca viene. */}
+      <p>
+        Viene también la <strong>receta</strong>: centros, bases de distribución, departamentos y
+        capacidad normal. <strong>No</strong> se copian las compras, los consumos, ni la actividad y
+        el CIP reales de {preview.from?.label} — son datos de ese mes, que queda guardado y se puede
+        seguir consultando.
+      </p>
+
+      {/* Los importes: el costista elige. */}
+      <label className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          checked={carryAmounts}
+          onChange={(e) => onCarryAmounts(e.target.checked)}
+          className="mt-0.5 size-4 accent-granate"
+        />
+        <span>
+          Traer también los <strong>importes</strong> de {preview.from?.label} para revisarlos y
+          corregirlos
+          {preview.amounts && (
+            <>
+              {' '}
+              — sueldos {formatMoney(preview.amounts.wages)} · CIF{' '}
+              {formatMoney(preview.amounts.indirect)}
+            </>
+          )}
+          . Si no, arrancan en cero.
+        </span>
+      </label>
     </div>
   );
 }

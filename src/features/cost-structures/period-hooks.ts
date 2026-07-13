@@ -32,6 +32,45 @@ export interface CostPeriod {
   reopenReason: string | null;
 }
 
+/** Con cuánta materia prima (y a qué PPP) arranca el período que se va a abrir. */
+export interface MaterialOpeningStock {
+  name: string;
+  unit: string | null;
+  /** Existencia final del mes que cierra = existencia inicial del que abre. */
+  quantity: number;
+  /** PPP con el que cerró. */
+  unitCost: number;
+  value: number;
+}
+
+/** Qué va a pasar si abro el período siguiente (Fase 3). No modifica nada. */
+export interface PeriodPreview {
+  /** El primer período no arrastra: fotografía lo que ya está cargado. */
+  isFirst: boolean;
+  /** Si hay un período abierto, hay que cerrarlo antes de abrir otro. */
+  blockedBy: { id: string; label: string } | null;
+  next: { code: string; label: string; startDate: string; endDate: string };
+  from: { id: string; code: string; label: string; status: CostPeriodStatus } | null;
+  openingStock: MaterialOpeningStock[];
+  /** La ficha de stock del mes que cierra no cuadra: no se puede arrastrar. */
+  openingStockError: string | null;
+  amounts: { wages: number; indirect: number } | null;
+}
+
+/** Se pide solo cuando el diálogo de apertura está abierto (`enabled`). */
+export function usePeriodPreview(structureId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['cost-structures', structureId, 'periods', 'next-preview'],
+    queryFn: async () => {
+      const res = await api.get<{ data: PeriodPreview }>(
+        `/structures/${structureId}/periods/next-preview`,
+      );
+      return res.data.data;
+    },
+    enabled: !!structureId && enabled,
+  });
+}
+
 /** Todos los períodos de la estructura, del más nuevo al más viejo. */
 export function usePeriods(structureId: string) {
   return useQuery({
