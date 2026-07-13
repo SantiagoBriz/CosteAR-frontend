@@ -40,7 +40,15 @@ export function useConfigHistory(structureId: string, section: string) {
 export function useCreateCostStructure(companyId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { productName: string; period: string; costingSystem?: string }) => {
+    mutationFn: async (input: {
+      productName: string;
+      /**
+       * OPCIONAL: si no se manda, el backend lo deriva de la fecha de hoy y del ritmo
+       * de costeo de la empresa. Ya no se tipea a mano.
+       */
+      period?: string;
+      costingSystem?: string;
+    }) => {
       const res = await api.post<{ data: CostStructure }>(
         `/companies/${companyId}/cost-structures`,
         input,

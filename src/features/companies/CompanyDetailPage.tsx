@@ -3,7 +3,8 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   Plus, FileSpreadsheet, ChevronRight, ArrowLeft, Users, Copy, Trash2, Eye, EyeOff, KeyRound,
-  Edit2, Mic, MicOff, Sparkles, BookOpen, History, Table, FileDown, PenLine, Pencil, ImageIcon
+  Edit2, Mic, MicOff, Sparkles, BookOpen, History, Table, FileDown, PenLine, Pencil, ImageIcon,
+  CalendarClock
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -18,6 +19,7 @@ import { LedgerEntryModal } from '@/features/libro/LedgerEntryModal';
 import { useHistorial } from '@/features/validaciones/validaciones-hooks';
 import { api, apiErrorMessage } from '@/lib/api';
 import { cn, formatMoney, formatDate } from '@/lib/utils';
+import { PERIODICITY_OPTIONS, PERIODICITY_LABEL, type Periodicity } from '@/lib/types';
 
 const STATUS: Record<string, { label: string; status: 'ok' | 'warn' | 'idle' }> = {
   DRAFT: { label: 'Borrador', status: 'idle' },
@@ -77,14 +79,7 @@ export function CompanyDetailPage() {
           </div>
           {company?.industry && <p className="mt-1 text-sm text-zinc-500">{company.industry}</p>}
         </div>
-        {activeTab === 'structures' && (
-          <Button onClick={() => setShowForm((v) => !v)}>
-            <Plus className="size-4" /> Nueva estructura
-          </Button>
-        )}
       </div>
-
-      {showForm && <NewStructureForm companyId={id} onDone={() => setShowForm(false)} />}
 
       {/* Asistente de Configuración Inicial (IA) */}
       <AiSuggesterSection companyName={company?.name ?? ''} />
@@ -121,7 +116,26 @@ export function CompanyDetailPage() {
       <div className="mt-4">
         {activeTab === 'structures' && (
           <Card>
-            <CardHeader title="Estructuras de costos" description="Por producto y período" />
+            {/* El botón vive acá, junto a la lista que va a modificar — no en el header
+                de la página, donde no tenía contexto. */}
+            <CardHeader
+              title="Estructuras de costos"
+              description="Por producto y período"
+              action={
+                <Button size="sm" onClick={() => setShowForm((v) => !v)}>
+                  <Plus className="size-4" /> Nueva estructura
+                </Button>
+              }
+            />
+            {showForm && (
+              <div className="border-b border-zinc-100 px-6 py-5">
+                <NewStructureForm
+                  companyId={id}
+                  periodicity={company?.periodicity}
+                  onDone={() => setShowForm(false)}
+                />
+              </div>
+            )}
             <CardBody className="p-0">
               {!structures?.length ? (
                 <div className="flex flex-col items-center gap-3 py-14 text-center">
@@ -182,7 +196,13 @@ function EditCompanyModal({
   company,
   onClose,
 }: {
-  company: { id: string; name: string; industry: string | null; cuit?: string | null };
+  company: {
+    id: string;
+    name: string;
+    industry: string | null;
+    cuit?: string | null;
+    periodicity?: Periodicity;
+  };
   onClose: () => void;
 }) {
   const update = useUpdateCompany();
@@ -191,6 +211,7 @@ function EditCompanyModal({
       name: company.name,
       industry: company.industry ?? '',
       cuit: company.cuit ?? '',
+      periodicity: company.periodicity ?? ('MONTHLY' as Periodicity),
     },
   });
 
@@ -201,6 +222,7 @@ function EditCompanyModal({
         name: values.name,
         industry: values.industry || undefined,
         cuit: values.cuit || undefined,
+        periodicity: values.periodicity,
       });
       onClose();
     } catch (e) {
@@ -216,6 +238,24 @@ function EditCompanyModal({
           <Input label="Razón Social" {...register('name', { required: true })} />
           <Input label="Sector / Actividad" {...register('industry')} />
           <Input label="CUIT (opcional)" {...register('cuit')} />
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-zinc-700">
+              Ritmo de costeo
+            </label>
+            <select
+              {...register('periodicity')}
+              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 focus:border-granate focus:outline-none focus:ring-2 focus:ring-granate/10"
+            >
+              {PERIODICITY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-zinc-400">
+              Solo se puede cambiar mientras la empresa no tenga ningún período cargado.
+            </p>
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
             <Button type="submit" loading={formState.isSubmitting}>Guardar Cambios</Button>
@@ -921,15 +961,31 @@ function CredField({ label, value, copied, onCopy }: { label: string; value: str
   );
 }
 
-function NewStructureForm({ companyId, onDone }: { companyId: string; onDone: () => void }) {
+/**
+ * Alta de estructura. El PERÍODO ya no se tipea.
+ *
+ * Antes había que escribir "2026-06" a mano, lo que obligaba a inventar un código
+ * mensual incluso para una empresa que cierra por quincena o por trimestre. Ahora el
+ * backend lo deriva de la fecha de hoy leída con el ritmo de la empresa, y de ahí en
+ * más los períodos se abren y se cierran desde la pantalla de la estructura.
+ */
+function NewStructureForm({
+  companyId,
+  periodicity,
+  onDone,
+}: {
+  companyId: string;
+  periodicity?: Periodicity;
+  onDone: () => void;
+}) {
   const create = useCreateCostStructure(companyId);
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, formState } = useForm<{ productName: string; period: string }>();
+  const { register, handleSubmit, formState } = useForm<{ productName: string }>();
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     try {
-      await create.mutateAsync(values);
+      await create.mutateAsync({ productName: values.productName });
       onDone();
     } catch (e) {
       setError(apiErrorMessage(e));
@@ -937,26 +993,33 @@ function NewStructureForm({ companyId, onDone }: { companyId: string; onDone: ()
   });
 
   return (
-    <Card className="mb-6 animate-rise">
-      <CardBody>
-        <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
-          <Input label="Producto" {...register('productName', { required: true })} />
-          <Input label="Período (YYYY-MM)" placeholder="2026-06" {...register('period', { required: true })} />
-          {error && (
-            <div className="sm:col-span-2 rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">
-              {error}
-            </div>
-          )}
-          <div className="flex gap-2 sm:col-span-2">
-            <Button type="submit" size="sm" loading={formState.isSubmitting}>
-              Crear
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onDone}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      </CardBody>
-    </Card>
+    <form onSubmit={onSubmit} className="animate-rise space-y-4">
+      <Input label="Producto" placeholder="Ej: Mesa de roble" {...register('productName', { required: true })} />
+
+      <div className="flex items-start gap-2.5 rounded-lg bg-zinc-50 border border-zinc-100 px-3.5 py-3">
+        <CalendarClock className="size-4 shrink-0 text-zinc-400 mt-0.5" />
+        <p className="text-[13px] text-zinc-500 leading-relaxed">
+          El período de arranque lo pone el sistema: el que corre hoy según el ritmo{' '}
+          <strong className="text-zinc-700">
+            {periodicity ? PERIODICITY_LABEL[periodicity].toLowerCase() : 'de costeo'}
+          </strong>{' '}
+          de esta empresa. Después lo cerrás y abrís el siguiente desde la pantalla de
+          la estructura.
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-sm bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>
+      )}
+
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" loading={formState.isSubmitting}>
+          Crear
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onDone}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
   );
 }

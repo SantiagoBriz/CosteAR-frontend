@@ -21,6 +21,7 @@ import {
 } from "./company-hooks";
 import { apiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { PERIODICITY_OPTIONS, type Periodicity } from "@/lib/types";
 
 const INDUSTRY_CLASSES: Record<string, string> = {
   Agropecuaria: "bg-amber-50 text-amber-700 border-amber-200/50",
@@ -282,7 +283,8 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
     industry?: string;
     cuit?: string;
     description?: string;
-  }>();
+    periodicity: Periodicity;
+  }>({ defaultValues: { periodicity: "MONTHLY" } });
 
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
@@ -340,6 +342,7 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
         industry: values.industry || undefined,
         cuit: values.cuit || undefined,
         description: values.description || undefined,
+        periodicity: values.periodicity,
       });
       onDone();
     } catch (e) {
@@ -392,6 +395,29 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
               placeholder="Ej: Manufactura, Construcción, Gastronomía..."
               {...register("industry")}
             />
+          </div>
+          <div>
+            <label className="block text-[12px] font-semibold text-ink mb-2 uppercase tracking-wide">
+              Ritmo de Costeo *
+            </label>
+            <select
+              {...register("periodicity", { required: true })}
+              className="w-full rounded-lg border border-line bg-white px-4 py-3 text-sm text-ink focus:border-granate focus:outline-none focus:ring-2 focus:ring-granate/10"
+            >
+              {PERIODICITY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-ink-soft mt-2">
+              Cada cuánto esta empresa cierra un período de costos. Define los
+              períodos de todas sus estructuras.{" "}
+              <strong className="text-ink">
+                Se elige ahora y no se puede cambiar
+              </strong>{" "}
+              una vez que haya períodos cargados.
+            </p>
           </div>
         </div>
 
