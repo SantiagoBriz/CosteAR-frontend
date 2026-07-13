@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
-import { Paperclip, X, Send, FileText, Mic, Camera } from 'lucide-react';
+import { useRef, type Dispatch, type SetStateAction } from 'react';
+import { Paperclip, X, Send, FileText, Mic, MicOff, Camera } from 'lucide-react';
 import { StructureSelectDropdown } from './StructureSelector';
 import { cn } from '@/lib/utils';
+import { useDictation } from '@/lib/use-dictation';
 
 const MAX_FILE_BYTES = 4.5 * 1024 * 1024;
 
@@ -61,7 +62,11 @@ function compressImage(file: File): Promise<File> {
 
 interface ChatComposerProps {
   text: string;
-  setText: (t: string) => void;
+  /**
+   * El setter de verdad, no `(t: string) => void`. Hace falta la forma funcional
+   * (`setText(prev => ...)`) para agregar lo dictado sin pisar lo que ya estaba escrito.
+   */
+  setText: Dispatch<SetStateAction<string>>;
   file: File | null;
   setFile: (f: File | null) => void;
   fileError: string | null;
@@ -91,66 +96,17 @@ export function ChatComposer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
-
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  const isSpeechSupported = !!SpeechRecognition;
-
-  const toggleListening = () => {
-    if (!isSpeechSupported) return;
-
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'es-AR';
-
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error('Speech recognition error', event.error);
-      setIsListening(false);
-    };
-
-    recognition.onresult = (event: any) => {
-      let finalTranscript = '';
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        }
+  // El texto dictado se AGREGA al que ya había (forma funcional). Antes se leía `text`
+  // congelado en el momento de arrancar, así que la segunda frase pisaba a la primera.
+  const dictado = useDictation((chunk) => {
+    setText((prev) => (prev.trim() ? `${prev} ${chunk}` : chunk));
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
       }
-
-      if (finalTranscript) {
-        const suffix = text.trim() ? ' ' : '';
-        setText(text + suffix + finalTranscript);
-
-        // Trigger auto-resize textarea
-        setTimeout(() => {
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
-          }
-        }, 0);
-      }
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  };
+    }, 0);
+  });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setFileError(null);
@@ -211,6 +167,15 @@ export function ChatComposer({
       {fileError && <p className="mb-2 text-xs text-danger">{fileError}</p>}
       {sendError && <p className="mb-2 text-xs text-danger">{sendError}</p>}
 
+      {/* Antes, cuando el dictado fallaba, el botón dejaba de titilar y nada más. */}
+      {dictado.listening && (
+        <p className="mb-2 flex items-center gap-1.5 text-xs text-action font-medium">
+          <span className="inline-block size-1.5 rounded-full bg-action animate-ping" />
+          Escuchando… hablá tranquilo, podés frenar a pensar.
+        </p>
+      )}
+      {dictado.error && <p className="mb-2 text-xs text-danger">{dictado.error}</p>}
+
       <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface-alt px-4 py-2 focus-within:border-granate transition-all">
         {/* Attach File */}
         <label className="shrink-0 cursor-pointer flex items-center justify-center size-8 rounded-xl text-ink-soft hover:text-action hover:bg-surface-alt transition-colors" title="Adjuntar archivo o imagen">
@@ -237,21 +202,21 @@ export function ChatComposer({
           />
         </label>
 
-        {/* Voice Dictation (Audio mic button) */}
-        {isSpeechSupported && (
+        {/* Dictado por voz */}
+        {dictado.supported && (
           <button
             type="button"
-            onClick={toggleListening}
+            onClick={dictado.toggle}
             disabled={!activeConnectionId}
             className={cn(
               "shrink-0 flex items-center justify-center size-8 rounded-xl transition-all",
-              isListening
+              dictado.listening
                 ? "bg-action text-white animate-pulse"
                 : "text-ink-soft hover:text-action hover:bg-surface-alt"
             )}
-            title={isListening ? "Detener dictado por voz" : "Dictar por voz"}
+            title={dictado.listening ? "Detener el dictado" : "Dictar por voz"}
           >
-            <Mic className="size-5" />
+            {dictado.listening ? <MicOff className="size-5" /> : <Mic className="size-5" />}
           </button>
         )}
 
@@ -260,7 +225,7 @@ export function ChatComposer({
           ref={textareaRef}
           className="flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-soft/45 focus:!outline-none focus-visible:!outline-none focus-visible:!ring-0 max-h-32 min-h-[32px] py-1.5 leading-relaxed"
           placeholder={
-            isListening
+            dictado.listening
               ? 'Escuchando... Hablá ahora...'
               : activeConnectionId
                 ? 'Escribí una nota o adjuntá facturas/recibos de este producto...'
@@ -274,7 +239,7 @@ export function ChatComposer({
               onSend();
             }
           }}
-          disabled={!activeConnectionId || isListening}
+          disabled={!activeConnectionId || dictado.listening}
           rows={1}
           style={{ height: 'auto' }}
           onInput={(e) => {
@@ -285,7 +250,7 @@ export function ChatComposer({
         />
 
         {/* Audio soundwave visualization helper */}
-        {isListening && (
+        {dictado.listening && (
           <div className="flex items-center gap-1.5 px-2 h-8 shrink-0">
             <span className="w-[3px] h-3 bg-action rounded-full animate-pulse" />
             <span className="w-[3px] h-5 bg-action rounded-full animate-pulse delay-75" />
