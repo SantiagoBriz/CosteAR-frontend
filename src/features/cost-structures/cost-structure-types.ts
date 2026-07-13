@@ -91,9 +91,17 @@ export interface IndirectCostConfig {
     name: string;
     amount: { fixed: number; variable: number };
     distribution: Record<string, number>;
+    // Cómo se arma el prorrateo primario: 'percent' (% tipeados, default) o
+    // 'base' (el motor deriva los % desde las unidades de una base física).
+    allocationMode?: 'direct' | 'percent' | 'base';
+    baseCode?: string;
   }>;
   serviceDistributions: Array<{
     serviceCenterId: string;
+    // Cómo se arma el reparto: 'manual' (% tipeados) o 'base' (el motor deriva
+    // los % desde las unidades de una base física, ej. horas-máquina).
+    distributionMode?: 'manual' | 'base';
+    baseCode?: string;
     toProductive?: Record<string, number>;
     toProductiveFixed?: Record<string, number>;
     toProductiveVariable?: Record<string, number>;

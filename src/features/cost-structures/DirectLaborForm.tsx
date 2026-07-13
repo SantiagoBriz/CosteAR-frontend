@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { Plus, Trash2, Sparkles } from 'lucide-react';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { Plus, Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { fractionToPercentInput, percentInputToFraction } from '@/lib/utils';
 import { catedraExample } from './catedra-example';
+import { SOCIAL_CHARGES_CATALOG, classifySocialCharge } from './social-charges-catalog';
 import type { DirectLaborConfig } from './cost-structure-types';
 
 interface Props {
@@ -165,6 +166,19 @@ export function DirectLaborForm({ defaultValues, onSave, saving, autoLoadExample
   const { fields: nonRemFields, append: appendNonRem, remove: removeNonRem } = useFieldArray({ control, name: 'itcs.uncertainNonRemunerative' });
   const { fields: deptFields, append: appendDept, remove: removeDept } = useFieldArray({ control, name: 'departments' });
 
+  // D-1: nombres tipeados en cada lista, para avisar si el sistema los reconoce
+  // con la clasificación CONTRARIA (una mala clasificación desvía el costo).
+  const watchedRem = useWatch({ control, name: 'itcs.uncertainRemunerative' });
+  const watchedNonRem = useWatch({ control, name: 'itcs.uncertainNonRemunerative' });
+
+  /** Agrega el concepto del catálogo a la lista que le corresponde (auto). */
+  const addFromCatalog = (name: string) => {
+    const item = SOCIAL_CHARGES_CATALOG.find((c) => c.name === name);
+    if (!item) return;
+    if (item.kind === 'remunerative') appendRem({ name: item.name, coefficient: 0 });
+    else appendNonRem({ name: item.name, coefficient: 0 });
+  };
+
   const [pending, setPending] = useState<DirectLaborConfig | null>(null);
 
   return (
@@ -216,6 +230,38 @@ export function DirectLaborForm({ defaultValues, onSave, saving, autoLoadExample
           <Input label="ART fija" type="number" step="0.01" numeric suffix="%" placeholder="Ej: 1.5" info="Alícuota fija de ART. En porcentaje (ej: 1.5 = 1,5%)." {...register('itcs.fixedArt', { valueAsNumber: true })} />
         </div>
 
+        {/* D-1 — Clasificación AUTOMÁTICA: el costista elige del catálogo de la
+            cátedra y el sistema lo manda a la lista correcta. Si prefiere
+            hacerlo a mano, usa el "Agregar" de cada lista (clasificación manual). */}
+        <div className="mt-3 rounded-lg border border-dashed border-action/40 bg-surface-alt/40 p-2.5">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-medium text-ink-soft">
+              Agregar del catálogo — lo clasifica el sistema
+            </span>
+            <select
+              value=""
+              onChange={(e) => addFromCatalog(e.target.value)}
+              className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none sm:w-80"
+            >
+              <option value="">Elegir concepto…</option>
+              <optgroup label="Remunerativas — generan cargas derivadas">
+                {SOCIAL_CHARGES_CATALOG.filter((c) => c.kind === 'remunerative').map((c) => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="No remunerativas — NO generan derivadas">
+                {SOCIAL_CHARGES_CATALOG.filter((c) => c.kind === 'nonRemunerative').map((c) => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </optgroup>
+            </select>
+          </label>
+          <p className="mt-1.5 text-[10.5px] leading-snug text-ink-soft">
+            Según la cátedra, de las cargas inciertas <strong className="font-medium text-ink">solo las remunerativas generan cargas derivadas</strong> (IAP, PAP y PPP).
+            Clasificar mal un concepto desvía el costo. Si preferís decidirlo vos, cargalo a mano con <em>Agregar</em> en la lista que corresponda.
+          </p>
+        </div>
+
         <div className="mt-3">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-[11px] text-ink-soft font-medium">Conceptos remunerativos inciertos</span>
@@ -226,18 +272,30 @@ export function DirectLaborForm({ defaultValues, onSave, saving, autoLoadExample
           <p className="mb-2 text-[11px] text-ink-soft">
             El <strong className="font-medium text-ink">IAP (Índice de Ausentismo Pago)</strong> se calcula automáticamente a partir de las ausencias remuneradas y se muestra en el Resultado — no lo cargues acá.
           </p>
-          {remFields.map((f, i) => (
-            <div key={f.id} className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none sm:flex-1" placeholder="Nombre (ej: Antigüedad)" {...register(`itcs.uncertainRemunerative.${i}.name`)} />
-              <div className="flex items-center gap-2 sm:contents">
-                <div className="relative w-28">
-                  <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 5" title="Coeficiente en porcentaje (ej: 5 = 5%)" {...register(`itcs.uncertainRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
-                  <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+          {remFields.map((f, i) => {
+            // El sistema lo reconoce como NO remunerativo → está en la lista equivocada.
+            const misfit = classifySocialCharge(watchedRem?.[i]?.name ?? '') === 'nonRemunerative';
+            return (
+            <div key={f.id} className="mb-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none sm:flex-1" placeholder="Nombre (ej: Antigüedad)" {...register(`itcs.uncertainRemunerative.${i}.name`)} />
+                <div className="flex items-center gap-2 sm:contents">
+                  <div className="relative w-28">
+                    <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 5" title="Coeficiente en porcentaje (ej: 5 = 5%)" {...register(`itcs.uncertainRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+                    <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+                  </div>
+                  <button type="button" onClick={() => removeRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                 </div>
-                <button type="button" onClick={() => removeRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
               </div>
+              {misfit && (
+                <p className="mt-1 flex items-start gap-1 text-[11px] leading-snug text-warn">
+                  <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                  <span>Según la cátedra este concepto es <strong>no remunerativo</strong>: acá le suma cargas derivadas que no corresponden e <strong>infla el costo</strong>. Convendría moverlo a la lista de no remunerativos.</span>
+                </p>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-2">
@@ -247,18 +305,30 @@ export function DirectLaborForm({ defaultValues, onSave, saving, autoLoadExample
               <Plus className="size-3" /> Agregar
             </Button>
           </div>
-          {nonRemFields.map((f, i) => (
-            <div key={f.id} className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none sm:flex-1" placeholder="Nombre (ej: Viandas)" {...register(`itcs.uncertainNonRemunerative.${i}.name`)} />
-              <div className="flex items-center gap-2 sm:contents">
-                <div className="relative w-28">
-                  <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 2" title="Coeficiente en porcentaje (ej: 2 = 2%)" {...register(`itcs.uncertainNonRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
-                  <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+          {nonRemFields.map((f, i) => {
+            // El sistema lo reconoce como REMUNERATIVO → está en la lista equivocada.
+            const misfit = classifySocialCharge(watchedNonRem?.[i]?.name ?? '') === 'remunerative';
+            return (
+            <div key={f.id} className="mb-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input className="w-full rounded border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:border-granate focus:outline-none sm:flex-1" placeholder="Nombre (ej: Viandas)" {...register(`itcs.uncertainNonRemunerative.${i}.name`)} />
+                <div className="flex items-center gap-2 sm:contents">
+                  <div className="relative w-28">
+                    <input type="number" step="0.1" className="w-full rounded border border-line bg-surface px-2 py-1.5 pr-6 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="Ej: 2" title="Coeficiente en porcentaje (ej: 2 = 2%)" {...register(`itcs.uncertainNonRemunerative.${i}.coefficient`, { valueAsNumber: true })} />
+                    <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs font-medium text-ink-soft">%</span>
+                  </div>
+                  <button type="button" onClick={() => removeNonRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                 </div>
-                <button type="button" onClick={() => removeNonRem(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
               </div>
+              {misfit && (
+                <p className="mt-1 flex items-start gap-1 text-[11px] leading-snug text-warn">
+                  <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                  <span>Según la cátedra este concepto es <strong>remunerativo</strong>: acá no genera las cargas derivadas que le corresponden y <strong>subestima el costo</strong>. Convendría moverlo a la lista de remunerativos.</span>
+                </p>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

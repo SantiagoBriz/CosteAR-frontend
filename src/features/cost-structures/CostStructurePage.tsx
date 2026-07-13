@@ -260,6 +260,8 @@ export function CostStructurePage() {
             perDepartment={shown?.result?.detail?.indirectCosts?.perDepartment}
             onSave={(d) => saveSection('indirect-costs', d)}
             saving={updateSection.isPending}
+            companyId={structure?.companyId}
+            structureId={id}
           />
         </SectionShell>
       </div>
@@ -310,12 +312,14 @@ export function CostStructurePage() {
 
 // ── Costos Indirectos: lista de centros ↔ configuración (Parte 3.3) ──────────
 function IndirectCostsSection({
-  config, perDepartment, onSave, saving,
+  config, perDepartment, onSave, saving, companyId, structureId,
 }: {
   config?: IndirectCostConfig;
   perDepartment?: CalculationResult['detail']['indirectCosts']['perDepartment'];
   onSave: (data: IndirectCostConfig) => Promise<void>;
   saving: boolean;
+  companyId?: string;
+  structureId?: string;
 }) {
   // Arranca en la vista de centros si ya hay centros cargados; si no, en edición.
   const [editing, setEditing] = useState(!config?.centers?.length);
@@ -332,6 +336,7 @@ function IndirectCostsSection({
           defaultValues={config}
           onSave={async (d) => { await onSave(d); setEditing(false); }}
           saving={saving}
+          companyId={companyId}
         />
       </div>
     );
@@ -342,6 +347,8 @@ function IndirectCostsSection({
       config={config ?? { centers: [], concepts: [], serviceDistributions: [], productiveSettings: [] }}
       perDepartment={perDepartment}
       onEdit={() => setEditing(true)}
+      structureId={structureId}
+      companyId={companyId}
     />
   );
 }

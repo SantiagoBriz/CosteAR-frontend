@@ -1,17 +1,30 @@
 import { useState, type ReactNode } from 'react';
-import { ArrowLeft, ChevronRight, Factory, Wrench, Pencil, Info } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Factory, Wrench, Pencil, Info, FileText, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Money } from '@/components/ui/Money';
 import { cn } from '@/lib/utils';
 import type { IndirectCostConfig } from './cost-structure-types';
 import type { CalculationResult } from '@/lib/types';
+import { useAllocationValues, useAllocationBases } from './allocation-base-hooks';
 
 type PerDept = CalculationResult['detail']['indirectCosts']['perDepartment'];
+
+/** Fila de trazabilidad de una base para un centro (3b-3, registro auditable). */
+interface TraceRow {
+  baseName: string;
+  unit: string;
+  value: number;
+  createdAt: string;
+  note?: string | null;
+  dataPointId?: string | null;
+}
 
 interface Props {
   config: IndirectCostConfig;
   perDepartment?: PerDept;
   onEdit: () => void;
+  structureId?: string;
+  companyId?: string;
 }
 
 const fmt = (n: number | undefined) =>
@@ -23,15 +36,41 @@ const fmt = (n: number | undefined) =>
  * (el front no recalcula); la estructura (conceptos, servicios, orden de cierre)
  * sale de la config. Para editar, se vuelve al formulario de configuración.
  */
-export function CostCentersView({ config, perDepartment, onEdit }: Props) {
+export function CostCentersView({ config, perDepartment, onEdit, structureId, companyId }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const centers = config.centers ?? [];
   const hasResult = !!perDepartment && Object.keys(perDepartment).length > 0;
+
+  // Trazabilidad de bases (3b-3): valores vigentes del registro auditable,
+  // agrupados por centro, con el nombre/unidad de cada base del catálogo.
+  const { data: allocValues } = useAllocationValues(structureId);
+  const { data: allocBases } = useAllocationBases(companyId);
+  const baseById = new Map((allocBases ?? []).map((b) => [b.id, b]));
+  const traceByCenter = new Map<string, TraceRow[]>();
+  for (const v of allocValues ?? []) {
+    const b = baseById.get(v.baseId);
+    const rows = traceByCenter.get(v.centerId) ?? [];
+    rows.push({
+      baseName: b?.name ?? v.baseId,
+      unit: b?.unit ?? '',
+      value: Number(v.value),
+      createdAt: v.createdAt,
+      note: v.note,
+      dataPointId: v.dataPointId,
+    });
+    traceByCenter.set(v.centerId, rows);
+  }
 
   // Sobreaplicación neta global = Σ (aplicado − real) de los centros productivos.
   const netOverApplied = hasResult
     ? Object.values(perDepartment!).reduce((a, d) => a + (d.overUnderApplied ?? 0), 0)
     : null;
+
+  // E3 — centros sin cierre de mes: su CIF se aplicó a capacidad normal y NO
+  // tienen variaciones. Hay que decirlo antes de mostrar cualquier total.
+  const pendingCount = hasResult
+    ? Object.values(perDepartment!).filter((d) => d.pendingClosing).length
+    : 0;
 
   const center = selected ? centers.find((c) => c.id === selected) : null;
   if (center) {
@@ -40,6 +79,7 @@ export function CostCentersView({ config, perDepartment, onEdit }: Props) {
         center={center}
         data={perDepartment?.[center.id]}
         config={config}
+        trace={traceByCenter.get(center.id) ?? []}
         onBack={() => setSelected(null)}
       />
     );
@@ -64,7 +104,18 @@ export function CostCentersView({ config, perDepartment, onEdit }: Props) {
         </div>
       )}
 
-      {netOverApplied != null && (
+      {pendingCount > 0 && (
+        <div className="flex items-start gap-2 rounded-xl bg-warn/10 px-4 py-2.5 text-[12.5px] text-ink">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" />
+          <span>
+            <strong>{pendingCount === 1 ? 'Un centro no tiene' : `${pendingCount} centros no tienen`} el cierre del mes cargado</strong> (actividad real
+            y/o CIP real). Su costo indirecto se aplicó con el <strong>presupuesto</strong>, a capacidad normal, y todavía
+            no tienen variaciones. Cargá el cierre para ver el desvío contra lo real.
+          </span>
+        </div>
+      )}
+
+      {netOverApplied != null && pendingCount === 0 && (
         <div className="rounded-xl border border-line bg-surface-alt/50 px-4 py-2.5 text-[13px]">
           <span className="text-ink-soft">Sobreaplicación neta global (Σ aplicado − real): </span>
           <strong className={cn(netOverApplied >= 0 ? 'text-ok' : 'text-danger')}>
@@ -123,11 +174,12 @@ export function CostCentersView({ config, perDepartment, onEdit }: Props) {
 // ── Ficha de un centro ───────────────────────────────────────────────────────
 
 function CenterCard({
-  center, data, config, onBack,
+  center, data, config, trace, onBack,
 }: {
   center: IndirectCostConfig['centers'][number];
   data?: PerDept[string];
   config: IndirectCostConfig;
+  trace: TraceRow[];
   onBack: () => void;
 }) {
   const isProd = center.type === 'productive';
@@ -167,6 +219,30 @@ function CenterCard({
         )}
       </Section>
 
+      {/* Trazabilidad de bases (3b-3): valores del registro auditable que
+          alimentan el prorrateo de este centro. Solo si hay valores cargados. */}
+      {trace.length > 0 && (
+        <Section title="Trazabilidad de bases (registro auditable)">
+          <ul className="space-y-1 text-[12.5px]">
+            {trace.map((t, i) => (
+              <li key={i} className="flex flex-col gap-0.5 rounded border border-line bg-surface px-2.5 py-1.5 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-ink"><strong>{t.baseName}</strong>: {fmt(t.value)}{t.unit ? ` ${t.unit}` : ''}</span>
+                <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-soft">
+                  registrado {new Date(t.createdAt).toLocaleDateString('es-AR')}
+                  {t.note ? <span>· {t.note}</span> : null}
+                  {t.dataPointId ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full border border-action/20 bg-action/10 px-1.5 py-0.5 text-[10px] font-semibold text-action">
+                      <FileText className="size-3" /> con ficha del dato
+                    </span>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-[10.5px] text-ink-soft">Cada valor queda versionado (append-only): si lo cambiás, se guarda una versión nueva sin pisar la anterior.</p>
+        </Section>
+      )}
+
       {isProd && data ? (
         <>
           {/* Presupuesto derivado */}
@@ -191,24 +267,52 @@ function CenterCard({
           <Section title="Datos reales (fin de mes)">
             <div className="grid gap-2 sm:grid-cols-3">
               <Stat label="Capacidad normal" value={`${fmt(data.normalCapacity)} hs`} />
-              <Stat label="Actividad real" value={`${fmt(data.actualActivity)} hs`} />
-              <Stat label="CIP real" value={<Money value={data.actualCip ?? 0} />} />
+              <Stat label="Actividad real" value={data.actualActivity ? `${fmt(data.actualActivity)} hs` : '— pendiente'} />
+              <Stat label="CIP real" value={data.actualCip ? <Money value={data.actualCip} /> : '— pendiente'} />
             </div>
           </Section>
 
-          {/* CIP aplicado + variaciones con lectura contable */}
+          {/* CIP aplicado + variaciones con lectura contable.
+              E3: sin los datos de cierre no hay variaciones posibles — se dice
+              con todas las letras en vez de mostrar números contra cero. */}
           <Section title="Aplicación y variaciones">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Stat label="CIP aplicado" value={<Money value={data.appliedCip} />} hint={`cuota total × actividad real (${fmt(data.quota)} × ${fmt(data.actualActivity)})`} />
-              <VarianceStat label="Sobre / sub-aplicación" value={data.overUnderApplied ?? (data.appliedCip - (data.actualCip ?? 0))}
-                positive="sobreaplicado (el costeo cargó de más)" negative="subaplicado (el costeo cargó de menos)" />
-              <VarianceStat label="Variación presupuesto" value={data.budgetVariance} invert
-                positive="desfavorable — exceso de gasto" negative="favorable — ahorro en el gasto"
-                hint="CIP real − presupuesto ajustado al nivel real" />
-              <VarianceStat label="Variación volumen" value={data.volumeVariance} invert
-                positive="desfavorable — capacidad ociosa (sub-absorción de fijos)" negative="favorable — sobre-absorción de fijos"
-                hint="cuota fija × (capacidad normal − actividad real)" />
-            </div>
+            {data.pendingClosing ? (
+              <>
+                <p className="mb-2 flex items-start gap-2 rounded-xl bg-warn/10 px-3 py-2 text-[12.5px] text-ink">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" />
+                  <span>
+                    <strong>Falta el cierre del mes</strong> en este centro
+                    {!data.actualActivity && !data.actualCip
+                      ? ' (actividad real y CIP real)'
+                      : !data.actualActivity ? ' (actividad real)' : ' (CIP real)'}.
+                    El costo se calcula igual, con el <strong>presupuesto</strong>, pero todavía no hay
+                    variaciones: no hay contra qué comparar.
+                  </span>
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Stat
+                    label="CIP aplicado (predeterminado)"
+                    value={<Money value={data.appliedCip} />}
+                    hint={data.appliedOn === 'normalCapacity'
+                      ? `cuota total × capacidad normal (${fmt(data.quota)} × ${fmt(data.normalCapacity)})`
+                      : `cuota total × actividad real (${fmt(data.quota)} × ${fmt(data.actualActivity)})`}
+                  />
+                  <Stat label="Variaciones" value="Pendientes de cierre" hint="se calculan cuando cargues la actividad real y el CIP real" />
+                </div>
+              </>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Stat label="CIP aplicado" value={<Money value={data.appliedCip} />} hint={`cuota total × actividad real (${fmt(data.quota)} × ${fmt(data.actualActivity)})`} />
+                <VarianceStat label="Sobre / sub-aplicación" value={data.overUnderApplied ?? (data.appliedCip - (data.actualCip ?? 0))}
+                  positive="sobreaplicado (el costeo cargó de más)" negative="subaplicado (el costeo cargó de menos)" />
+                <VarianceStat label="Variación presupuesto" value={data.budgetVariance} invert
+                  positive="desfavorable — exceso de gasto" negative="favorable — ahorro en el gasto"
+                  hint="CIP real − presupuesto ajustado al nivel real" />
+                <VarianceStat label="Variación volumen" value={data.volumeVariance} invert
+                  positive="desfavorable — capacidad ociosa (sub-absorción de fijos)" negative="favorable — sobre-absorción de fijos"
+                  hint="cuota fija × (capacidad normal − actividad real)" />
+              </div>
+            )}
           </Section>
         </>
       ) : isProd ? (

@@ -70,6 +70,10 @@ export interface CalculationResult {
           quotaFixed?: number;
           quotaVariable?: number;
           overUnderApplied?: number;
+          /** E3 — faltan datos de cierre (actividad real y/o CIP real): las
+           *  variaciones no se calculan y el CIF se aplica a capacidad normal. */
+          pendingClosing?: boolean;
+          appliedOn?: 'actualActivity' | 'normalCapacity';
         }
       >;
     };
