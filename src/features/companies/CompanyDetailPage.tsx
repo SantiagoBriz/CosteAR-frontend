@@ -20,6 +20,7 @@ import { useHistorial } from '@/features/validaciones/validaciones-hooks';
 import { api, apiErrorMessage } from '@/lib/api';
 import { cn, formatMoney, formatDate } from '@/lib/utils';
 import { PERIODICITY_OPTIONS, PERIODICITY_LABEL, type Periodicity } from '@/lib/types';
+import { useDictation } from '@/lib/use-dictation';
 
 const STATUS: Record<string, { label: string; status: 'ok' | 'warn' | 'idle' }> = {
   DRAFT: { label: 'Borrador', status: 'idle' },
@@ -271,37 +272,10 @@ function AiSuggesterSection({ companyName }: { companyName: string }) {
   const [promptText, setPromptText] = useState('');
   const [suggs, setSuggs] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
 
-  const startListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Tu navegador no soporta reconocimiento de voz.');
-      return;
-    }
-    const rec = new SpeechRecognition();
-    rec.lang = 'es-AR';
-    rec.continuous = false;
-    rec.interimResults = false;
-
-    rec.onstart = () => setListening(true);
-    rec.onend = () => setListening(false);
-    rec.onresult = (e: any) => {
-      const transcript = e.results[0][0].transcript;
-      setPromptText((prev) => prev + (prev ? ' ' : '') + transcript);
-    };
-
-    rec.start();
-    setRecognition(rec);
-  };
-
-  const stopListening = () => {
-    if (recognition) {
-      recognition.stop();
-    }
-    setListening(false);
-  };
+  const dictado = useDictation((chunk) =>
+    setPromptText((prev) => (prev.trim() ? `${prev} ${chunk}` : chunk)),
+  );
 
   const handleSuggest = async () => {
     if (!promptText.trim()) return;
@@ -335,18 +309,26 @@ function AiSuggesterSection({ companyName }: { companyName: string }) {
           />
           <button
             type="button"
-            onClick={listening ? stopListening : startListening}
+            onClick={dictado.toggle}
             className={cn(
               "flex size-11 shrink-0 items-center justify-center rounded-xl border transition-all",
-              listening
+              dictado.listening
                 ? "bg-red-50 text-red-600 border-red-200 animate-pulse"
                 : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:bg-zinc-100"
             )}
-            title={listening ? "Detener dictado" : "Dictar por voz"}
+            title={dictado.listening ? "Detener el dictado" : "Dictar por voz"}
           >
-            {listening ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+            {dictado.listening ? <MicOff className="size-5" /> : <Mic className="size-5" />}
           </button>
         </div>
+
+        {dictado.listening && (
+          <p className="flex items-center gap-1.5 text-xs font-medium text-granate">
+            <span className="inline-block size-1.5 rounded-full bg-granate animate-ping" />
+            Escuchando… hablá tranquilo, podés frenar a pensar.
+          </p>
+        )}
+        {dictado.error && <p className="text-xs text-danger">{dictado.error}</p>}
 
         <div className="flex justify-end">
           <Button

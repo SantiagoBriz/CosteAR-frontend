@@ -22,6 +22,7 @@ import {
 import { apiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { PERIODICITY_OPTIONS, type Periodicity } from "@/lib/types";
+import { useDictation } from "@/lib/use-dictation";
 
 const INDUSTRY_CLASSES: Record<string, string> = {
   Agropecuaria: "bg-amber-50 text-amber-700 border-amber-200/50",
@@ -286,53 +287,10 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
     periodicity: Periodicity;
   }>({ defaultValues: { periodicity: "MONTHLY" } });
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
-
-  const startSpeech = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert(
-        "Tu navegador no soporta dictado por voz. Por favor usá Chrome, Edge o Safari.",
-      );
-      return;
-    }
-    const rec = new SpeechRecognition();
-    rec.lang = "es-AR";
-    rec.continuous = false;
-    rec.interimResults = false;
-
-    rec.onstart = () => {
-      setIsRecording(true);
-    };
-
-    rec.onresult = (event: any) => {
-      const text = event.results[0][0].transcript;
-      const currentDesc = watch("description") || "";
-      setValue("description", currentDesc ? `${currentDesc} ${text}` : text);
-    };
-
-    rec.onerror = (event: any) => {
-      console.error(event.error);
-      setIsRecording(false);
-    };
-
-    rec.onend = () => {
-      setIsRecording(false);
-    };
-
-    rec.start();
-    setRecognition(rec);
-  };
-
-  const stopSpeech = () => {
-    if (recognition) {
-      recognition.stop();
-    }
-    setIsRecording(false);
-  };
+  const dictado = useDictation((chunk) => {
+    const actual = watch("description") ?? "";
+    setValue("description", actual.trim() ? `${actual} ${chunk}` : chunk);
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -433,18 +391,19 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
             </div>
             <button
               type="button"
-              onClick={isRecording ? stopSpeech : startSpeech}
+              onClick={dictado.toggle}
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold border transition-all shrink-0",
-                isRecording
+                dictado.listening
                   ? "bg-red-50 text-red-600 border-red-200"
                   : "bg-granate-tenue text-granate border-granate/20 hover:bg-granate/5",
               )}
             >
-              {isRecording ? (
+              {dictado.listening ? (
                 <>
                   <span className="inline-block size-1.5 rounded-full bg-red-600 animate-ping" />
-                  Deteniendo...
+                  {/* Decía "Deteniendo..." MIENTRAS grababa: mentía sobre lo que pasaba. */}
+                  Escuchando…
                 </>
               ) : (
                 <>
@@ -459,6 +418,12 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
             placeholder="Ej: Fabrica muebles de madera. Costea por órdenes de producción. Principal insumo: madera de pino y chapa MDF. Producen 50-100 órdenes/mes..."
             className="w-full rounded-lg border border-line bg-white px-4 py-3 text-sm text-ink placeholder-zinc-400 focus:border-granate focus:outline-none focus:ring-2 focus:ring-granate/10 min-h-24"
           />
+          {dictado.listening && (
+            <p className="text-xs text-granate font-medium">
+              Hablá tranquilo: podés frenar a pensar, el micrófono no se corta.
+            </p>
+          )}
+          {dictado.error && <p className="text-xs text-danger">{dictado.error}</p>}
         </div>
 
         {error && (
