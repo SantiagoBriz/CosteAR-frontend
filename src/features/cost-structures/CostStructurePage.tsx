@@ -3,7 +3,7 @@ import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Calculator, Package, Users, Factory, Activity,
-  TrendingUp, BarChart2, CheckCircle2, History,
+  TrendingUp, BarChart2, CheckCircle2, History, GitCompare,
   Download, Loader2, Lock,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
@@ -35,6 +35,7 @@ import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
 import { usePeriods } from './period-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
 import { PeriodBar } from './components/PeriodBar';
+import { PeriodComparison } from './components/PeriodComparison';
 import type { DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -43,7 +44,7 @@ import type { CalculationResult } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate';
+type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate' | 'comparison';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -236,6 +237,7 @@ export function CostStructurePage() {
             { id: 'sales'           as SectionTab, label: 'Venta',                 icon: TrendingUp, configKey: 'sales' as const },
             { id: 'result'          as SectionTab, label: 'Resultado',             icon: BarChart2,  configKey: undefined },
             { id: 'simulate'        as SectionTab, label: 'Simulador',             icon: Activity,   configKey: undefined },
+            { id: 'comparison'      as SectionTab, label: 'Comparación',           icon: GitCompare, configKey: undefined },
             { id: 'history'         as SectionTab, label: 'Historial',             icon: History,    configKey: undefined },
           ] as { id: SectionTab; label: string; icon: typeof Package; configKey: keyof typeof configured | undefined }[]
         ).map(({ id: tabId, label, icon: Icon, configKey }) => {
@@ -362,6 +364,10 @@ export function CostStructurePage() {
 
       {activeTab === 'simulate' && (
         <ScenarioSimulator structureId={id} currentResult={shown?.result || null} />
+      )}
+
+      {activeTab === 'comparison' && (
+        <PeriodComparison structureId={id} />
       )}
 
       {activeTab === 'history' && (
