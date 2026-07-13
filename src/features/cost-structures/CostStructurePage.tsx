@@ -331,11 +331,16 @@ export function CostStructurePage() {
           <SalesTab
             defaultPrice={structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined}
             defaultQty={structure?.salesQuantity ? Number(structure.salesQuantity) : undefined}
-            onSave={async (p, q) => {
+            defaultProducedQty={structure?.productionQuantity ? Number(structure.productionQuantity) : undefined}
+            onSave={async (p, q, produced) => {
               setError(null);
               if (blockedByClosedPeriod()) return;
               try {
-                await updateSales.mutateAsync({ salesUnitPrice: p, salesQuantity: q });
+                await updateSales.mutateAsync({
+                  salesUnitPrice: p,
+                  salesQuantity: q,
+                  productionQuantity: produced,
+                });
                 // Se queda en Venta tras guardar (no salta a Resultado).
               } catch (e) { setError(apiErrorMessage(e)); }
             }}
@@ -517,20 +522,22 @@ function SectionShell({
 // ── Sales Tab ─────────────────────────────────────────────────────────────────
 
 function SalesTab({
-  defaultPrice, defaultQty, onSave, saving, allReady, onCalculate, calculating,
+  defaultPrice, defaultQty, defaultProducedQty, onSave, saving, allReady, onCalculate, calculating,
 }: {
   defaultPrice?: number;
   defaultQty?: number;
-  onSave: (p: number, q: number) => Promise<void>;
+  defaultProducedQty?: number;
+  onSave: (p: number, q: number, produced: number | null) => Promise<void>;
   saving: boolean;
   allReady: boolean;
   onCalculate: () => void;
   calculating: boolean;
 }) {
-  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ unitPrice: any; quantity: any }>({
+  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ unitPrice: any; quantity: any; producedQuantity: any }>({
     defaultValues: {
       unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
       quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
+      producedQuantity: defaultProducedQty === 0 ? '' : (defaultProducedQty ?? ''),
     },
   });
 
@@ -538,33 +545,52 @@ function SalesTab({
     reset({
       unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
       quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
+      producedQuantity: defaultProducedQty === 0 ? '' : (defaultProducedQty ?? ''),
     });
-  }, [defaultPrice, defaultQty, reset]);
+  }, [defaultPrice, defaultQty, defaultProducedQty, reset]);
 
-  const [pending, setPending] = useState<{ p: number; q: number } | null>(null);
+  const [pending, setPending] = useState<{ p: number; q: number; prod: number | null } | null>(null);
 
   const onSubmit = (v: any) => {
     const fallbackNum = (val: any) => {
       if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
       return Number(val);
     };
-    setPending({ p: fallbackNum(v.unitPrice), q: fallbackNum(v.quantity) });
+    // La cantidad producida es opcional: vacía = null (el sistema se cae a la
+    // vendida, como hacía antes de que este campo existiera).
+    const producedRaw = v.producedQuantity;
+    const produced =
+      producedRaw === '' || producedRaw === null || producedRaw === undefined || isNaN(Number(producedRaw))
+        ? null
+        : Number(producedRaw);
+
+    setPending({ p: fallbackNum(v.unitPrice), q: fallbackNum(v.quantity), prod: produced });
   };
 
   return (
     <Card>
       <CardHeader
         title="Datos de venta"
-        description="Precio unitario y cantidad producida para calcular el margen bruto"
+        description="Precio, unidades vendidas (para el margen) y unidades producidas (para el costo unitario)"
       />
       <CardBody>
         <form onSubmit={handleSubmit(onSubmit)} className="max-w-sm space-y-4">
           <Input label="Precio de venta unitario $" type="number" step="0.01" numeric
             placeholder="Ej: 25000" info="Precio al que vendés una unidad del producto. En pesos."
             {...register('unitPrice', { required: true })} />
-          <Input label="Cantidad producida / vendida" type="number" step="1" numeric
-            placeholder="Ej: 100" info="Unidades producidas/vendidas en el período. Número entero."
+          <Input label="Unidades vendidas" type="number" step="1" numeric
+            placeholder="Ej: 800"
+            info="Lo que VENDISTE en el período. Con esto se calcula la facturación y el margen bruto."
             {...register('quantity', { required: true })} />
+          <Input label="Unidades producidas (opcional)" type="number" step="1" numeric
+            placeholder="Ej: 1000"
+            info="Lo que FABRICASTE en el período. Con esto se saca el costo por unidad. Si producís y vendés lo mismo, dejalo vacío."
+            {...register('producedQuantity')} />
+          <p className="rounded-xl border border-line bg-surface-alt px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
+            No son lo mismo: si fabricaste 1.000 y vendiste 800, el costo del mes se reparte entre las
+            <strong className="text-ink"> 1.000 producidas</strong>, no entre las 800 vendidas. Dividir por lo
+            vendido infla el costo unitario.
+          </p>
           {isDirty && (
             <p className="flex items-center gap-1.5 text-[12px] font-medium text-warn">
               <span className="size-1.5 rounded-full bg-warn" /> Tenés cambios sin guardar
@@ -589,8 +615,8 @@ function SalesTab({
         loading={saving}
         onConfirm={async () => {
           if (!pending) return;
-          await onSave(pending.p, pending.q);
-          reset({ unitPrice: pending.p, quantity: pending.q }); // limpia "cambios sin guardar" al toque
+          await onSave(pending.p, pending.q, pending.prod);
+          reset({ unitPrice: pending.p, quantity: pending.q, producedQuantity: pending.prod ?? '' }); // limpia "cambios sin guardar" al toque
           setPending(null);
         }}
         onCancel={() => setPending(null)}

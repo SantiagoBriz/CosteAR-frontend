@@ -72,7 +72,13 @@ export function useUpdateCostSection(id: string) {
 export function useUpdateSales(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { salesUnitPrice: number; salesQuantity: number }) => {
+    mutationFn: async (input: {
+      salesUnitPrice: number;
+      /** Unidades VENDIDAS: facturación y margen. */
+      salesQuantity: number;
+      /** Unidades PRODUCIDAS: costo unitario. null = usar las vendidas (como antes). */
+      productionQuantity?: number | null;
+    }) => {
       const res = await api.put(`/cost-structures/${id}/sales`, input);
       return res.data;
     },

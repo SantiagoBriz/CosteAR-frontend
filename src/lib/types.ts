@@ -21,7 +21,10 @@ export interface CostStructure {
   directLaborConfig: unknown | null;
   indirectCostConfig: unknown | null;
   salesUnitPrice: string | null;
+  /** Unidades VENDIDAS (facturación y margen). */
   salesQuantity: string | null;
+  /** Unidades PRODUCIDAS (costo unitario). Si es null, se usan las vendidas. */
+  productionQuantity: string | null;
   createdAt: string;
   deletedAt?: string | null;
 }
