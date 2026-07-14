@@ -118,16 +118,21 @@ export function CostStructurePage() {
       const data = await importExcel.mutateAsync(file);
       setImportedDefaults(data);
       // El backend omite del todo una sección si no encontró nada en el
-      // Excel para ella (nunca la manda "vacía") — si las cuatro faltan,
-      // no encontramos nada de nada. Sin este aviso, la costista ve la
-      // pantalla igual que antes de importar y piensa que el botón no hizo
-      // nada, cuando en realidad sí lo intentó.
-      const foundNothing =
-        !data.rawMaterialConfig && !data.directLaborConfig && !data.indirectCostConfig && !data.sales;
+      // Excel para ella (nunca la manda "vacía"). Avisamos si falta
+      // CUALQUIERA de las cuatro, no solo cuando no se encontró nada de
+      // nada — un import parcial (ej. Materia Prima sí, el resto no) es
+      // tan silencioso como uno vacío si no se dice explícitamente qué
+      // quedó sin leer.
+      const missing = [
+        !data.rawMaterialConfig && 'Materia Prima',
+        !data.directLaborConfig && 'Mano de Obra',
+        !data.indirectCostConfig && 'Costos Indirectos',
+        !data.sales && 'Ventas',
+      ].filter((s): s is string => typeof s === 'string');
       setImportNotice(
-        foundNothing
-          ? 'No pudimos reconocer datos en este Excel automáticamente — no es un error, simplemente no encontramos etiquetas que reconozcamos. Completá los campos a mano.'
-          : null,
+        missing.length === 0
+          ? null
+          : `No pudimos reconocer datos automáticamente para: ${missing.join(', ')}. No es un error — completá esas secciones a mano.`,
       );
       // Llevar a la costista a la primera sección para que vea de entrada lo
       // que se pre-llenó, en vez de dejarla en la pestaña donde clickeó.
