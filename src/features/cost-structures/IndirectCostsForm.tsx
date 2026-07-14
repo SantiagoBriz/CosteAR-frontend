@@ -4,6 +4,86 @@ import { Plus, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { IndirectCostConfig } from './cost-structure-types';
+import { useAllocationBases, useCreateAllocationBase, type AllocationBase } from './allocation-base-hooks';
+
+/**
+ * Desplegable de bases de asignación (3b-1). Reemplaza el texto libre: el
+ * costista elige una base del catálogo (sistema + propias) o crea una nueva.
+ * El valor seleccionado es el `code` de la base (lo que el motor resuelve).
+ */
+function BaseSelect({ bases, value, companyId, onSelect }: {
+  bases: AllocationBase[] | undefined;
+  value: string;
+  companyId?: string;
+  onSelect: (code: string) => void;
+}) {
+  const list = bases ?? [];
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newUnit, setNewUnit] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const create = useCreateAllocationBase();
+
+  const inCatalog = list.some((b) => b.code === value);
+
+  // Genera un código estable a partir del nombre (sin acentos ni espacios).
+  const slug = (s: string) =>
+    s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+
+  const handleCreate = async () => {
+    if (!companyId) { setErr('No se pudo identificar la empresa.'); return; }
+    const name = newName.trim();
+    const unit = newUnit.trim();
+    if (!name || !unit) { setErr('Poné un nombre y una unidad.'); return; }
+    const code = slug(name);
+    if (!code) { setErr('El nombre no es válido.'); return; }
+    try {
+      const base = await create.mutateAsync({ companyId, code, name, unit });
+      onSelect(base.code);
+      setShowCreate(false); setNewName(''); setNewUnit(''); setErr(null);
+    } catch {
+      setErr('No se pudo crear la base. Puede que ya exista una con ese nombre.');
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <select
+        value={value || ''}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === '__new__') { setShowCreate(true); return; }
+          onSelect(v);
+        }}
+        className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none sm:w-56"
+      >
+        <option value="">Elegir base…</option>
+        {list.map((b) => (
+          <option key={b.id} value={b.code}>
+            {b.name}{b.unit ? ` (${b.unit})` : ''}{b.isSystem ? '' : ' · propia'}
+          </option>
+        ))}
+        {value && !inCatalog && <option value={value}>{value} (fuera del catálogo)</option>}
+        <option value="__new__">+ Crear base nueva…</option>
+      </select>
+
+      {showCreate && (
+        <div className="space-y-1.5 rounded-lg border border-line bg-surface p-2">
+          <div className="flex flex-wrap gap-1.5">
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nombre (ej. Superficie)" className="min-w-0 flex-1 rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" />
+            <input value={newUnit} onChange={(e) => setNewUnit(e.target.value)} placeholder="Unidad (ej. m²)" className="w-28 rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" />
+          </div>
+          {err && <p className="text-[11px] text-danger">{err}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={() => { setShowCreate(false); setErr(null); }}>Cancelar</Button>
+            <Button type="button" size="sm" loading={create.isPending} onClick={handleCreate}>Crear base</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Formatea un importe derivado (presupuesto del prorrateo) para mostrarlo. */
 function fmtBudget(value: unknown): string {
@@ -16,6 +96,8 @@ interface Props {
   defaultValues?: IndirectCostConfig;
   onSave: (data: IndirectCostConfig) => Promise<void>;
   saving: boolean;
+  /** Empresa dueña de la estructura: sirve para traer su catálogo de bases. */
+  companyId?: string;
 }
 
 function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
@@ -34,6 +116,8 @@ function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
     centers: base.centers ?? [],
     concepts: (base.concepts ?? []).map((c) => ({
       ...c,
+      allocationMode: c.allocationMode === 'base' ? 'base' : 'percent',
+      baseCode: c.baseCode ?? '',
       amount: {
         fixed: c.amount?.fixed === 0 ? '' : (c.amount?.fixed ?? ''),
         variable: c.amount?.variable === 0 ? '' : (c.amount?.variable ?? ''),
@@ -42,6 +126,9 @@ function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
     })),
     serviceDistributions: (base.serviceDistributions ?? []).map((s) => ({
       ...s,
+      distributionMode: s.distributionMode ?? 'manual',
+      baseCode: s.baseCode ?? '',
+      toProductive: cleanRecord(s.toProductive),
       toProductiveFixed: cleanRecord(s.toProductiveFixed),
       toProductiveVariable: cleanRecord(s.toProductiveVariable),
     })),
@@ -75,19 +162,41 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
 
   return {
     centers: data.centers ?? [],
-    concepts: (data.concepts ?? []).map((c: any) => ({
-      ...c,
-      amount: {
-        fixed: fallbackNum(c.amount?.fixed),
-        variable: fallbackNum(c.amount?.variable),
-      },
-      distribution: cleanRecord(c.distribution),
-    })),
-    serviceDistributions: (data.serviceDistributions ?? []).map((s: any) => ({
-      ...s,
-      toProductiveFixed: cleanRecord(s.toProductiveFixed),
-      toProductiveVariable: cleanRecord(s.toProductiveVariable),
-    })),
+    concepts: (data.concepts ?? []).map((c: any) => {
+      const mode = c.allocationMode === 'base' ? 'base' : 'percent';
+      const common = {
+        name: c.name,
+        amount: { fixed: fallbackNum(c.amount?.fixed), variable: fallbackNum(c.amount?.variable) },
+        allocationMode: mode,
+        // En 'base', distribution guarda las UNIDADES de la base; en 'percent',
+        // los % tipeados. En ambos casos se limpian los vacíos a 0.
+        distribution: cleanRecord(c.distribution),
+      };
+      return mode === 'base' ? { ...common, baseCode: (c.baseCode ?? '').trim() } : common;
+    }),
+    serviceDistributions: (data.serviceDistributions ?? []).map((s: any) => {
+      const mode = s.distributionMode === 'base' ? 'base' : 'manual';
+      if (mode === 'base') {
+        // Modo automático: el reparto sale de las UNIDADES de la base (una por
+        // centro). Se limpian los % manuales para que el motor use toProductive.
+        return {
+          serviceCenterId: s.serviceCenterId,
+          distributionMode: 'base',
+          baseCode: (s.baseCode ?? '').trim(),
+          toProductive: cleanRecord(s.toProductive),
+          toProductiveFixed: {},
+          toProductiveVariable: {},
+        };
+      }
+      // Modo manual: % tipeados. Se limpia toProductive (evita drivers viejos).
+      return {
+        serviceCenterId: s.serviceCenterId,
+        distributionMode: 'manual',
+        toProductive: {},
+        toProductiveFixed: cleanRecord(s.toProductiveFixed),
+        toProductiveVariable: cleanRecord(s.toProductiveVariable),
+      };
+    }),
     productiveSettings: (data.productiveSettings ?? []).map((p: any) => ({
       ...p,
       budget: {
@@ -107,10 +216,14 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
   };
 }
 
-export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
-  const { register, control, handleSubmit, reset, getValues, formState: { isDirty } } = useForm<IndirectCostConfig>({
+export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: Props) {
+  const { register, control, handleSubmit, reset, getValues, setValue, formState: { isDirty } } = useForm<IndirectCostConfig>({
     defaultValues: cleanIndirectCostsForForm(defaultValues) as any,
   });
+
+  // Catálogo de bases de asignación de la empresa (sistema + propias) para los
+  // desplegables del modo "Automático (por base)".
+  const { data: allocationBases } = useAllocationBases(companyId);
 
   const loadedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -173,6 +286,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   };
 
   const watchedCenters = useWatch({ control, name: 'centers' });
+  const watchedConcepts = useWatch({ control, name: 'concepts' });
   const watchedProdSettings = useWatch({ control, name: 'productiveSettings' });
   const watchedServiceDists = useWatch({ control, name: 'serviceDistributions' });
   const productiveCenters = watchedCenters?.filter((c) => c.type === 'productive') ?? [];
@@ -181,6 +295,16 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
   // repartir a otro servicio (que aún no cerró): así funciona el escalonado.
   // En cada fila, la columna del propio servicio queda deshabilitada.
   const targetCenters = [...productiveCenters, ...serviceCenters];
+
+  // % derivado de una base (unidad del centro ÷ Σ unidades). Solo para mostrar
+  // en vivo en el modo automático; el motor lo recalcula igual al guardar.
+  const driverPct = (drivers: Record<string, any> | undefined, centerId: string): string => {
+    if (!drivers) return '—';
+    const total = Object.values(drivers).reduce((a: number, v) => a + (Number(v) || 0), 0);
+    const val = Number(drivers[centerId]) || 0;
+    if (total <= 0 || val <= 0) return '—';
+    return `${((val / total) * 100).toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`;
+  };
 
   // Auto-sync serviceDistributions when service centers change
   const prevServiceKey = useRef('');
@@ -195,7 +319,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
 
     for (const center of serviceCenters) {
       if (!existingIds.has(center.id)) {
-        addServiceDist({ serviceCenterId: center.id, toProductiveFixed: {}, toProductiveVariable: {} });
+        addServiceDist({ serviceCenterId: center.id, distributionMode: 'manual', baseCode: '', toProductive: {}, toProductiveFixed: {}, toProductiveVariable: {} });
       }
     }
     for (let i = currentDists.length - 1; i >= 0; i--) {
@@ -290,7 +414,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             <Button type="button" size="sm" variant="ghost" onClick={() => setShowPasteConcepts(!showPasteConcepts)}>
               Pegar de Excel
             </Button>
-            <Button type="button" size="sm" variant="secondary" onClick={() => addConcept({ name: '', amount: { fixed: 0, variable: 0 }, distribution: {} })}>
+            <Button type="button" size="sm" variant="secondary" onClick={() => addConcept({ name: '', amount: { fixed: 0, variable: 0 }, distribution: {}, allocationMode: 'percent', baseCode: '' })}>
               <Plus className="size-3" /> Concepto
             </Button>
           </div>
@@ -321,6 +445,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 <th className="px-3 py-2 text-left font-medium">Concepto</th>
                 <th className="px-3 py-2 text-right font-medium">Fijo $</th>
                 <th className="px-3 py-2 text-right font-medium">Variable $</th>
+                <th className="w-36 px-3 py-2 text-left font-medium">Modo</th>
                 {watchedCenters?.map((c) => (
                   <th key={c.id} className="w-20 px-3 py-2 text-right font-medium">{c.name || c.id} %</th>
                 ))}
@@ -328,7 +453,10 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
               </tr>
             </thead>
             <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
-              {concepts.map((f, i) => (
+              {concepts.map((f, i) => {
+                const cMode = (watchedConcepts ?? [])[i]?.allocationMode === 'base' ? 'base' : 'percent';
+                const cDrivers = (watchedConcepts ?? [])[i]?.distribution as Record<string, any> | undefined;
+                return (
                 <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
                   <td data-label="Concepto" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" placeholder="Alquiler, Energía…" {...register(`concepts.${i}.name`)} />
@@ -339,23 +467,59 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                   <td data-label="Variable $" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                     <input type="number" step="0.01" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-28" {...register(`concepts.${i}.amount.variable`, { valueAsNumber: true })} />
                   </td>
-                  {watchedCenters?.map((c) => (
-                    <td key={c.id} data-label={`${c.name || c.id} %`} className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
-                      <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
+                  <td data-label="Modo" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                    <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`concepts.${i}.allocationMode`)}>
+                      <option value="percent">Manual (%)</option>
+                      <option value="base">Automático (por base)</option>
+                    </select>
+                  </td>
+                  {cMode === 'base' ? (
+                    <td colSpan={watchedCenters?.length ?? 1} className="block sm:table-cell sm:px-2 sm:py-1.5">
+                      <div className="rounded-lg border border-dashed border-action/40 bg-surface-alt/40 p-2.5">
+                        <div className="mb-2">
+                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-soft">Base de distribución</span>
+                          <input type="hidden" {...register(`concepts.${i}.baseCode`)} />
+                          <BaseSelect
+                            bases={allocationBases}
+                            companyId={companyId}
+                            value={(watchedConcepts ?? [])[i]?.baseCode ?? ''}
+                            onSelect={(code) => setValue(`concepts.${i}.baseCode`, code, { shouldDirty: true })}
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {(watchedCenters ?? []).map((c) => (
+                            <div key={c.id} className="flex items-center gap-1.5 rounded border border-line bg-surface px-2 py-1">
+                              <span className="text-[12px] text-ink-soft">{c.name || c.id}</span>
+                              <input type="number" step="any" inputMode="decimal" className="w-16 rounded border border-line bg-surface px-1.5 py-0.5 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
+                              <span className="w-12 text-right text-[11px] font-medium text-action">{driverPct(cDrivers, c.id)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="mt-1.5 text-[10.5px] text-ink-soft">Cargá la unidad de cada centro (ej. m²). El % se deriva solo (unidad ÷ total) y lo aplica el motor.</p>
+                      </div>
                     </td>
-                  ))}
+                  ) : (
+                    watchedCenters?.map((c) => (
+                      <td key={c.id} data-label={`${c.name || c.id} %`} className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                        <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`concepts.${i}.distribution.${c.id}`, { valueAsNumber: true })} />
+                      </td>
+                    ))
+                  )}
                   <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                     <button type="button" onClick={() => removeConcept(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {concepts.length === 0 && (
-                <tr className="block sm:table-row"><td colSpan={5 + (watchedCenters?.length ?? 0)} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin conceptos. Agregá los costos indirectos de fabricación.</td></tr>
+                <tr className="block sm:table-row"><td colSpan={6 + (watchedCenters?.length ?? 0)} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin conceptos. Agregá los costos indirectos de fabricación.</td></tr>
               )}
             </tbody>
           </table>
         </div>
-        <p className="mt-1 text-[11px] text-ink-soft">Los porcentajes por centro deben sumar 100 en cada fila.</p>
+        <p className="mt-1 text-[11px] text-ink-soft">
+          En modo <em>Manual (%)</em>, los porcentajes por centro deben sumar 100 en cada fila. En modo <em>Automático (por base)</em>, elegís una base física (ej. superficie) y cargás la unidad de cada centro; el % lo deriva el sistema solo.
+        </p>
       </section>
 
       {/* Distribuciones de centros de servicio */}
@@ -371,12 +535,17 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             el primero cierra primero. Un servicio puede repartir a otro servicio que <em>todavía no cerró</em> — no puede
             repartir a uno que ya cerró (por eso su columna aparece bloqueada más abajo). Usá las flechas para reordenar.
           </p>
+          <p className="mb-2 text-[11px] leading-snug text-ink-soft">
+            <strong className="font-medium text-ink">Modo de reparto</strong>: <em>Manual (%)</em> = tipeás los porcentajes por centro.
+            <em> Automático (por base)</em> = elegís una base física (ej. horas-máquina) y cargás la unidad de cada centro; el porcentaje lo deriva el sistema solo.
+          </p>
           <div className="overflow-x-auto rounded-xl border border-line p-2 sm:p-0">
             <table className="block w-full text-sm sm:table">
               <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
                 <tr>
                   <th className="w-8 px-2 py-2 text-center font-medium" rowSpan={2}>#</th>
                   <th className="w-40 px-3 py-2 text-left font-medium" rowSpan={2}>Centro de servicio</th>
+                  <th className="w-36 px-3 py-2 text-left font-medium" rowSpan={2}>Modo</th>
                   {targetCenters.map((c) => (
                     <th key={c.id} className="px-3 py-2 text-center font-medium" colSpan={2}>
                       {c.name || c.id}{c.type === 'service' && <span className="ml-1 text-[9px] text-ink-soft">(servicio)</span>}
@@ -396,6 +565,8 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
               <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
                 {serviceDists.map((f, i) => {
                   const rowServiceId = (watchedServiceDists ?? [])[i]?.serviceCenterId;
+                  const rowMode = (watchedServiceDists ?? [])[i]?.distributionMode ?? 'manual';
+                  const rowDrivers = (watchedServiceDists ?? [])[i]?.toProductive as Record<string, any> | undefined;
                   return (
                   <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
                     <td data-label="Orden de cierre" className="flex items-center gap-1 before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
@@ -419,7 +590,39 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                           ))}
                       </select>
                     </td>
-                    {targetCenters.map((c) => {
+                    <td data-label="Modo" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                      <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`serviceDistributions.${i}.distributionMode`)}>
+                        <option value="manual">Manual (%)</option>
+                        <option value="base">Automático (por base)</option>
+                      </select>
+                    </td>
+                    {rowMode === 'base' ? (
+                      <td colSpan={targetCenters.length * 2} className="block sm:table-cell sm:px-2 sm:py-1.5">
+                        <div className="rounded-lg border border-dashed border-action/40 bg-surface-alt/40 p-2.5">
+                          <div className="mb-2">
+                            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-soft">Base de distribución</span>
+                            <input type="hidden" {...register(`serviceDistributions.${i}.baseCode`)} />
+                            <BaseSelect
+                              bases={allocationBases}
+                              companyId={companyId}
+                              value={(watchedServiceDists ?? [])[i]?.baseCode ?? ''}
+                              onSelect={(code) => setValue(`serviceDistributions.${i}.baseCode`, code, { shouldDirty: true })}
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {targetCenters.filter((c) => c.id !== rowServiceId).map((c) => (
+                              <div key={c.id} className="flex items-center gap-1.5 rounded border border-line bg-surface px-2 py-1">
+                                <span className="text-[12px] text-ink-soft">{c.name || c.id}</span>
+                                <input type="number" step="any" inputMode="decimal" className="w-16 rounded border border-line bg-surface px-1.5 py-0.5 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductive.${c.id}`, { valueAsNumber: true })} />
+                                <span className="w-12 text-right text-[11px] font-medium text-action">{driverPct(rowDrivers, c.id)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="mt-1.5 text-[10.5px] text-ink-soft">Cargá la unidad de cada centro (ej. horas). El % se deriva solo (unidad ÷ total) y lo aplica el motor al fijo y al variable.</p>
+                        </div>
+                      </td>
+                    ) : (
+                      targetCenters.map((c) => {
                       const isSelf = !!rowServiceId && c.id === rowServiceId;
                       return (
                       <Fragment key={c.id}>
@@ -433,7 +636,8 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                         </td>
                       </Fragment>
                       );
-                    })}
+                    })
+                    )}
                     <td className="flex justify-end sm:table-cell sm:px-2 sm:py-1.5 sm:text-center">
                       <button type="button" onClick={() => removeServiceDist(i)} className="text-ink-soft hover:text-danger"><Trash2 className="size-4" /></button>
                     </td>
@@ -441,7 +645,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                   );
                 })}
                 {serviceDists.length === 0 && (
-                  <tr className="block sm:table-row"><td colSpan={2 + targetCenters.length * 2 + 1} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Cargando distribuciones…</td></tr>
+                  <tr className="block sm:table-row"><td colSpan={3 + targetCenters.length * 2 + 1} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Cargando distribuciones…</td></tr>
                 )}
               </tbody>
             </table>

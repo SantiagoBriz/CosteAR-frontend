@@ -5,7 +5,7 @@ import {
   Building2, Bell, ArrowRight, ClipboardCheck,
   DollarSign, AlertTriangle, CheckCircle2, FileText,
   ChevronRight, Activity, Percent, Search, FileInput,
-  Image, MessageSquare, User, ShieldCheck, TrendingUp,
+  Image, MessageSquare, User, ShieldCheck,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/AppShell';
@@ -17,25 +17,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api';
 import { formatDate, cn } from '@/lib/utils';
 import type { MacroSnapshot } from '@/lib/types';
-
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-
-const COST_EVOLUTION = [
-  { name: 'Ene', índice: 100.0 },
-  { name: 'Feb', índice: 104.2 },
-  { name: 'Mar', índice: 108.9 },
-  { name: 'Abr', índice: 112.5 },
-  { name: 'May', índice: 116.1 },
-  { name: 'Jun', índice: 120.4 },
-];
 
 function useRecentDocs() {
   return useQuery({
@@ -310,67 +291,19 @@ export function DashboardPage() {
           />
         </div>
 
-        {/* ── MIDDLE ANALYTICAL ROW (Recharts Chart + Attention Feed) ── */}
+        {/* ── MIDDLE ANALYTICAL ROW (Attention Feed) ──
+             Acá vivía "Variación de Costos País": un gráfico con datos INVENTADOS
+             (un índice Ene→Jun fijo en el código, y un "+20.4%" escrito a mano).
+             No salía de los períodos del costista ni del INDEC: no era un número,
+             era un dibujo. En una herramienta que fija precios reales, un número
+             que no se puede rastrear hasta su origen es peor que no tener número.
+             Se saca hasta que exista el dato de verdad (problema B — ver
+             DECISIONES.md del backend: el insumo es la comparación entre períodos,
+             que ya está construida y testeada). */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          
-          {/* Bento 3: Evolution chart (Col: 8) */}
-          <div className="lg:col-span-8 rounded-[28px] border border-line bg-white p-7 flex flex-col justify-between shadow-sm hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20 transition-all duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-[14px] font-extrabold text-granate-deep uppercase tracking-wider flex items-center gap-1.5">
-                  <TrendingUp className="size-4.5 text-granate" /> Variación de Costos País
-                </h2>
-                <p className="text-[11px] text-ink-soft mt-1">
-                  Histórico consolidado del índice de costos CosteAR
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-150 shadow-sm">
-                <TrendingUp className="size-3.5" /> +20.4% Semestre
-              </div>
-            </div>
 
-            {/* Responsive chart container */}
-            <div className="h-[180px] w-full text-[10.5px] lg:h-[240px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={COST_EVOLUTION} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorIndice" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-granate)" stopOpacity={0.16} />
-                      <stop offset="95%" stopColor="var(--color-granate)" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.03)" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="#8a8a8a"
-                    fontSize={10.5}
-                    tickLine={false}
-                    axisLine={false}
-                    dy={8}
-                  />
-                  <YAxis
-                    stroke="#8a8a8a"
-                    fontSize={10.5}
-                    tickLine={false}
-                    axisLine={false}
-                    domain={['dataMin - 5', 'dataMax + 5']}
-                  />
-                  <Tooltip content={<CustomChartTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="índice"
-                    stroke="var(--color-granate)"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#colorIndice)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Bento 4: Prioritized Feed (Alerts & Warnings) (Col: 4) */}
-          <div className="lg:col-span-4 rounded-[28px] border border-line bg-white p-6 flex flex-col justify-between shadow-sm hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20 transition-all duration-300">
+          {/* Bento 4: Prioritized Feed (Alerts & Warnings) (Col: 12) */}
+          <div className="lg:col-span-12 rounded-[28px] border border-line bg-white p-6 flex flex-col justify-between shadow-sm hover:shadow-[0_20px_50px_rgba(74,21,27,0.04)] hover:border-granate/20 transition-all duration-300">
             <div>
               <div className="flex items-center justify-between mb-4.5 px-1">
                 <h2 className="text-[13px] font-extrabold text-granate-deep uppercase tracking-wider flex items-center gap-1.5">
@@ -733,29 +666,3 @@ function StatCard({
   );
 }
 
-// ── Custom Tooltip for Recharts Cost Evolution
-function CustomChartTooltip({ active, payload }: any) {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="rounded-2xl border border-line bg-white/95 backdrop-blur-md p-3.5 shadow-md font-outfit text-[11px] leading-relaxed">
-        <p className="font-bold text-granate-deep border-b border-line pb-1 mb-1.5 uppercase tracking-wide">
-          {data.name} - Detalle
-        </p>
-        <div className="space-y-0.5">
-          <p className="flex justify-between gap-4">
-            <span className="text-ink-soft">Índice CosteAR:</span>
-            <span className="font-bold text-ink font-mono-jb">{Number(data.índice).toFixed(1)}</span>
-          </p>
-          <p className="flex justify-between gap-4 text-emerald-600">
-            <span className="font-bold">Evolución:</span>
-            <span className="font-bold font-mono-jb">
-              {data.name !== 'Ene' ? `+${(data.índice - 100).toFixed(1)}%` : 'Base'}
-            </span>
-          </p>
-        </div>
-      </div>
-    );
-  }
-  return null;
-}

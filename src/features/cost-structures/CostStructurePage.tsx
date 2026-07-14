@@ -3,8 +3,8 @@ import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Calculator, Package, Users, Factory, Activity,
-  TrendingUp, BarChart2, CheckCircle2, History,
-  Download, Loader2,
+  TrendingUp, BarChart2, CheckCircle2, History, GitCompare,
+  Download, Loader2, Lock,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -32,7 +32,10 @@ import { LaborDepartmentsView } from './LaborDepartmentsView';
 import { ConfigHistoryPanel } from './ConfigHistoryPanel';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
+import { usePeriods } from './period-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
+import { PeriodBar } from './components/PeriodBar';
+import { PeriodComparison } from './components/PeriodComparison';
 import type { DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -41,7 +44,7 @@ import type { CalculationResult } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate';
+type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate' | 'comparison';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -64,6 +67,21 @@ export function CostStructurePage() {
   const [tracedError, setTracedError] = useState<string | null>(null);
   const effectiveRunId = tracedRunId ?? runsList?.[0]?.id ?? null;
 
+  // Período de costeo que se está mirando (problema C — Fase 2). Por defecto, el
+  // que está abierto; si ya se cerraron todos, el más nuevo.
+  const { data: periods } = usePeriods(id);
+  const [periodId, setPeriodId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!periods?.length) return;
+    if (periods.some((p) => p.id === periodId)) return;
+    const fallback = periods.find((p) => p.status === 'OPEN') ?? periods[0];
+    if (fallback) setPeriodId(fallback.id);
+  }, [periods, periodId]);
+
+  const selectedPeriod = periods?.find((p) => p.id === periodId) ?? null;
+  /** Un mes cerrado está congelado: se puede mirar, no editar. */
+  const readOnly = selectedPeriod?.status === 'CLOSED';
+
   const [activeTab, setActiveTab] = useState<SectionTab>('raw-material');
   const [result,    setResult]    = useState<{ result: CalculationResult; calculationId: string } | null>(null);
   const [error,     setError]     = useState<string | null>(null);
@@ -77,11 +95,22 @@ export function CostStructurePage() {
   const allReady = configured.mp && configured.mod && configured.cip && configured.sales;
   const shown    = result ?? (latest ? { result: latestToResult(latest), calculationId: latest.id } : null);
 
+  /** Un período cerrado no se toca. Reabrirlo es la única puerta, y deja rastro. */
+  const blockedByClosedPeriod = (): boolean => {
+    if (!readOnly) return false;
+    setError(
+      `"${selectedPeriod?.label}" está cerrado: sus números están congelados. ` +
+        'Para corregir algo, reabrí el período (te va a pedir el motivo).',
+    );
+    return true;
+  };
+
   const saveSection = async (
     section: 'raw-material' | 'direct-labor' | 'indirect-costs',
     config: unknown,
   ) => {
     setError(null);
+    if (blockedByClosedPeriod()) return;
     try {
       await updateSection.mutateAsync({ section, config });
       // No se auto-avanza a la siguiente sección: el usuario se queda en la
@@ -92,6 +121,7 @@ export function CostStructurePage() {
   const runCalculate = async () => {
     setError(null);
     setTracedError(null);
+    if (blockedByClosedPeriod()) return;
     try {
       const data = await calculate.mutateAsync();
       setResult(data);
@@ -140,11 +170,17 @@ export function CostStructurePage() {
             <ArrowLeft className="size-3.5" /> Volver a la empresa
           </Link>
           <h1 className="text-2xl font-extrabold tracking-tight text-granate-deep">{structure?.productName ?? 'Estructura de costos'}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex items-center rounded-full border border-granate/20 bg-granate-tenue px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-granate-deep">
-              Período de costo: {structure?.period}
-            </span>
-            <span className="inline-flex items-center rounded-full border border-line bg-surface-alt px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-soft">
+          {/* El período de costo dejó de ser un texto tipeado: es el período real,
+              con su estado y sus tres operaciones (problema C — Fase 2). */}
+          <div className="mt-1.5 flex flex-wrap items-start gap-x-2 gap-y-1.5">
+            <PeriodBar
+              structureId={id}
+              legacyPeriod={structure?.period}
+              selectedId={periodId}
+              onSelect={setPeriodId}
+              runIdToFreeze={effectiveRunId}
+            />
+            <span className="inline-flex items-center self-start rounded-full border border-line bg-surface-alt px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-soft">
               Captación: continua
             </span>
           </div>
@@ -153,7 +189,12 @@ export function CostStructurePage() {
           <Button variant="secondary" size="sm" onClick={runExport} loading={exportExcel.isPending} disabled={!allReady}>
             <Download className="size-4" /> Exportar
           </Button>
-          <Button onClick={runCalculate} loading={calculate.isPending} disabled={!allReady}>
+          <Button
+            onClick={runCalculate}
+            loading={calculate.isPending}
+            disabled={!allReady || readOnly}
+            title={readOnly ? 'El período está cerrado: sus números están congelados.' : undefined}
+          >
             <Calculator className="size-4" /> Calcular
           </Button>
         </div>
@@ -167,8 +208,20 @@ export function CostStructurePage() {
         </div>
       )}
 
+      {/* Período cerrado: se mira, no se toca. */}
+      {readOnly && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-line bg-surface-alt px-4 py-2.5 text-[13px] text-ink">
+          <Lock className="size-4 shrink-0 text-ink-soft" />
+          <span>
+            Estás viendo <strong>{selectedPeriod?.label}</strong>, que está cerrado. Los números
+            quedaron congelados: podés consultarlos, pero no editarlos ni recalcular. Para corregir
+            algo, reabrí el período.
+          </span>
+        </div>
+      )}
+
       {/* Aviso de progreso */}
-      {!allReady && (
+      {!allReady && !readOnly && (
         <div className="mb-4 rounded-xl border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] text-ink">
           Completá las 4 secciones para habilitar el cálculo.
         </div>
@@ -184,6 +237,7 @@ export function CostStructurePage() {
             { id: 'sales'           as SectionTab, label: 'Venta',                 icon: TrendingUp, configKey: 'sales' as const },
             { id: 'result'          as SectionTab, label: 'Resultado',             icon: BarChart2,  configKey: undefined },
             { id: 'simulate'        as SectionTab, label: 'Simulador',             icon: Activity,   configKey: undefined },
+            { id: 'comparison'      as SectionTab, label: 'Comparación',           icon: GitCompare, configKey: undefined },
             { id: 'history'         as SectionTab, label: 'Historial',             icon: History,    configKey: undefined },
           ] as { id: SectionTab; label: string; icon: typeof Package; configKey: keyof typeof configured | undefined }[]
         ).map(({ id: tabId, label, icon: Icon, configKey }) => {
@@ -219,14 +273,16 @@ export function CostStructurePage() {
           structureId={id}
           historySection="rawMaterial"
         >
-          <RawMaterialForm
-            structureId={id}
-            period={structure?.period}
-            defaultValues={structure?.rawMaterialConfig}
-            onSave={(d) => saveSection('raw-material', d)}
-            saving={updateSection.isPending}
-            isProcesses={structure?.costingSystem === 'PROCESSES'}
-          />
+          <Frozen when={readOnly}>
+            <RawMaterialForm
+              structureId={id}
+              period={structure?.period}
+              defaultValues={structure?.rawMaterialConfig}
+              onSave={(d) => saveSection('raw-material', d)}
+              saving={updateSection.isPending}
+              isProcesses={structure?.costingSystem === 'PROCESSES'}
+            />
+          </Frozen>
         </SectionShell>
       </div>
 
@@ -238,12 +294,14 @@ export function CostStructurePage() {
           structureId={id}
           historySection="directLabor"
         >
-          <DirectLaborSection
-            config={structure?.directLaborConfig as DirectLaborConfig | undefined}
-            directLabor={shown?.result?.detail?.directLabor}
-            onSave={(d) => saveSection('direct-labor', d)}
-            saving={updateSection.isPending}
-          />
+          <Frozen when={readOnly}>
+            <DirectLaborSection
+              config={structure?.directLaborConfig as DirectLaborConfig | undefined}
+              directLabor={shown?.result?.detail?.directLabor}
+              onSave={(d) => saveSection('direct-labor', d)}
+              saving={updateSection.isPending}
+            />
+          </Frozen>
         </SectionShell>
       </div>
 
@@ -255,31 +313,43 @@ export function CostStructurePage() {
           structureId={id}
           historySection="indirectCosts"
         >
-          <IndirectCostsSection
-            config={structure?.indirectCostConfig as IndirectCostConfig | undefined}
-            perDepartment={shown?.result?.detail?.indirectCosts?.perDepartment}
-            onSave={(d) => saveSection('indirect-costs', d)}
-            saving={updateSection.isPending}
-          />
+          <Frozen when={readOnly}>
+            <IndirectCostsSection
+              config={structure?.indirectCostConfig as IndirectCostConfig | undefined}
+              perDepartment={shown?.result?.detail?.indirectCosts?.perDepartment}
+              onSave={(d) => saveSection('indirect-costs', d)}
+              saving={updateSection.isPending}
+              companyId={structure?.companyId}
+              structureId={id}
+            />
+          </Frozen>
         </SectionShell>
       </div>
 
       <div className={cn(activeTab !== 'sales' && 'hidden')}>
-        <SalesTab
-          defaultPrice={structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined}
-          defaultQty={structure?.salesQuantity ? Number(structure.salesQuantity) : undefined}
-          onSave={async (p, q) => {
-            setError(null);
-            try {
-              await updateSales.mutateAsync({ salesUnitPrice: p, salesQuantity: q });
-              // Se queda en Venta tras guardar (no salta a Resultado).
-            } catch (e) { setError(apiErrorMessage(e)); }
-          }}
-          saving={updateSales.isPending}
-          allReady={allReady}
-          onCalculate={runCalculate}
-          calculating={calculate.isPending}
-        />
+        <Frozen when={readOnly}>
+          <SalesTab
+            defaultPrice={structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined}
+            defaultQty={structure?.salesQuantity ? Number(structure.salesQuantity) : undefined}
+            defaultProducedQty={structure?.productionQuantity ? Number(structure.productionQuantity) : undefined}
+            onSave={async (p, q, produced) => {
+              setError(null);
+              if (blockedByClosedPeriod()) return;
+              try {
+                await updateSales.mutateAsync({
+                  salesUnitPrice: p,
+                  salesQuantity: q,
+                  productionQuantity: produced,
+                });
+                // Se queda en Venta tras guardar (no salta a Resultado).
+              } catch (e) { setError(apiErrorMessage(e)); }
+            }}
+            saving={updateSales.isPending}
+            allReady={allReady}
+            onCalculate={runCalculate}
+            calculating={calculate.isPending}
+          />
+        </Frozen>
       </div>
 
       {activeTab === 'result' && (
@@ -301,6 +371,10 @@ export function CostStructurePage() {
         <ScenarioSimulator structureId={id} currentResult={shown?.result || null} />
       )}
 
+      {activeTab === 'comparison' && (
+        <PeriodComparison structureId={id} />
+      )}
+
       {activeTab === 'history' && (
         <HistoryPanel structureId={id} />
       )}
@@ -310,12 +384,14 @@ export function CostStructurePage() {
 
 // ── Costos Indirectos: lista de centros ↔ configuración (Parte 3.3) ──────────
 function IndirectCostsSection({
-  config, perDepartment, onSave, saving,
+  config, perDepartment, onSave, saving, companyId, structureId,
 }: {
   config?: IndirectCostConfig;
   perDepartment?: CalculationResult['detail']['indirectCosts']['perDepartment'];
   onSave: (data: IndirectCostConfig) => Promise<void>;
   saving: boolean;
+  companyId?: string;
+  structureId?: string;
 }) {
   // Arranca en la vista de centros si ya hay centros cargados; si no, en edición.
   const [editing, setEditing] = useState(!config?.centers?.length);
@@ -332,6 +408,7 @@ function IndirectCostsSection({
           defaultValues={config}
           onSave={async (d) => { await onSave(d); setEditing(false); }}
           saving={saving}
+          companyId={companyId}
         />
       </div>
     );
@@ -342,6 +419,8 @@ function IndirectCostsSection({
       config={config ?? { centers: [], concepts: [], serviceDistributions: [], productiveSettings: [] }}
       perDepartment={perDepartment}
       onEdit={() => setEditing(true)}
+      structureId={structureId}
+      companyId={companyId}
     />
   );
 }
@@ -386,6 +465,25 @@ function DirectLaborSection({
   );
 }
 
+// ── Frozen ────────────────────────────────────────────────────────────────────
+
+/**
+ * Congela un formulario cuando el período está cerrado (problema C — Fase 2).
+ *
+ * Es un `<fieldset disabled>`: el navegador apaga TODOS los campos y botones que
+ * cuelgan adentro, sin que cada formulario tenga que enterarse. A diferencia de
+ * tapar la sección, el texto se sigue pudiendo leer y seleccionar — que es
+ * justamente para lo que se mira un mes cerrado.
+ */
+function Frozen({ when, children }: { when: boolean; children: React.ReactNode }) {
+  if (!when) return <>{children}</>;
+  return (
+    <fieldset disabled className="m-0 min-w-0 border-0 p-0 opacity-70">
+      {children}
+    </fieldset>
+  );
+}
+
 // ── SectionShell ──────────────────────────────────────────────────────────────
 
 function SectionShell({
@@ -424,20 +522,22 @@ function SectionShell({
 // ── Sales Tab ─────────────────────────────────────────────────────────────────
 
 function SalesTab({
-  defaultPrice, defaultQty, onSave, saving, allReady, onCalculate, calculating,
+  defaultPrice, defaultQty, defaultProducedQty, onSave, saving, allReady, onCalculate, calculating,
 }: {
   defaultPrice?: number;
   defaultQty?: number;
-  onSave: (p: number, q: number) => Promise<void>;
+  defaultProducedQty?: number;
+  onSave: (p: number, q: number, produced: number | null) => Promise<void>;
   saving: boolean;
   allReady: boolean;
   onCalculate: () => void;
   calculating: boolean;
 }) {
-  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ unitPrice: any; quantity: any }>({
+  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ unitPrice: any; quantity: any; producedQuantity: any }>({
     defaultValues: {
       unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
       quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
+      producedQuantity: defaultProducedQty === 0 ? '' : (defaultProducedQty ?? ''),
     },
   });
 
@@ -445,33 +545,52 @@ function SalesTab({
     reset({
       unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
       quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
+      producedQuantity: defaultProducedQty === 0 ? '' : (defaultProducedQty ?? ''),
     });
-  }, [defaultPrice, defaultQty, reset]);
+  }, [defaultPrice, defaultQty, defaultProducedQty, reset]);
 
-  const [pending, setPending] = useState<{ p: number; q: number } | null>(null);
+  const [pending, setPending] = useState<{ p: number; q: number; prod: number | null } | null>(null);
 
   const onSubmit = (v: any) => {
     const fallbackNum = (val: any) => {
       if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
       return Number(val);
     };
-    setPending({ p: fallbackNum(v.unitPrice), q: fallbackNum(v.quantity) });
+    // La cantidad producida es opcional: vacía = null (el sistema se cae a la
+    // vendida, como hacía antes de que este campo existiera).
+    const producedRaw = v.producedQuantity;
+    const produced =
+      producedRaw === '' || producedRaw === null || producedRaw === undefined || isNaN(Number(producedRaw))
+        ? null
+        : Number(producedRaw);
+
+    setPending({ p: fallbackNum(v.unitPrice), q: fallbackNum(v.quantity), prod: produced });
   };
 
   return (
     <Card>
       <CardHeader
         title="Datos de venta"
-        description="Precio unitario y cantidad producida para calcular el margen bruto"
+        description="Precio, unidades vendidas (para el margen) y unidades producidas (para el costo unitario)"
       />
       <CardBody>
         <form onSubmit={handleSubmit(onSubmit)} className="max-w-sm space-y-4">
           <Input label="Precio de venta unitario $" type="number" step="0.01" numeric
             placeholder="Ej: 25000" info="Precio al que vendés una unidad del producto. En pesos."
             {...register('unitPrice', { required: true })} />
-          <Input label="Cantidad producida / vendida" type="number" step="1" numeric
-            placeholder="Ej: 100" info="Unidades producidas/vendidas en el período. Número entero."
+          <Input label="Unidades vendidas" type="number" step="1" numeric
+            placeholder="Ej: 800"
+            info="Lo que VENDISTE en el período. Con esto se calcula la facturación y el margen bruto."
             {...register('quantity', { required: true })} />
+          <Input label="Unidades producidas (opcional)" type="number" step="1" numeric
+            placeholder="Ej: 1000"
+            info="Lo que FABRICASTE en el período. Con esto se saca el costo por unidad. Si producís y vendés lo mismo, dejalo vacío."
+            {...register('producedQuantity')} />
+          <p className="rounded-xl border border-line bg-surface-alt px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
+            No son lo mismo: si fabricaste 1.000 y vendiste 800, el costo del mes se reparte entre las
+            <strong className="text-ink"> 1.000 producidas</strong>, no entre las 800 vendidas. Dividir por lo
+            vendido infla el costo unitario.
+          </p>
           {isDirty && (
             <p className="flex items-center gap-1.5 text-[12px] font-medium text-warn">
               <span className="size-1.5 rounded-full bg-warn" /> Tenés cambios sin guardar
@@ -496,8 +615,8 @@ function SalesTab({
         loading={saving}
         onConfirm={async () => {
           if (!pending) return;
-          await onSave(pending.p, pending.q);
-          reset({ unitPrice: pending.p, quantity: pending.q }); // limpia "cambios sin guardar" al toque
+          await onSave(pending.p, pending.q, pending.prod);
+          reset({ unitPrice: pending.p, quantity: pending.q, producedQuantity: pending.prod ?? '' }); // limpia "cambios sin guardar" al toque
           setPending(null);
         }}
         onCancel={() => setPending(null)}

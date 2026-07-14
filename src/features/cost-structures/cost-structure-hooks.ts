@@ -40,7 +40,15 @@ export function useConfigHistory(structureId: string, section: string) {
 export function useCreateCostStructure(companyId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { productName: string; period: string; costingSystem?: string }) => {
+    mutationFn: async (input: {
+      productName: string;
+      /**
+       * OPCIONAL: si no se manda, el backend lo deriva de la fecha de hoy y del ritmo
+       * de costeo de la empresa. Ya no se tipea a mano.
+       */
+      period?: string;
+      costingSystem?: string;
+    }) => {
       const res = await api.post<{ data: CostStructure }>(
         `/companies/${companyId}/cost-structures`,
         input,
@@ -72,7 +80,13 @@ export function useUpdateCostSection(id: string) {
 export function useUpdateSales(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { salesUnitPrice: number; salesQuantity: number }) => {
+    mutationFn: async (input: {
+      salesUnitPrice: number;
+      /** Unidades VENDIDAS: facturación y margen. */
+      salesQuantity: number;
+      /** Unidades PRODUCIDAS: costo unitario. null = usar las vendidas (como antes). */
+      productionQuantity?: number | null;
+    }) => {
       const res = await api.put(`/cost-structures/${id}/sales`, input);
       return res.data;
     },

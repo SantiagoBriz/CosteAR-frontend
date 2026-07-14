@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Company, CostStructure } from '@/lib/types';
+import type { Company, CostStructure, Periodicity } from '@/lib/types';
 
 export function useCompanies() {
   return useQuery({
@@ -26,7 +26,14 @@ export function useCompany(id: string) {
 export function useCreateCompany() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; industry?: string; cuit?: string; description?: string }) => {
+    mutationFn: async (input: {
+      name: string;
+      industry?: string;
+      cuit?: string;
+      description?: string;
+      /** El ritmo de costeo. Solo al dar de alta: después queda fijo. */
+      periodicity?: Periodicity;
+    }) => {
       const res = await api.post<{ data: Company }>('/companies', input);
       return res.data.data;
     },
@@ -71,8 +78,8 @@ export function useRestoreCostStructure(companyId: string) {
 export function useUpdateCompany() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, name, industry, cuit, description }: { id: string; name: string; industry?: string; cuit?: string; description?: string }) => {
-      const res = await api.put<{ data: Company }>(`/companies/${id}`, { name, industry, cuit, description });
+    mutationFn: async ({ id, name, industry, cuit, description, periodicity }: { id: string; name: string; industry?: string; cuit?: string; description?: string; periodicity?: Periodicity }) => {
+      const res = await api.put<{ data: Company }>(`/companies/${id}`, { name, industry, cuit, description, periodicity });
       return res.data.data;
     },
     onSuccess: (_, variables) => {

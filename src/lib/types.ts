@@ -1,5 +1,23 @@
 /** Tipos de la API de CosteAR (espejo del backend). */
 
+/**
+ * El RITMO de costeo de la empresa: cada cuánto cierra un período.
+ * No toda empresa costea por mes; hay quienes cierran por quincena o por trimestre.
+ */
+export type Periodicity = 'MONTHLY' | 'BIWEEKLY' | 'QUARTERLY';
+
+export const PERIODICITY_OPTIONS: { value: Periodicity; label: string }[] = [
+  { value: 'MONTHLY', label: 'Mensual — cierra todos los meses' },
+  { value: 'BIWEEKLY', label: 'Quincenal — cierra cada 15 días' },
+  { value: 'QUARTERLY', label: 'Trimestral — cierra cada 3 meses' },
+];
+
+export const PERIODICITY_LABEL: Record<Periodicity, string> = {
+  MONTHLY: 'Mensual',
+  BIWEEKLY: 'Quincenal',
+  QUARTERLY: 'Trimestral',
+};
+
 export interface Company {
   id: string;
   name: string;
@@ -7,6 +25,7 @@ export interface Company {
   cuit: string | null;
   isActive: boolean;
   createdAt: string;
+  periodicity: Periodicity;
   _count?: { costStructures: number };
 }
 
@@ -21,7 +40,10 @@ export interface CostStructure {
   directLaborConfig: unknown | null;
   indirectCostConfig: unknown | null;
   salesUnitPrice: string | null;
+  /** Unidades VENDIDAS (facturación y margen). */
   salesQuantity: string | null;
+  /** Unidades PRODUCIDAS (costo unitario). Si es null, se usan las vendidas. */
+  productionQuantity: string | null;
   createdAt: string;
   deletedAt?: string | null;
 }
@@ -70,6 +92,10 @@ export interface CalculationResult {
           quotaFixed?: number;
           quotaVariable?: number;
           overUnderApplied?: number;
+          /** E3 — faltan datos de cierre (actividad real y/o CIP real): las
+           *  variaciones no se calculan y el CIF se aplica a capacidad normal. */
+          pendingClosing?: boolean;
+          appliedOn?: 'actualActivity' | 'normalCapacity';
         }
       >;
     };
