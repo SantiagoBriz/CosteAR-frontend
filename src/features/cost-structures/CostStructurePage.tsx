@@ -56,6 +56,7 @@ export function CostStructurePage() {
   const [result,    setResult]    = useState<{ result: CalculationResult; calculationId: string } | null>(null);
   const [error,     setError]     = useState<string | null>(null);
   const [importedDefaults, setImportedDefaults] = useState<ImportedExcelData | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const configured = {
@@ -112,9 +113,22 @@ export function CostStructurePage() {
     e.target.value = ''; // permite volver a elegir el mismo archivo si hace falta reintentar
     if (!file) return;
     setError(null);
+    setImportNotice(null);
     try {
       const data = await importExcel.mutateAsync(file);
       setImportedDefaults(data);
+      // El backend omite del todo una sección si no encontró nada en el
+      // Excel para ella (nunca la manda "vacía") — si las cuatro faltan,
+      // no encontramos nada de nada. Sin este aviso, la costista ve la
+      // pantalla igual que antes de importar y piensa que el botón no hizo
+      // nada, cuando en realidad sí lo intentó.
+      const foundNothing =
+        !data.rawMaterialConfig && !data.directLaborConfig && !data.indirectCostConfig && !data.sales;
+      setImportNotice(
+        foundNothing
+          ? 'No pudimos reconocer datos en este Excel automáticamente — no es un error, simplemente no encontramos etiquetas que reconozcamos. Completá los campos a mano.'
+          : null,
+      );
       // Llevar a la costista a la primera sección para que vea de entrada lo
       // que se pre-llenó, en vez de dejarla en la pestaña donde clickeó.
       setActiveTab('raw-material');
@@ -172,6 +186,15 @@ export function CostStructurePage() {
         <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-danger/10 px-4 py-2.5 text-[13px] text-danger">
           <span className="min-w-0 flex-1 break-words">{error}</span>
           <button type="button" onClick={() => setError(null)} className="shrink-0 text-danger/60 hover:text-danger">✕</button>
+        </div>
+      )}
+
+      {/* Aviso de import sin resultados — no es un error, el pedido funcionó
+          bien, simplemente no encontramos nada reconocible en el archivo. */}
+      {importNotice && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+          <span className="min-w-0 flex-1 break-words">{importNotice}</span>
+          <button type="button" onClick={() => setImportNotice(null)} className="shrink-0 text-warn/60 hover:text-warn">✕</button>
         </div>
       )}
 
