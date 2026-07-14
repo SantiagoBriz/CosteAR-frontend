@@ -67,6 +67,12 @@ export function CostStructurePage() {
   const allReady = configured.mp && configured.mod && configured.cip && configured.sales;
   const shown    = result ?? (latest ? { result: latestToResult(latest), calculationId: latest.id } : null);
 
+  const IMPORTED_KEY_BY_SECTION = {
+    'raw-material': 'rawMaterialConfig',
+    'direct-labor': 'directLaborConfig',
+    'indirect-costs': 'indirectCostConfig',
+  } as const;
+
   const saveSection = async (
     section: 'raw-material' | 'direct-labor' | 'indirect-costs',
     config: unknown,
@@ -76,6 +82,10 @@ export function CostStructurePage() {
       await updateSection.mutateAsync({ section, config });
       // No se auto-avanza a la siguiente sección: el usuario se queda en la
       // pestaña actual para seguir revisando lo que cargó.
+      // El aviso de "importación pendiente de guardar" ya no aplica para esta
+      // sección: se acaba de guardar, así que lo que se ve ahora es lo persistido.
+      const importedKey = IMPORTED_KEY_BY_SECTION[section];
+      setImportedDefaults((prev) => (prev ? { ...prev, [importedKey]: undefined } : prev));
     } catch (e) { setError(apiErrorMessage(e)); }
   };
 
@@ -266,6 +276,9 @@ export function CostStructurePage() {
             try {
               await updateSales.mutateAsync({ salesUnitPrice: p, salesQuantity: q });
               // Se queda en Venta tras guardar (no salta a Resultado).
+              // Igual que en saveSection: una vez guardado, el aviso de
+              // importación pendiente ya no aplica para Venta.
+              setImportedDefaults((prev) => (prev ? { ...prev, sales: undefined } : prev));
             } catch (e) { setError(apiErrorMessage(e)); }
           }}
           saving={updateSales.isPending}
