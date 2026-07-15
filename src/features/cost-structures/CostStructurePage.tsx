@@ -40,6 +40,29 @@ import type { CalculationResult } from '@/lib/types';
 
 type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate';
 
+const IMPORT_REVIEW_SECTIONS = [
+  { key: 'rawMaterialConfig', label: 'Materia Prima' },
+  { key: 'directLaborConfig', label: 'Mano de Obra' },
+  { key: 'indirectCostConfig', label: 'Costos Indirectos' },
+  { key: 'sales', label: 'Ventas' },
+] as const;
+
+/**
+ * Cuenta valores efectivamente encontrados dentro de un resultado parcial de
+ * import: cada campo definido cuenta 1, cada fila de un array (departamento,
+ * concepto) también cuenta 1. No hay un "total esperado" fijo para comparar
+ * — la config varía según qué tan detallado sea el Excel de cada costista —
+ * así que se muestra la cuenta sola, no una fracción.
+ */
+function countFilled(value: unknown): number {
+  if (value === undefined || value === null) return 0;
+  if (Array.isArray(value)) return value.length;
+  if (typeof value === 'object') {
+    return Object.values(value).reduce((sum: number, v) => sum + countFilled(v), 0);
+  }
+  return 1;
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function CostStructurePage() {
@@ -57,6 +80,10 @@ export function CostStructurePage() {
   const [error,     setError]     = useState<string | null>(null);
   const [importedDefaults, setImportedDefaults] = useState<ImportedExcelData | null>(null);
   const [importNotice, setImportNotice] = useState<string | null>(null);
+  // Resultado crudo del parseo, en revisión — todavía NO se aplicó a los
+  // formularios. Se separa de `importedDefaults` a propósito: hasta que la
+  // costista no confirma en el diálogo, nada de esto toca la pantalla real.
+  const [pendingImport, setPendingImport] = useState<ImportedExcelData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const configured = {
@@ -116,24 +143,41 @@ export function CostStructurePage() {
     setImportNotice(null);
     try {
       const data = await importExcel.mutateAsync(file);
-      setImportedDefaults(data);
-      // El backend omite del todo una sección si no encontró nada en el
-      // Excel para ella (nunca la manda "vacía") — si las cuatro faltan,
-      // no encontramos nada de nada. Sin este aviso, la costista ve la
-      // pantalla igual que antes de importar y piensa que el botón no hizo
-      // nada, cuando en realidad sí lo intentó.
-      const foundNothing =
-        !data.rawMaterialConfig && !data.directLaborConfig && !data.indirectCostConfig && !data.sales;
-      setImportNotice(
-        foundNothing
-          ? 'No pudimos reconocer datos en este Excel automáticamente — no es un error, simplemente no encontramos etiquetas que reconozcamos. Completá los campos a mano.'
-          : null,
-      );
-      // Llevar a la costista a la primera sección para que vea de entrada lo
-      // que se pre-llenó, en vez de dejarla en la pestaña donde clickeó.
-      setActiveTab('raw-material');
+      // No se aplica todavía — se muestra en el diálogo de revisión y la
+      // costista decide si lo carga o lo descarta. Nada toca la pantalla
+      // real hasta ese "Cargar en el formulario".
+      setPendingImport(data);
     } catch (e) { setError(apiErrorMessage(e)); }
   };
+
+  const confirmImport = () => {
+    if (!pendingImport) return;
+    const data = pendingImport;
+    setImportedDefaults(data);
+    // El backend omite del todo una sección si no encontró nada en el
+    // Excel para ella (nunca la manda "vacía"). Avisamos si falta
+    // CUALQUIERA de las cuatro, no solo cuando no se encontró nada de
+    // nada — un import parcial (ej. Materia Prima sí, el resto no) es
+    // tan silencioso como uno vacío si no se dice explícitamente qué
+    // quedó sin leer.
+    const missing = [
+      !data.rawMaterialConfig && 'Materia Prima',
+      !data.directLaborConfig && 'Mano de Obra',
+      !data.indirectCostConfig && 'Costos Indirectos',
+      !data.sales && 'Ventas',
+    ].filter((s): s is string => typeof s === 'string');
+    setImportNotice(
+      missing.length === 0
+        ? null
+        : `No pudimos reconocer datos automáticamente para: ${missing.join(', ')}. No es un error — completá esas secciones a mano.`,
+    );
+    // Llevar a la costista a la primera sección para que vea de entrada lo
+    // que se pre-llenó, en vez de dejarla en la pestaña donde clickeó.
+    setActiveTab('raw-material');
+    setPendingImport(null);
+  };
+
+  const discardImport = () => setPendingImport(null);
 
   if (isLoading) {
     return (
@@ -188,6 +232,39 @@ export function CostStructurePage() {
           <button type="button" onClick={() => setError(null)} className="shrink-0 text-danger/60 hover:text-danger">✕</button>
         </div>
       )}
+
+      {/* Revisión del import: nada se aplica a los formularios hasta que la
+          costista confirma acá — ve qué se encontró (y qué no) antes de que
+          toque la pantalla real. */}
+      <ConfirmDialog
+        open={pendingImport !== null}
+        title="Revisá lo que encontramos en tu Excel"
+        message={
+          <div className="space-y-2">
+            <p>Antes de cargar esto en el formulario, confirmá que está bien. No se guarda nada todavía — vas a poder revisar y editar cada campo igual que siempre antes de apretar &quot;Guardar&quot;.</p>
+            <ul className="space-y-1 rounded-lg bg-surface-alt p-3">
+              {IMPORT_REVIEW_SECTIONS.map(({ key, label }) => {
+                const data = pendingImport?.[key];
+                const count = countFilled(data);
+                return (
+                  <li key={key} className="flex items-center justify-between gap-3">
+                    <span className="font-medium text-ink">{label}</span>
+                    {data ? (
+                      <span className="text-ok">{count} {count === 1 ? 'dato encontrado' : 'datos encontrados'}</span>
+                    ) : (
+                      <span className="text-ink-soft">No se encontró nada</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        }
+        confirmLabel="Cargar en el formulario"
+        cancelLabel="Descartar"
+        onConfirm={confirmImport}
+        onCancel={discardImport}
+      />
 
       {/* Aviso de import sin resultados — no es un error, el pedido funcionó
           bien, simplemente no encontramos nada reconocible en el archivo. */}
