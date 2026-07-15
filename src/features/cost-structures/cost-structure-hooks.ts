@@ -41,10 +41,42 @@ export function useCostStructure(id: string) {
   });
 }
 
+export interface ConfigVersion {
+  id: string;
+  section: string;
+  versionN: number;
+  value: unknown;
+  reason: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+/** Historial append-only de la config del motor (R1). Más nueva primero. */
+export function useConfigHistory(structureId: string, section: string) {
+  return useQuery({
+    queryKey: ['cost-structures', structureId, 'config-history', section],
+    queryFn: async () => {
+      const res = await api.get<{ data: ConfigVersion[] }>(
+        `/cost-structures/${structureId}/config-history?section=${section}`,
+      );
+      return res.data.data;
+    },
+    enabled: !!structureId && !!section,
+  });
+}
+
 export function useCreateCostStructure(companyId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { productName: string; period: string; costingSystem?: string }) => {
+    mutationFn: async (input: {
+      productName: string;
+      /**
+       * OPCIONAL: si no se manda, el backend lo deriva de la fecha de hoy y del ritmo
+       * de costeo de la empresa. Ya no se tipea a mano.
+       */
+      period?: string;
+      costingSystem?: string;
+    }) => {
       const res = await api.post<{ data: CostStructure }>(
         `/companies/${companyId}/cost-structures`,
         input,
@@ -76,7 +108,13 @@ export function useUpdateCostSection(id: string) {
 export function useUpdateSales(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { salesUnitPrice: number; salesQuantity: number }) => {
+    mutationFn: async (input: {
+      salesUnitPrice: number;
+      /** Unidades VENDIDAS: facturación y margen. */
+      salesQuantity: number;
+      /** Unidades PRODUCIDAS: costo unitario. null = usar las vendidas (como antes). */
+      productionQuantity?: number | null;
+    }) => {
       const res = await api.put(`/cost-structures/${id}/sales`, input);
       return res.data;
     },
@@ -166,31 +204,4 @@ export function useLatestCalculation(id: string) {
     enabled: !!id,
   });
 }
-
-export function useCalculationTree(id: string, runId: string | undefined) {
-  return useQuery({
-    queryKey: ['cost-structures', id, 'calculations', runId, 'tree'],
-    queryFn: async () => {
-      if (!runId) throw new Error('runId is required');
-      const res = await api.get<{ data: { tree: any[] } }>(
-        `/cost-structures/${id}/calculations/${runId}/tree`,
-      );
-      return res.data.data.tree;
-    },
-    enabled: !!id && !!runId,
-  });
-}
-
-export function useTraceData(versionId: string | null) {
-  return useQuery({
-    queryKey: ['data-point-versions', versionId, 'trace'],
-    queryFn: async () => {
-      if (!versionId) throw new Error('versionId is required');
-      const res = await api.get<{ data: any }>(`/data-point-versions/${versionId}/trace`);
-      return res.data.data;
-    },
-    enabled: !!versionId,
-  });
-}
-
 
