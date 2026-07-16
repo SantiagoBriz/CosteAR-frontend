@@ -1,6 +1,34 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { CostStructure, CalculationResult, CostCalculation } from '@/lib/types';
+import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
+
+/**
+ * Resultado del parseo del Excel importado: cada sección es PARCIAL porque el
+ * backend solo completa lo que efectivamente encontró en el archivo. No se
+ * persiste nada — es solo para pre-llenar los formularios existentes, que ya
+ * saben tolerar `defaultValues` incompletos (ver `cleanXForForm` en cada uno).
+ */
+export interface ImportedExcelData {
+  rawMaterialConfig?: Partial<RawMaterialConfig>;
+  directLaborConfig?: Partial<DirectLaborConfig>;
+  indirectCostConfig?: Partial<IndirectCostConfig>;
+  sales?: { salesUnitPrice?: number; salesQuantity?: number };
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Sacar el prefijo "data:<mime>;base64," antes de mandarlo.
+      const base64 = result.split(',')[1] ?? '';
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 export function useCostStructure(id: string) {
   return useQuery({
@@ -124,6 +152,19 @@ export function useExportExcel(id: string) {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
+    },
+  });
+}
+
+export function useImportExcel(id: string) {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const fileBase64 = await fileToBase64(file);
+      const res = await api.post<{ data: ImportedExcelData }>(
+        `/cost-structures/${id}/import-excel`,
+        { fileBase64 },
+      );
+      return res.data.data;
     },
   });
 }

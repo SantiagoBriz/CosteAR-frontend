@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Calculator, Package, Users, Factory, Activity,
   TrendingUp, BarChart2, CheckCircle2, History, GitCompare,
-  Download, Loader2, Lock,
+  Download, Loader2, Lock, Upload, AlertTriangle,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -21,6 +21,8 @@ import {
   useLatestCalculation,
   useCalculationHistory,
   useExportExcel,
+  useImportExcel,
+  type ImportedExcelData,
 } from './cost-structure-hooks';
 import { useLedger } from '@/features/libro/libro-hooks';
 import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
@@ -36,7 +38,7 @@ import { usePeriods } from './period-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
 import { PeriodBar } from './components/PeriodBar';
 import { PeriodComparison } from './components/PeriodComparison';
-import type { DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
+import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -45,6 +47,29 @@ import type { CalculationResult } from '@/lib/types';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate' | 'comparison';
+
+const IMPORT_REVIEW_SECTIONS = [
+  { key: 'rawMaterialConfig', label: 'Materia Prima' },
+  { key: 'directLaborConfig', label: 'Mano de Obra' },
+  { key: 'indirectCostConfig', label: 'Costos Indirectos' },
+  { key: 'sales', label: 'Ventas' },
+] as const;
+
+/**
+ * Cuenta valores efectivamente encontrados dentro de un resultado parcial de
+ * import: cada campo definido cuenta 1, cada fila de un array (departamento,
+ * concepto) también cuenta 1. No hay un "total esperado" fijo para comparar
+ * — la config varía según qué tan detallado sea el Excel de cada costista —
+ * así que se muestra la cuenta sola, no una fracción.
+ */
+function countFilled(value: unknown): number {
+  if (value === undefined || value === null) return 0;
+  if (Array.isArray(value)) return value.length;
+  if (typeof value === 'object') {
+    return Object.values(value).reduce((sum: number, v) => sum + countFilled(v), 0);
+  }
+  return 1;
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -55,6 +80,7 @@ export function CostStructurePage() {
   const updateSales   = useUpdateSales(id);
   const calculate     = useCalculate(id);
   const exportExcel   = useExportExcel(id);
+  const importExcel   = useImportExcel(id);
   const { data: latest } = useLatestCalculation(id);
 
   // Trazabilidad Total v1 (D.1): corrida nueva con árbol persistido, en
@@ -85,6 +111,13 @@ export function CostStructurePage() {
   const [activeTab, setActiveTab] = useState<SectionTab>('raw-material');
   const [result,    setResult]    = useState<{ result: CalculationResult; calculationId: string } | null>(null);
   const [error,     setError]     = useState<string | null>(null);
+  const [importedDefaults, setImportedDefaults] = useState<ImportedExcelData | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
+  // Resultado crudo del parseo, en revisión — todavía NO se aplicó a los
+  // formularios. Se separa de `importedDefaults` a propósito: hasta que la
+  // costista no confirma en el diálogo, nada de esto toca la pantalla real.
+  const [pendingImport, setPendingImport] = useState<ImportedExcelData | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const configured = {
     mp:    !!structure?.rawMaterialConfig,
@@ -105,6 +138,12 @@ export function CostStructurePage() {
     return true;
   };
 
+  const IMPORTED_KEY_BY_SECTION = {
+    'raw-material': 'rawMaterialConfig',
+    'direct-labor': 'directLaborConfig',
+    'indirect-costs': 'indirectCostConfig',
+  } as const;
+
   const saveSection = async (
     section: 'raw-material' | 'direct-labor' | 'indirect-costs',
     config: unknown,
@@ -115,6 +154,10 @@ export function CostStructurePage() {
       await updateSection.mutateAsync({ section, config });
       // No se auto-avanza a la siguiente sección: el usuario se queda en la
       // pestaña actual para seguir revisando lo que cargó.
+      // El aviso de "importación pendiente de guardar" ya no aplica para esta
+      // sección: se acaba de guardar, así que lo que se ve ahora es lo persistido.
+      const importedKey = IMPORTED_KEY_BY_SECTION[section];
+      setImportedDefaults((prev) => (prev ? { ...prev, [importedKey]: undefined } : prev));
     } catch (e) { setError(apiErrorMessage(e)); }
   };
 
@@ -145,6 +188,52 @@ export function CostStructurePage() {
       await exportExcel.mutateAsync();
     } catch (e) { setError(apiErrorMessage(e)); }
   };
+
+  const triggerImport = () => fileInputRef.current?.click();
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo si hace falta reintentar
+    if (!file) return;
+    setError(null);
+    setImportNotice(null);
+    try {
+      const data = await importExcel.mutateAsync(file);
+      // No se aplica todavía — se muestra en el diálogo de revisión y la
+      // costista decide si lo carga o lo descarta. Nada toca la pantalla
+      // real hasta ese "Cargar en el formulario".
+      setPendingImport(data);
+    } catch (e) { setError(apiErrorMessage(e)); }
+  };
+
+  const confirmImport = () => {
+    if (!pendingImport) return;
+    const data = pendingImport;
+    setImportedDefaults(data);
+    // El backend omite del todo una sección si no encontró nada en el
+    // Excel para ella (nunca la manda "vacía"). Avisamos si falta
+    // CUALQUIERA de las cuatro, no solo cuando no se encontró nada de
+    // nada — un import parcial (ej. Materia Prima sí, el resto no) es
+    // tan silencioso como uno vacío si no se dice explícitamente qué
+    // quedó sin leer.
+    const missing = [
+      !data.rawMaterialConfig && 'Materia Prima',
+      !data.directLaborConfig && 'Mano de Obra',
+      !data.indirectCostConfig && 'Costos Indirectos',
+      !data.sales && 'Ventas',
+    ].filter((s): s is string => typeof s === 'string');
+    setImportNotice(
+      missing.length === 0
+        ? null
+        : `No pudimos reconocer datos automáticamente para: ${missing.join(', ')}. No es un error — completá esas secciones a mano.`,
+    );
+    // Llevar a la costista a la primera sección para que vea de entrada lo
+    // que se pre-llenó, en vez de dejarla en la pestaña donde clickeó.
+    setActiveTab('raw-material');
+    setPendingImport(null);
+  };
+
+  const discardImport = () => setPendingImport(null);
 
   if (isLoading) {
     return (
@@ -186,6 +275,16 @@ export function CostStructurePage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button variant="secondary" size="sm" onClick={triggerImport} loading={importExcel.isPending}>
+            <Upload className="size-4" /> Importar desde Excel
+          </Button>
           <Button variant="secondary" size="sm" onClick={runExport} loading={exportExcel.isPending} disabled={!allReady}>
             <Download className="size-4" /> Exportar
           </Button>
@@ -217,6 +316,48 @@ export function CostStructurePage() {
             quedaron congelados: podés consultarlos, pero no editarlos ni recalcular. Para corregir
             algo, reabrí el período.
           </span>
+        </div>
+      )}
+
+      {/* Revisión del import: nada se aplica a los formularios hasta que la
+          costista confirma acá — ve qué se encontró (y qué no) antes de que
+          toque la pantalla real. */}
+      <ConfirmDialog
+        open={pendingImport !== null}
+        title="Revisá lo que encontramos en tu Excel"
+        message={
+          <div className="space-y-2">
+            <p>Antes de cargar esto en el formulario, confirmá que está bien. No se guarda nada todavía — vas a poder revisar y editar cada campo igual que siempre antes de apretar &quot;Guardar&quot;.</p>
+            <ul className="space-y-1 rounded-lg bg-surface-alt p-3">
+              {IMPORT_REVIEW_SECTIONS.map(({ key, label }) => {
+                const data = pendingImport?.[key];
+                const count = countFilled(data);
+                return (
+                  <li key={key} className="flex items-center justify-between gap-3">
+                    <span className="font-medium text-ink">{label}</span>
+                    {data ? (
+                      <span className="text-ok">{count} {count === 1 ? 'dato encontrado' : 'datos encontrados'}</span>
+                    ) : (
+                      <span className="text-ink-soft">No se encontró nada</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        }
+        confirmLabel="Cargar en el formulario"
+        cancelLabel="Descartar"
+        onConfirm={confirmImport}
+        onCancel={discardImport}
+      />
+
+      {/* Aviso de import sin resultados — no es un error, el pedido funcionó
+          bien, simplemente no encontramos nada reconocible en el archivo. */}
+      {importNotice && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+          <span className="min-w-0 flex-1 break-words">{importNotice}</span>
+          <button type="button" onClick={() => setImportNotice(null)} className="shrink-0 text-warn/60 hover:text-warn">✕</button>
         </div>
       )}
 
@@ -273,11 +414,12 @@ export function CostStructurePage() {
           structureId={id}
           historySection="rawMaterial"
         >
+          {importedDefaults?.rawMaterialConfig && configured.mp && <ImportOverwriteWarning />}
           <Frozen when={readOnly}>
             <RawMaterialForm
               structureId={id}
               period={structure?.period}
-              defaultValues={structure?.rawMaterialConfig}
+              defaultValues={(importedDefaults?.rawMaterialConfig ?? structure?.rawMaterialConfig) as RawMaterialConfig | undefined}
               onSave={(d) => saveSection('raw-material', d)}
               saving={updateSection.isPending}
               isProcesses={structure?.costingSystem === 'PROCESSES'}
@@ -294,9 +436,10 @@ export function CostStructurePage() {
           structureId={id}
           historySection="directLabor"
         >
+          {importedDefaults?.directLaborConfig && configured.mod && <ImportOverwriteWarning />}
           <Frozen when={readOnly}>
             <DirectLaborSection
-              config={structure?.directLaborConfig as DirectLaborConfig | undefined}
+              config={(importedDefaults?.directLaborConfig ?? structure?.directLaborConfig) as DirectLaborConfig | undefined}
               directLabor={shown?.result?.detail?.directLabor}
               onSave={(d) => saveSection('direct-labor', d)}
               saving={updateSection.isPending}
@@ -313,9 +456,10 @@ export function CostStructurePage() {
           structureId={id}
           historySection="indirectCosts"
         >
+          {importedDefaults?.indirectCostConfig && configured.cip && <ImportOverwriteWarning />}
           <Frozen when={readOnly}>
             <IndirectCostsSection
-              config={structure?.indirectCostConfig as IndirectCostConfig | undefined}
+              config={(importedDefaults?.indirectCostConfig ?? structure?.indirectCostConfig) as IndirectCostConfig | undefined}
               perDepartment={shown?.result?.detail?.indirectCosts?.perDepartment}
               onSave={(d) => saveSection('indirect-costs', d)}
               saving={updateSection.isPending}
@@ -327,10 +471,11 @@ export function CostStructurePage() {
       </div>
 
       <div className={cn(activeTab !== 'sales' && 'hidden')}>
+        {importedDefaults?.sales && configured.sales && <ImportOverwriteWarning />}
         <Frozen when={readOnly}>
           <SalesTab
-            defaultPrice={structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined}
-            defaultQty={structure?.salesQuantity ? Number(structure.salesQuantity) : undefined}
+            defaultPrice={importedDefaults?.sales?.salesUnitPrice ?? (structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined)}
+            defaultQty={importedDefaults?.sales?.salesQuantity ?? (structure?.salesQuantity ? Number(structure.salesQuantity) : undefined)}
             defaultProducedQty={structure?.productionQuantity ? Number(structure.productionQuantity) : undefined}
             onSave={async (p, q, produced) => {
               setError(null);
@@ -342,6 +487,9 @@ export function CostStructurePage() {
                   productionQuantity: produced,
                 });
                 // Se queda en Venta tras guardar (no salta a Resultado).
+                // Igual que en saveSection: una vez guardado, el aviso de
+                // importación pendiente ya no aplica para Venta.
+                setImportedDefaults((prev) => (prev ? { ...prev, sales: undefined } : prev));
               } catch (e) { setError(apiErrorMessage(e)); }
             }}
             saving={updateSales.isPending}
@@ -516,6 +664,20 @@ function SectionShell({
         )}
       </CardBody>
     </Card>
+  );
+}
+
+/**
+ * Aviso no bloqueante: esta sección ya tenía datos guardados y la importación
+ * de Excel está mostrando otros en su lugar en el formulario. Nada se persiste
+ * todavía — solo se guarda si la costista clickea "Guardar" más abajo.
+ */
+function ImportOverwriteWarning() {
+  return (
+    <div className="mb-4 flex items-center gap-2 rounded-xl border border-warn/30 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+      <AlertTriangle className="size-4 shrink-0" />
+      <span>Esta sección ya tenía datos guardados. La importación reemplazó lo que ves abajo, pero no se guarda hasta que presiones "Guardar".</span>
+    </div>
   );
 }
 
