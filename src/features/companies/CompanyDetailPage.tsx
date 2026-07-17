@@ -372,12 +372,18 @@ function LedgerTabSection({ companyId, companyName }: { companyId: string; compa
   };
 
   const entries = data?.entries ?? [];
-  const SECTION_ORDER = ['MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS'];
+  const SECTION_ORDER = [
+    'MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS',
+    'GASTO_COMERCIALIZACION', 'GASTO_ADMINISTRACION', 'GASTO_FINANCIERO',
+  ];
   const SECTION_LABELS: Record<string, string> = {
     MATERIA_PRIMA: 'Materia Prima',
     MANO_DE_OBRA: 'Mano de Obra',
     COSTOS_INDIRECTOS: 'Costos Indirectos',
     VENTAS: 'Ventas',
+    GASTO_COMERCIALIZACION: 'Gasto de Comercialización',
+    GASTO_ADMINISTRACION: 'Gasto de Administración',
+    GASTO_FINANCIERO: 'Gasto Financiero',
   };
 
   const grouped = SECTION_ORDER

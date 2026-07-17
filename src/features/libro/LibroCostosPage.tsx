@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, ImageIcon, Bot, PenLine, FileText, FileDown, Plus, Pencil, Trash2, Table, Boxes, Users, Layers, TrendingUp } from 'lucide-react';
+import { BookOpen, ImageIcon, Bot, PenLine, FileText, FileDown, Plus, Pencil, Trash2, Table, Boxes, Users, Layers, TrendingUp, Megaphone, Briefcase, Landmark } from 'lucide-react';
 import { AppShell, PageHeader } from '@/components/layout/AppShell';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
@@ -16,6 +16,9 @@ const SECTION_LABELS_FULL: Record<string, string> = {
   MANO_DE_OBRA: 'Mano de Obra',
   COSTOS_INDIRECTOS: 'Costos Indirectos',
   VENTAS: 'Ventas',
+  GASTO_COMERCIALIZACION: 'Gasto de Comercialización',
+  GASTO_ADMINISTRACION: 'Gasto de Administración',
+  GASTO_FINANCIERO: 'Gasto Financiero',
 };
 
 /** Exporta las líneas a CSV (Excel) — los costistas viven en Excel. */
@@ -49,15 +52,25 @@ const SECTION_LABELS: Record<string, string> = {
   MANO_DE_OBRA: 'Mano de Obra',
   COSTOS_INDIRECTOS: 'Costos Indirectos',
   VENTAS: 'Ventas',
+  GASTO_COMERCIALIZACION: 'Gasto de Comercialización',
+  GASTO_ADMINISTRACION: 'Gasto de Administración',
+  GASTO_FINANCIERO: 'Gasto Financiero',
 };
 
-const SECTION_ORDER = ['MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS'];
+// Gastos van al final, después de los costos y ventas, como grupo separado.
+const SECTION_ORDER = [
+  'MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS',
+  'GASTO_COMERCIALIZACION', 'GASTO_ADMINISTRACION', 'GASTO_FINANCIERO',
+];
 
 const SECTION_ICONS: Record<string, typeof Boxes> = {
   MATERIA_PRIMA: Boxes,
   MANO_DE_OBRA: Users,
   COSTOS_INDIRECTOS: Layers,
   VENTAS: TrendingUp,
+  GASTO_COMERCIALIZACION: Megaphone,
+  GASTO_ADMINISTRACION: Briefcase,
+  GASTO_FINANCIERO: Landmark,
 };
 
 const selectClass = 'h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[13px] font-semibold text-ink shadow-sm transition-colors focus:border-granate focus:outline-none sm:w-auto';

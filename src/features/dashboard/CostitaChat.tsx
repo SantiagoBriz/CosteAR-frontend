@@ -94,6 +94,9 @@ function sectionLabel(section: string) {
     MANO_DE_OBRA: 'Mano de Obra',
     COSTOS_INDIRECTOS: 'Costos Indirectos',
     VENTAS: 'Ventas',
+    GASTO_COMERCIALIZACION: 'Gasto de Comercialización',
+    GASTO_ADMINISTRACION: 'Gasto de Administración',
+    GASTO_FINANCIERO: 'Gasto Financiero',
     DESCONOCIDO: 'Sin clasificar',
   };
   return map[section] ?? section;
