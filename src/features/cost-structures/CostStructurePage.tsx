@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Calculator, Package, Users, Factory, Activity,
-  TrendingUp, BarChart2, CheckCircle2, History,
-  Download, Loader2,
+  TrendingUp, BarChart2, CheckCircle2, History, GitCompare,
+  Download, Loader2, Upload, AlertTriangle, Lock,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -21,13 +21,23 @@ import {
   useLatestCalculation,
   useCalculationHistory,
   useExportExcel,
+  useImportExcel,
+  type ImportedExcelData,
 } from './cost-structure-hooks';
 import { useLedger } from '@/features/libro/libro-hooks';
 import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { RawMaterialForm } from './RawMaterialForm';
 import { DirectLaborForm } from './DirectLaborForm';
 import { IndirectCostsForm } from './IndirectCostsForm';
+import { CostCentersView } from './CostCentersView';
+import { LaborDepartmentsView } from './LaborDepartmentsView';
+import { ConfigHistoryPanel } from './ConfigHistoryPanel';
+import { DerivationTree } from './DerivationTree';
+import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
+import { usePeriods } from './period-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
+import { PeriodBar } from './components/PeriodBar';
+import { PeriodComparison } from './components/PeriodComparison';
 import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -36,7 +46,30 @@ import type { CalculationResult } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate';
+type SectionTab = 'raw-material' | 'direct-labor' | 'indirect-costs' | 'sales' | 'result' | 'history' | 'simulate' | 'comparison';
+
+const IMPORT_REVIEW_SECTIONS = [
+  { key: 'rawMaterialConfig', label: 'Materia Prima' },
+  { key: 'directLaborConfig', label: 'Mano de Obra' },
+  { key: 'indirectCostConfig', label: 'Costos Indirectos' },
+  { key: 'sales', label: 'Ventas' },
+] as const;
+
+/**
+ * Cuenta valores efectivamente encontrados dentro de un resultado parcial de
+ * import: cada campo definido cuenta 1, cada fila de un array (departamento,
+ * concepto) también cuenta 1. No hay un "total esperado" fijo para comparar
+ * — la config varía según qué tan detallado sea el Excel de cada costista —
+ * así que se muestra la cuenta sola, no una fracción.
+ */
+function countFilled(value: unknown): number {
+  if (value === undefined || value === null) return 0;
+  if (Array.isArray(value)) return value.length;
+  if (typeof value === 'object') {
+    return Object.values(value).reduce((sum: number, v) => sum + countFilled(v), 0);
+  }
+  return 1;
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -47,11 +80,44 @@ export function CostStructurePage() {
   const updateSales   = useUpdateSales(id);
   const calculate     = useCalculate(id);
   const exportExcel   = useExportExcel(id);
+  const importExcel   = useImportExcel(id);
   const { data: latest } = useLatestCalculation(id);
+
+  // Trazabilidad Total v1 (D.1): corrida nueva con árbol persistido, en
+  // paralelo a la corrida legada (que sigue alimentando ResultPanel de
+  // abajo sin cambios). Cache-first del último run: si no calculaste en
+  // esta sesión todavía, usamos el último run que ya existía en el server.
+  const calculateTraced = useCalculateTraced(id);
+  const { data: runsList } = useStructureRuns(id);
+  const [tracedRunId, setTracedRunId] = useState<string | null>(null);
+  const [tracedError, setTracedError] = useState<string | null>(null);
+  const effectiveRunId = tracedRunId ?? runsList?.[0]?.id ?? null;
+
+  // Período de costeo que se está mirando (problema C — Fase 2). Por defecto, el
+  // que está abierto; si ya se cerraron todos, el más nuevo.
+  const { data: periods } = usePeriods(id);
+  const [periodId, setPeriodId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!periods?.length) return;
+    if (periods.some((p) => p.id === periodId)) return;
+    const fallback = periods.find((p) => p.status === 'OPEN') ?? periods[0];
+    if (fallback) setPeriodId(fallback.id);
+  }, [periods, periodId]);
+
+  const selectedPeriod = periods?.find((p) => p.id === periodId) ?? null;
+  /** Un mes cerrado está congelado: se puede mirar, no editar. */
+  const readOnly = selectedPeriod?.status === 'CLOSED';
 
   const [activeTab, setActiveTab] = useState<SectionTab>('raw-material');
   const [result,    setResult]    = useState<{ result: CalculationResult; calculationId: string } | null>(null);
   const [error,     setError]     = useState<string | null>(null);
+  const [importedDefaults, setImportedDefaults] = useState<ImportedExcelData | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
+  // Resultado crudo del parseo, en revisión — todavía NO se aplicó a los
+  // formularios. Se separa de `importedDefaults` a propósito: hasta que la
+  // costista no confirma en el diálogo, nada de esto toca la pantalla real.
+  const [pendingImport, setPendingImport] = useState<ImportedExcelData | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const configured = {
     mp:    !!structure?.rawMaterialConfig,
@@ -62,25 +128,58 @@ export function CostStructurePage() {
   const allReady = configured.mp && configured.mod && configured.cip && configured.sales;
   const shown    = result ?? (latest ? { result: latestToResult(latest), calculationId: latest.id } : null);
 
+  const IMPORTED_KEY_BY_SECTION = {
+    'raw-material': 'rawMaterialConfig',
+    'direct-labor': 'directLaborConfig',
+    'indirect-costs': 'indirectCostConfig',
+  } as const;
+
+  /** Un período cerrado no se toca. Reabrirlo es la única puerta, y deja rastro. */
+  const blockedByClosedPeriod = (): boolean => {
+    if (!readOnly) return false;
+    setError(
+      `"${selectedPeriod?.label}" está cerrado: sus números están congelados. ` +
+        'Para corregir algo, reabrí el período (te va a pedir el motivo).',
+    );
+    return true;
+  };
+
   const saveSection = async (
     section: 'raw-material' | 'direct-labor' | 'indirect-costs',
     config: unknown,
   ) => {
     setError(null);
+    if (blockedByClosedPeriod()) return;
     try {
       await updateSection.mutateAsync({ section, config });
       // No se auto-avanza a la siguiente sección: el usuario se queda en la
       // pestaña actual para seguir revisando lo que cargó.
+      // El aviso de "importación pendiente de guardar" ya no aplica para esta
+      // sección: se acaba de guardar, así que lo que se ve ahora es lo persistido.
+      const importedKey = IMPORTED_KEY_BY_SECTION[section];
+      setImportedDefaults((prev) => (prev ? { ...prev, [importedKey]: undefined } : prev));
     } catch (e) { setError(apiErrorMessage(e)); }
   };
 
   const runCalculate = async () => {
     setError(null);
+    setTracedError(null);
+    if (blockedByClosedPeriod()) return;
     try {
       const data = await calculate.mutateAsync();
       setResult(data);
       setActiveTab('result');
-    } catch (e) { setError(apiErrorMessage(e)); }
+    } catch (e) { setError(apiErrorMessage(e)); return; }
+
+    // Corrida de trazabilidad (árbol persistido): no bloquea ni tapa el
+    // resultado de arriba si falla (ej. hay datos sin imputar) — el aviso
+    // queda solo dentro de la caja del árbol.
+    try {
+      const traced = await calculateTraced.mutateAsync();
+      setTracedRunId(traced.runId);
+    } catch (e) {
+      setTracedError(apiErrorMessage(e));
+    }
   };
 
   const runExport = async () => {
@@ -89,6 +188,52 @@ export function CostStructurePage() {
       await exportExcel.mutateAsync();
     } catch (e) { setError(apiErrorMessage(e)); }
   };
+
+  const triggerImport = () => fileInputRef.current?.click();
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo si hace falta reintentar
+    if (!file) return;
+    setError(null);
+    setImportNotice(null);
+    try {
+      const data = await importExcel.mutateAsync(file);
+      // No se aplica todavía — se muestra en el diálogo de revisión y la
+      // costista decide si lo carga o lo descarta. Nada toca la pantalla
+      // real hasta ese "Cargar en el formulario".
+      setPendingImport(data);
+    } catch (e) { setError(apiErrorMessage(e)); }
+  };
+
+  const confirmImport = () => {
+    if (!pendingImport) return;
+    const data = pendingImport;
+    setImportedDefaults(data);
+    // El backend omite del todo una sección si no encontró nada en el
+    // Excel para ella (nunca la manda "vacía"). Avisamos si falta
+    // CUALQUIERA de las cuatro, no solo cuando no se encontró nada de
+    // nada — un import parcial (ej. Materia Prima sí, el resto no) es
+    // tan silencioso como uno vacío si no se dice explícitamente qué
+    // quedó sin leer.
+    const missing = [
+      !data.rawMaterialConfig && 'Materia Prima',
+      !data.directLaborConfig && 'Mano de Obra',
+      !data.indirectCostConfig && 'Costos Indirectos',
+      !data.sales && 'Ventas',
+    ].filter((s): s is string => typeof s === 'string');
+    setImportNotice(
+      missing.length === 0
+        ? null
+        : `No pudimos reconocer datos automáticamente para: ${missing.join(', ')}. No es un error — completá esas secciones a mano.`,
+    );
+    // Llevar a la costista a la primera sección para que vea de entrada lo
+    // que se pre-llenó, en vez de dejarla en la pestaña donde clickeó.
+    setActiveTab('raw-material');
+    setPendingImport(null);
+  };
+
+  const discardImport = () => setPendingImport(null);
 
   if (isLoading) {
     return (
@@ -114,13 +259,41 @@ export function CostStructurePage() {
             <ArrowLeft className="size-3.5" /> Volver a la empresa
           </Link>
           <h1 className="text-2xl font-extrabold tracking-tight text-granate-deep">{structure?.productName ?? 'Estructura de costos'}</h1>
-          <p className="text-sm text-ink-soft">Período {structure?.period}</p>
+          {/* El período de costo dejó de ser un texto tipeado: es el período real,
+              con su estado y sus tres operaciones (problema C — Fase 2). */}
+          <div className="mt-1.5 flex flex-wrap items-start gap-x-2 gap-y-1.5">
+            <PeriodBar
+              structureId={id}
+              legacyPeriod={structure?.period}
+              selectedId={periodId}
+              onSelect={setPeriodId}
+              runIdToFreeze={effectiveRunId}
+            />
+            <span className="inline-flex items-center self-start rounded-full border border-line bg-surface-alt px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-soft">
+              Captación: continua
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button variant="secondary" size="sm" onClick={triggerImport} loading={importExcel.isPending}>
+            <Upload className="size-4" /> Importar desde Excel
+          </Button>
           <Button variant="secondary" size="sm" onClick={runExport} loading={exportExcel.isPending} disabled={!allReady}>
             <Download className="size-4" /> Exportar
           </Button>
-          <Button onClick={runCalculate} loading={calculate.isPending} disabled={!allReady}>
+          <Button
+            onClick={runCalculate}
+            loading={calculate.isPending}
+            disabled={!allReady || readOnly}
+            title={readOnly ? 'El período está cerrado: sus números están congelados.' : undefined}
+          >
             <Calculator className="size-4" /> Calcular
           </Button>
         </div>
@@ -134,8 +307,62 @@ export function CostStructurePage() {
         </div>
       )}
 
+      {/* Revisión del import: nada se aplica a los formularios hasta que la
+          costista confirma acá — ve qué se encontró (y qué no) antes de que
+          toque la pantalla real. */}
+      <ConfirmDialog
+        open={pendingImport !== null}
+        title="Revisá lo que encontramos en tu Excel"
+        message={
+          <div className="space-y-2">
+            <p>Antes de cargar esto en el formulario, confirmá que está bien. No se guarda nada todavía — vas a poder revisar y editar cada campo igual que siempre antes de apretar &quot;Guardar&quot;.</p>
+            <ul className="space-y-1 rounded-lg bg-surface-alt p-3">
+              {IMPORT_REVIEW_SECTIONS.map(({ key, label }) => {
+                const data = pendingImport?.[key];
+                const count = countFilled(data);
+                return (
+                  <li key={key} className="flex items-center justify-between gap-3">
+                    <span className="font-medium text-ink">{label}</span>
+                    {data ? (
+                      <span className="text-ok">{count} {count === 1 ? 'dato encontrado' : 'datos encontrados'}</span>
+                    ) : (
+                      <span className="text-ink-soft">No se encontró nada</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        }
+        confirmLabel="Cargar en el formulario"
+        cancelLabel="Descartar"
+        onConfirm={confirmImport}
+        onCancel={discardImport}
+      />
+
+      {/* Aviso de import sin resultados — no es un error, el pedido funcionó
+          bien, simplemente no encontramos nada reconocible en el archivo. */}
+      {importNotice && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+          <span className="min-w-0 flex-1 break-words">{importNotice}</span>
+          <button type="button" onClick={() => setImportNotice(null)} className="shrink-0 text-warn/60 hover:text-warn">✕</button>
+        </div>
+      )}
+
+      {/* Período cerrado: se mira, no se toca. */}
+      {readOnly && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-line bg-surface-alt px-4 py-2.5 text-[13px] text-ink">
+          <Lock className="size-4 shrink-0 text-ink-soft" />
+          <span>
+            Estás viendo <strong>{selectedPeriod?.label}</strong>, que está cerrado. Los números
+            quedaron congelados: podés consultarlos, pero no editarlos ni recalcular. Para corregir
+            algo, reabrí el período.
+          </span>
+        </div>
+      )}
+
       {/* Aviso de progreso */}
-      {!allReady && (
+      {!allReady && !readOnly && (
         <div className="mb-4 rounded-xl border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] text-ink">
           Completá las 4 secciones para habilitar el cálculo.
         </div>
@@ -151,6 +378,7 @@ export function CostStructurePage() {
             { id: 'sales'           as SectionTab, label: 'Venta',                 icon: TrendingUp, configKey: 'sales' as const },
             { id: 'result'          as SectionTab, label: 'Resultado',             icon: BarChart2,  configKey: undefined },
             { id: 'simulate'        as SectionTab, label: 'Simulador',             icon: Activity,   configKey: undefined },
+            { id: 'comparison'      as SectionTab, label: 'Comparación',           icon: GitCompare, configKey: undefined },
             { id: 'history'         as SectionTab, label: 'Historial',             icon: History,    configKey: undefined },
           ] as { id: SectionTab; label: string; icon: typeof Package; configKey: keyof typeof configured | undefined }[]
         ).map(({ id: tabId, label, icon: Icon, configKey }) => {
@@ -183,14 +411,20 @@ export function CostStructurePage() {
           title="Materia Prima"
           description="Lote óptimo de Wilson · Política de stock · Ficha PPP (Precio Promedio Ponderado)"
           configured={configured.mp}
+          structureId={id}
+          historySection="rawMaterial"
         >
-          <RawMaterialForm
-            defaultValues={structure?.rawMaterialConfig as RawMaterialConfig | undefined}
-            onSave={(d) => saveSection('raw-material', d)}
-            saving={updateSection.isPending}
-            isProcesses={structure?.costingSystem === 'PROCESSES'}
-            period={structure?.period}
-          />
+          <Frozen when={readOnly}>
+            {importedDefaults?.rawMaterialConfig && configured.mp && <ImportOverwriteWarning />}
+            <RawMaterialForm
+              structureId={id}
+              period={structure?.period}
+              defaultValues={(importedDefaults?.rawMaterialConfig ?? structure?.rawMaterialConfig) as RawMaterialConfig | undefined}
+              onSave={(d) => saveSection('raw-material', d)}
+              saving={updateSection.isPending}
+              isProcesses={structure?.costingSystem === 'PROCESSES'}
+            />
+          </Frozen>
         </SectionShell>
       </div>
 
@@ -199,12 +433,18 @@ export function CostStructurePage() {
           title="Mano de Obra Directa"
           description="Días hábiles efectivos · ITCS (Índice Total de Cargas Sociales) · Tarifa horaria por departamento"
           configured={configured.mod}
+          structureId={id}
+          historySection="directLabor"
         >
-          <DirectLaborForm
-            defaultValues={structure?.directLaborConfig as DirectLaborConfig | undefined}
-            onSave={(d) => saveSection('direct-labor', d)}
-            saving={updateSection.isPending}
-          />
+          <Frozen when={readOnly}>
+            {importedDefaults?.directLaborConfig && configured.mod && <ImportOverwriteWarning />}
+            <DirectLaborSection
+              config={(importedDefaults?.directLaborConfig ?? structure?.directLaborConfig) as DirectLaborConfig | undefined}
+              directLabor={shown?.result?.detail?.directLabor}
+              onSave={(d) => saveSection('direct-labor', d)}
+              saving={updateSection.isPending}
+            />
+          </Frozen>
         </SectionShell>
       </div>
 
@@ -213,41 +453,73 @@ export function CostStructurePage() {
           title="Costos Indirectos de Producción"
           description="Centros de costo · Prorrateo primario y secundario · Cuotas por hora y variaciones"
           configured={configured.cip}
+          structureId={id}
+          historySection="indirectCosts"
         >
-          <IndirectCostsForm
-            defaultValues={structure?.indirectCostConfig as IndirectCostConfig | undefined}
-            onSave={(d) => saveSection('indirect-costs', d)}
-            saving={updateSection.isPending}
-          />
+          <Frozen when={readOnly}>
+            {importedDefaults?.indirectCostConfig && configured.cip && <ImportOverwriteWarning />}
+            <IndirectCostsSection
+              config={(importedDefaults?.indirectCostConfig ?? structure?.indirectCostConfig) as IndirectCostConfig | undefined}
+              perDepartment={shown?.result?.detail?.indirectCosts?.perDepartment}
+              onSave={(d) => saveSection('indirect-costs', d)}
+              saving={updateSection.isPending}
+              companyId={structure?.companyId}
+              structureId={id}
+            />
+          </Frozen>
         </SectionShell>
       </div>
 
       <div className={cn(activeTab !== 'sales' && 'hidden')}>
-        <SalesTab
-          defaultPrice={structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined}
-          defaultQty={structure?.salesQuantity ? Number(structure.salesQuantity) : undefined}
-          onSave={async (p, q) => {
-            setError(null);
-            try {
-              await updateSales.mutateAsync({ salesUnitPrice: p, salesQuantity: q });
-              // Se queda en Venta tras guardar (no salta a Resultado).
-            } catch (e) { setError(apiErrorMessage(e)); }
-          }}
-          saving={updateSales.isPending}
-          allReady={allReady}
-          onCalculate={runCalculate}
-          calculating={calculate.isPending}
-        />
+        <Frozen when={readOnly}>
+          {importedDefaults?.sales && configured.sales && <ImportOverwriteWarning />}
+          <SalesTab
+            defaultPrice={importedDefaults?.sales?.salesUnitPrice ?? (structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined)}
+            defaultQty={importedDefaults?.sales?.salesQuantity ?? (structure?.salesQuantity ? Number(structure.salesQuantity) : undefined)}
+            defaultProducedQty={structure?.productionQuantity ? Number(structure.productionQuantity) : undefined}
+            onSave={async (p, q, produced) => {
+              setError(null);
+              if (blockedByClosedPeriod()) return;
+              try {
+                await updateSales.mutateAsync({
+                  salesUnitPrice: p,
+                  salesQuantity: q,
+                  productionQuantity: produced,
+                });
+                // Se queda en Venta tras guardar (no salta a Resultado).
+                // Una vez guardado, el aviso de importación pendiente ya no aplica para Venta.
+                setImportedDefaults((prev) => (prev ? { ...prev, sales: undefined } : prev));
+              } catch (e) { setError(apiErrorMessage(e)); }
+            }}
+            saving={updateSales.isPending}
+            allReady={allReady}
+            onCalculate={runCalculate}
+            calculating={calculate.isPending}
+          />
+        </Frozen>
       </div>
 
       {activeTab === 'result' && (
-        shown
-          ? <ResultPanel result={shown.result} runId={shown.calculationId} structureId={id} companyId={structure?.companyId} period={structure?.period} />
-          : <EmptyResult />
+        <div className="space-y-4">
+          <DerivationTree
+            runId={effectiveRunId}
+            isMissingRun={!!tracedError}
+            missingRunMessage={tracedError}
+            structureId={id}
+            period={structure?.period}
+          />
+          {shown
+            ? <ResultPanel result={shown.result} companyId={structure?.companyId} period={structure?.period} />
+            : <EmptyResult />}
+        </div>
       )}
 
       {activeTab === 'simulate' && (
         <ScenarioSimulator structureId={id} currentResult={shown?.result || null} />
+      )}
+
+      {activeTab === 'comparison' && (
+        <PeriodComparison structureId={id} />
       )}
 
       {activeTab === 'history' && (
@@ -257,15 +529,119 @@ export function CostStructurePage() {
   );
 }
 
+// ── Costos Indirectos: lista de centros ↔ configuración (Parte 3.3) ──────────
+function IndirectCostsSection({
+  config, perDepartment, onSave, saving, companyId, structureId,
+}: {
+  config?: IndirectCostConfig;
+  perDepartment?: CalculationResult['detail']['indirectCosts']['perDepartment'];
+  onSave: (data: IndirectCostConfig) => Promise<void>;
+  saving: boolean;
+  companyId?: string;
+  structureId?: string;
+}) {
+  // Arranca en la vista de centros si ya hay centros cargados; si no, en edición.
+  const [editing, setEditing] = useState(!config?.centers?.length);
+
+  if (editing) {
+    return (
+      <div className="space-y-2 pt-1">
+        {!!config?.centers?.length && (
+          <button type="button" onClick={() => setEditing(false)} className="inline-flex items-center gap-1 text-[13px] text-granate hover:text-action">
+            <ArrowLeft className="size-3.5" /> Volver a la lista de centros
+          </button>
+        )}
+        <IndirectCostsForm
+          defaultValues={config}
+          onSave={async (d) => { await onSave(d); setEditing(false); }}
+          saving={saving}
+          companyId={companyId}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <CostCentersView
+      config={config ?? { centers: [], concepts: [], serviceDistributions: [], productiveSettings: [] }}
+      perDepartment={perDepartment}
+      onEdit={() => setEditing(true)}
+      structureId={structureId}
+      companyId={companyId}
+    />
+  );
+}
+
+// ── Mano de Obra: lista de departamentos ↔ configuración (Parte 3.2) ─────────
+function DirectLaborSection({
+  config, directLabor, onSave, saving,
+}: {
+  config?: DirectLaborConfig;
+  directLabor?: CalculationResult['detail']['directLabor'];
+  onSave: (data: DirectLaborConfig) => Promise<void>;
+  saving: boolean;
+}) {
+  const [editing, setEditing] = useState(!config?.departments?.length);
+  const [loadExample, setLoadExample] = useState(false);
+
+  if (editing) {
+    return (
+      <div className="space-y-2 pt-1">
+        {!!config?.departments?.length && (
+          <button type="button" onClick={() => { setEditing(false); setLoadExample(false); }} className="inline-flex items-center gap-1 text-[13px] text-granate hover:text-action">
+            <ArrowLeft className="size-3.5" /> Volver a la lista de departamentos
+          </button>
+        )}
+        <DirectLaborForm
+          defaultValues={config}
+          autoLoadExample={loadExample}
+          onSave={async (d) => { await onSave(d); setEditing(false); setLoadExample(false); }}
+          saving={saving}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <LaborDepartmentsView
+      config={config ?? { workingDays: { totalDaysPerYear: 0, unpaidAbsence: { sundays: 0, saturdays: 0, unjustifiedAbsences: 0, holidaysOnWeekend: 0 }, paidAbsence: { holidays: 0, vacations: 0, sickness: 0, specialLeaves: 0, workAccidents: 0 } }, itcs: { derivationBase: 0, fixedArt: 0, uncertainRemunerative: [], uncertainNonRemunerative: [] }, departments: [] }}
+      directLabor={directLabor}
+      onEdit={() => { setLoadExample(false); setEditing(true); }}
+      onLoadExample={() => { setLoadExample(true); setEditing(true); }}
+    />
+  );
+}
+
+// ── Frozen ────────────────────────────────────────────────────────────────────
+
+/**
+ * Congela un formulario cuando el período está cerrado (problema C — Fase 2).
+ *
+ * Es un `<fieldset disabled>`: el navegador apaga TODOS los campos y botones que
+ * cuelgan adentro, sin que cada formulario tenga que enterarse. A diferencia de
+ * tapar la sección, el texto se sigue pudiendo leer y seleccionar — que es
+ * justamente para lo que se mira un mes cerrado.
+ */
+function Frozen({ when, children }: { when: boolean; children: React.ReactNode }) {
+  if (!when) return <>{children}</>;
+  return (
+    <fieldset disabled className="m-0 min-w-0 border-0 p-0 opacity-70">
+      {children}
+    </fieldset>
+  );
+}
+
 // ── SectionShell ──────────────────────────────────────────────────────────────
 
 function SectionShell({
-  title, description, configured, children,
+  title, description, configured, children, structureId, historySection,
 }: {
   title: string;
   description: string;
   configured: boolean;
   children: React.ReactNode;
+  structureId?: string;
+  historySection?: string;
 }) {
   return (
     <Card>
@@ -282,28 +658,47 @@ function SectionShell({
       />
       <CardBody className="px-6 pb-6 pt-0">
         {children}
+        {structureId && historySection && (
+          <ConfigHistoryPanel structureId={structureId} section={historySection} />
+        )}
       </CardBody>
     </Card>
+  );
+}
+
+/**
+ * Aviso no bloqueante: esta sección ya tenía datos guardados y la importación
+ * de Excel está mostrando otros en su lugar en el formulario. Nada se persiste
+ * todavía — solo se guarda si la costista clickea "Guardar" más abajo.
+ */
+function ImportOverwriteWarning() {
+  return (
+    <div className="mb-4 flex items-center gap-2 rounded-xl border border-warn/30 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
+      <AlertTriangle className="size-4 shrink-0" />
+      <span>Esta sección ya tenía datos guardados. La importación reemplazó lo que ves abajo, pero no se guarda hasta que presiones "Guardar".</span>
+    </div>
   );
 }
 
 // ── Sales Tab ─────────────────────────────────────────────────────────────────
 
 function SalesTab({
-  defaultPrice, defaultQty, onSave, saving, allReady, onCalculate, calculating,
+  defaultPrice, defaultQty, defaultProducedQty, onSave, saving, allReady, onCalculate, calculating,
 }: {
   defaultPrice?: number;
   defaultQty?: number;
-  onSave: (p: number, q: number) => Promise<void>;
+  defaultProducedQty?: number;
+  onSave: (p: number, q: number, produced: number | null) => Promise<void>;
   saving: boolean;
   allReady: boolean;
   onCalculate: () => void;
   calculating: boolean;
 }) {
-  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ unitPrice: any; quantity: any }>({
+  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ unitPrice: any; quantity: any; producedQuantity: any }>({
     defaultValues: {
       unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
       quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
+      producedQuantity: defaultProducedQty === 0 ? '' : (defaultProducedQty ?? ''),
     },
   });
 
@@ -311,33 +706,52 @@ function SalesTab({
     reset({
       unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
       quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
+      producedQuantity: defaultProducedQty === 0 ? '' : (defaultProducedQty ?? ''),
     });
-  }, [defaultPrice, defaultQty, reset]);
+  }, [defaultPrice, defaultQty, defaultProducedQty, reset]);
 
-  const [pending, setPending] = useState<{ p: number; q: number } | null>(null);
+  const [pending, setPending] = useState<{ p: number; q: number; prod: number | null } | null>(null);
 
   const onSubmit = (v: any) => {
     const fallbackNum = (val: any) => {
       if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
       return Number(val);
     };
-    setPending({ p: fallbackNum(v.unitPrice), q: fallbackNum(v.quantity) });
+    // La cantidad producida es opcional: vacía = null (el sistema se cae a la
+    // vendida, como hacía antes de que este campo existiera).
+    const producedRaw = v.producedQuantity;
+    const produced =
+      producedRaw === '' || producedRaw === null || producedRaw === undefined || isNaN(Number(producedRaw))
+        ? null
+        : Number(producedRaw);
+
+    setPending({ p: fallbackNum(v.unitPrice), q: fallbackNum(v.quantity), prod: produced });
   };
 
   return (
     <Card>
       <CardHeader
         title="Datos de venta"
-        description="Precio unitario y cantidad producida para calcular el margen bruto"
+        description="Precio, unidades vendidas (para el margen) y unidades producidas (para el costo unitario)"
       />
       <CardBody>
         <form onSubmit={handleSubmit(onSubmit)} className="max-w-sm space-y-4">
           <Input label="Precio de venta unitario $" type="number" step="0.01" numeric
             placeholder="Ej: 25000" info="Precio al que vendés una unidad del producto. En pesos."
             {...register('unitPrice', { required: true })} />
-          <Input label="Cantidad producida / vendida" type="number" step="1" numeric
-            placeholder="Ej: 100" info="Unidades producidas/vendidas en el período. Número entero."
+          <Input label="Unidades vendidas" type="number" step="1" numeric
+            placeholder="Ej: 800"
+            info="Lo que VENDISTE en el período. Con esto se calcula la facturación y el margen bruto."
             {...register('quantity', { required: true })} />
+          <Input label="Unidades producidas (opcional)" type="number" step="1" numeric
+            placeholder="Ej: 1000"
+            info="Lo que FABRICASTE en el período. Con esto se saca el costo por unidad. Si producís y vendés lo mismo, dejalo vacío."
+            {...register('producedQuantity')} />
+          <p className="rounded-xl border border-line bg-surface-alt px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
+            No son lo mismo: si fabricaste 1.000 y vendiste 800, el costo del mes se reparte entre las
+            <strong className="text-ink"> 1.000 producidas</strong>, no entre las 800 vendidas. Dividir por lo
+            vendido infla el costo unitario.
+          </p>
           {isDirty && (
             <p className="flex items-center gap-1.5 text-[12px] font-medium text-warn">
               <span className="size-1.5 rounded-full bg-warn" /> Tenés cambios sin guardar
@@ -362,7 +776,8 @@ function SalesTab({
         loading={saving}
         onConfirm={async () => {
           if (!pending) return;
-          await onSave(pending.p, pending.q);
+          await onSave(pending.p, pending.q, pending.prod);
+          reset({ unitPrice: pending.p, quantity: pending.q, producedQuantity: pending.prod ?? '' }); // limpia "cambios sin guardar" al toque
           setPending(null);
         }}
         onCancel={() => setPending(null)}
@@ -429,9 +844,7 @@ function FullScreenCalculatorLoader({ active }: { active: boolean }) {
 
 // ── Result Panel ──────────────────────────────────────────────────────────────
 
-import { DerivationTree } from './components/DerivationTree';
-
-function ResultPanel({ result, runId, structureId, companyId, period }: { result: CalculationResult; runId: string; structureId: string; companyId?: string; period?: string }) {
+function ResultPanel({ result, companyId, period }: { result: CalculationResult; companyId?: string; period?: string }) {
   const rows = [
     { label: 'Materia Prima consumida', value: result.rawMaterialConsumed },
     { label: 'Mano de Obra Directa',    value: result.directLaborTotal },
@@ -501,8 +914,6 @@ function ResultPanel({ result, runId, structureId, companyId, period }: { result
           </CardBody>
         </Card>
 
-        <DerivationTree structureId={structureId} runId={runId} />
-
         {Object.keys(result.detail.indirectCosts.perDepartment).length > 0 && (
           <Card>
             <CardHeader title="Análisis de variaciones — CIP" description="Detalle de base, cuota, aplicación y variaciones de costos indirectos" />
@@ -570,7 +981,14 @@ function ResultPanel({ result, runId, structureId, companyId, period }: { result
           <CardHeader title="Detalle MOD" />
           <CardBody className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-ink-soft">Días hábiles efectivos</span><span className="font-medium">{result.detail.directLabor.workingDays} días</span></div>
-            <div className="flex justify-between"><span className="text-ink-soft">IAP (Índice de Ausentismo Pago)</span><span className="font-medium">{result.detail.directLabor.iapPercent.toFixed(2)}%</span></div>
+            <div className="flex flex-col gap-0.5">
+              <div className="flex justify-between"><span className="text-ink-soft">IAP — Inasistencias pagas</span><span className="font-medium">{result.detail.directLabor.iapPercent.toFixed(2)}%</span></div>
+              {result.detail.directLabor.paidDays != null && (
+                <span className="text-[11px] text-ink-soft">
+                  IAP = {result.detail.directLabor.paidDays} días pagos / {result.detail.directLabor.workingDays} efectivos = {result.detail.directLabor.iapPercent.toFixed(2)}% · derivado, solo lectura
+                </span>
+              )}
+            </div>
             <div className="flex justify-between"><span className="text-ink-soft">ITCS</span><span className="font-medium">{result.detail.directLabor.itcsPercent.toFixed(2)}%</span></div>
             {Object.entries(result.detail.directLabor.hourlyRates).map(([dept, rate]) => (
               <div key={dept} className="flex justify-between">

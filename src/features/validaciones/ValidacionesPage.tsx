@@ -843,7 +843,7 @@ function EntryRow({
                       if (d.netAmount != null) rows.push({ label: "Monto Neto", value: fmt(Number(d.netAmount)) ?? "" });
                       if (d.taxAmount != null) rows.push({ label: "IVA / Impuestos", value: fmt(Number(d.taxAmount)) ?? "" });
                       if (d.totalAmount != null) rows.push({ label: "Total Facturado", value: fmt(Number(d.totalAmount)) ?? "", isTotal: true });
-                      if (d.hoursWorked != null) rows.push({ label: "Horas Trabajadas", value: `${d.hoursWorked} hs` });
+                      if (d.hoursWorked != null) rows.push({ label: "Horas trabajadas (real)", value: `${d.hoursWorked} hs` });
                       if (d.department) rows.push({ label: "Departamento", value: String(d.department) });
                       if (!rows.length) return null;
                       return (

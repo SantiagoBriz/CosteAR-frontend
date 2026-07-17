@@ -26,6 +26,7 @@ import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { AutomatizacionPage } from '@/features/automatizacion/AutomatizacionPage';
 import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage';
 import { LandingPage } from '@/features/landing/LandingPage';
+import { TrazabilidadDatoPage, TrazabilidadCalculoPage } from '@/features/trazabilidad/TrazabilidadPages';
 
 
 const rootRoute = createRootRoute({
@@ -91,6 +92,28 @@ const changePasswordRoute = createRoute({
   component: ChangePasswordPage,
 });
 
+// Trazabilidad — páginas completas que se abren en pestaña nueva (mismo layout,
+// mismo login). Formato comprobante, imprimibles (Parte 2.3).
+const trazaDatoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/trazabilidad/dato/$id',
+  beforeLoad: requireAuth,
+  validateSearch: (s: Record<string, unknown>): { period?: string } => ({
+    period: typeof s.period === 'string' ? s.period : undefined,
+  }),
+  component: TrazabilidadDatoPage,
+});
+const trazaCalculoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/trazabilidad/calculo/$runId',
+  beforeLoad: requireAuth,
+  validateSearch: (s: Record<string, unknown>): { structureId?: string; period?: string } => ({
+    structureId: typeof s.structureId === 'string' ? s.structureId : undefined,
+    period: typeof s.period === 'string' ? s.period : undefined,
+  }),
+  component: TrazabilidadCalculoPage,
+});
+
 // Portal de empresa — accesible solo con rol EMPRESA_OPERATOR
 const empresaPortalRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -123,6 +146,8 @@ const routeTree = rootRoute.addChildren([
   automatizacionRoute,
   changePasswordRoute,
   empresaPortalRoute,
+  trazaDatoRoute,
+  trazaCalculoRoute,
 ]);
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' });
