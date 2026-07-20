@@ -312,7 +312,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
                 <th className="px-3 py-2 text-right font-medium">Fijo $</th>
                 <th className="px-3 py-2 text-right font-medium">Variable $</th>
                 {watchedCenters?.map((c) => (
-                  <th key={c.id} className="w-20 px-3 py-2 text-right font-medium">{c.name || c.id} %</th>
+                  <th key={c.id} className="w-20 px-3 py-2 text-right font-medium">{c.name || c.id} (base)</th>
                 ))}
                 <th className="px-3 py-2" />
               </tr>
@@ -345,7 +345,9 @@ export function IndirectCostsForm({ defaultValues, onSave, saving }: Props) {
             </tbody>
           </table>
         </div>
-        <p className="mt-1 text-[11px] text-ink-soft">Los porcentajes por centro deben sumar 100 en cada fila.</p>
+        <p className="mt-1 text-[11px] text-ink-soft">
+          Base de reparto por centro (m², kWh, o cualquier unidad proporcional — no hace falta que sumen 100 ni ninguna escala fija: el sistema reparte según la proporción entre centros de cada fila).
+        </p>
       </section>
 
       {/* Distribuciones de centros de servicio */}

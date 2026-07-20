@@ -191,12 +191,6 @@ export function CompaniesPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="hidden items-center justify-between sm:flex">
-            <h2 className="text-sm font-extrabold uppercase tracking-wide text-ink-soft">
-              {companies.length} cliente{companies.length !== 1 ? "s" : ""} en
-              tu cartera
-            </h2>
-          </div>
           <div className="grid gap-3">
             {companies.map((c) => {
               const health = companyHealth(c._count?.costStructures ?? 0);
