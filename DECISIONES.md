@@ -259,3 +259,34 @@ extra). No inventé un endpoint nuevo para esto.
   departamentos / N centros·conceptos / precio×cantidad), timestamp en zona
   America/Argentina/Tucuman, marca "VIGENTE" en la última y JSON expandible del
   snapshot. Hace visible que la fuente de verdad se versiona y nunca se pisa (R1).
+
+---
+
+## Sesión 2026-07-20 — T00: sync AlanSandbox ↔ staging (VERIFICADO, sin merge necesario)
+
+- **Hallazgo (contradice la premisa de la tarea):** al mapear la divergencia en
+  vivo el 2026-07-20, `AlanSandbox` y `origin/staging` **NO están divergidos**.
+  `origin/staging` está **totalmente contenido** en `AlanSandbox`:
+  - `git log --oneline AlanSandbox..origin/staging` → **vacío** (staging no tiene
+    ningún commit que AlanSandbox no tenga).
+  - `git merge-base AlanSandbox origin/staging` == `origin/staging` tip ==
+    `c95a503` (el mismo "fix(ui): etiqueta de prorrateo engañosa..." que la tarea
+    citaba como exclusivo de staging → ya está en AlanSandbox).
+  - `git merge-base --is-ancestor origin/staging AlanSandbox` → **YES**.
+  - `git merge origin/staging` → **"Already up to date."**
+- **Causa:** el sync ya se hizo en un merge previo (`43e6863 Merge
+  remote-tracking branch 'origin/staging' into AlanSandbox`), y encima de eso
+  AlanSandbox agregó `641925c feat(ui): render GASTO cost sections...`. La ruta
+  `merge/lautaro-a-dev` / `b3225ab` ya había llevado la trazabilidad + import
+  Excel a staging, tal como anticipaba la tarea.
+- **Ambos feature sets confirmados presentes en AlanSandbox** (rule #9, default
+  simple): Excel import (`759d91c`, `5ad8423 popup de revisión`, `b3225ab`),
+  trazabilidad periodos+comparación (`b3225ab`), F4 lista→ficha (MP/MOD/CIF),
+  historial config append-only (`dc9e4c8`), y el fix del panel de resultado
+  (`8824ba0 mapear latest + costo unitario`).
+- **Decisión:** NO se crea ningún merge commit (sería un commit vacío/stray,
+  viola rule #3). El `package-lock.json` es idéntico a staging; `npm install`
+  reporta "up to date". Verificación de salud del branch (base limpia para el
+  trabajo nuevo): `npm run typecheck` ✅, `npm run build` ✅ (solo avisos
+  preexistentes de tamaño de chunk / import estático+dinámico de auth-store, no
+  errores), `vitest run` ✅ 5/5. El único artefacto de T00 es esta entrada.
