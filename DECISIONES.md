@@ -342,3 +342,74 @@ del backend (2 productivos + 2 servicios cierran en 0, reordenar da idéntico, u
 anda). No se corrió un click-through en el navegador porque exige levantar Docker+DB+auth+seed
 (el daemon de Docker está apagado) y staging todavía no tiene F01-A; los pasos para la
 confirmación visual quedan en el resumen para Alan.
+
+## Sesión 2026-07-21 — F05: pantalla de imputación (resolver datos sin imputar)
+
+**Contexto.** F04 (backend, ya en `dev`) marca un cálculo como incompleto cuando corrió con
+datos sin decisión de imputación de período, y bloquea el CIERRE del mes con un 422 accionable —
+pero no había ninguna pantalla para RESOLVER una imputación, así que el costista chocaba una
+pared sin acción posible. Esta tarea construye ese camino. Contrato del backend verificado antes
+de escribir (`src/application/cost-structures/calculation-run-service.ts`, `cost-period-service.ts`,
+`domain/errors/*`): `data.incompleto` = `{ incompleto, motivos, datosPendientes:[{id,nombre}] }`
+(mismo objeto en `results.incompletitud`); el cierre lanza `MissingInputError('periodoImputado', …)`
+→ 422 `{ error:{ code:'MISSING_INPUT', message:<español>, details:{ field:'periodoImputado' } } }`.
+
+**Reuso, no reconstrucción (parámetro del prompt).** Se reusaron sin tocar `ImputacionModal`,
+`proposeImputation` (imputacion.ts) y `useImputar` (trazabilidad-hooks). Lo nuevo se concentró en
+un solo componente, `ImputacionResolver.tsx` (`IncompleteNotice` + `DatoImputacionModal`).
+
+**Las dos opciones del modal salen del manual, no del parafraseo del prompt.** El prompt describió
+las opciones como "Imputar a &lt;período del hecho&gt; (devengado)" vs "Mover a &lt;período
+actual&gt;", que está invertido respecto del `Manual-Trazabilidad-DEVS-v1.md §3` (fuente de dominio
+autorizada, hallada en `C:\Users\Alan\Desktop\` — ver nota de vault abajo). El manual define
+textualmente `Imputar a ${periodoCosto} (devengado)` (recomendada) vs `Mover a la estructura ${p}`,
+que es EXACTAMENTE lo que ya implementa y testea `proposeImputation`. Regla #4 (no inventar reglas
+de dominio) → se siguió el manual y el código existente; no se reescribieron los labels. Queda
+anotado por si la cátedra confirma que el parafraseo era el correcto.
+
+**De dónde sale la fecha del hecho.** `datosPendientes` solo trae `{id, nombre}`. Para armar las
+dos opciones (que dependen del mes del hecho vs el período de costo) se pide la ficha del dato con
+`useDataPointTrace(id)` y se usa `periods.hecho` (`fecha_hecho` en 'YYYY-MM-DD', o null). Si un
+dato no tuviera `fecha_hecho`, se ofrece igual "Imputar a &lt;período de costo&gt;" — nunca se deja
+al costista sin acción (parámetro NO DEAD ENDS).
+
+**`periodoCosto` = `structure.period`.** Se pasa el período de costo de la estructura (igual que
+`RawMaterialForm` y `DerivationTree`), no el `code` del período seleccionado en la barra. Es lo
+consistente con el resto del módulo y con la regla del manual; documentado por si en multi-período
+se quisiera afinar.
+
+**El aviso va ARRIBA de los números.** En la pestaña Resultado, `IncompleteNotice` se renderiza
+antes de `DerivationTree` y `ResultPanel` cuando `incompletitud.incompleto` es true (rojo, con
+`role="alert"`, lista los datos por NOMBRE). Cada dato es un botón que abre el modal; al resolver,
+se saca de la lista (optimista) y, cuando no queda ninguno, aparece "Volver a calcular" que corre
+el cálculo limpio y hace desaparecer el aviso.
+
+**La marca vive en estado de página, no en query.** `incompletitud` se guarda desde la respuesta de
+`useCalculateTraced` (se extendió su tipo con `incompleto`). Consecuencia asumida: el aviso aparece
+DESPUÉS de calcular en esta sesión; abrir Resultado con un resultado cacheado (sin recalcular) no lo
+muestra hasta recalcular, porque no hay endpoint que devuelva `results.incompletitud` de una corrida
+vieja sin volver a correr el motor (correr el motor en cada vista de pestaña spamearía corridas y
+audit logs). No es un dead end: el CIERRE del período sigue bloqueando y ofreciendo la resolución.
+
+**Cierre del período (mismo camino de resolución).** `PeriodBar` ahora cierra con `runClose`: si el
+backend responde el 422 de `periodoImputado`, muestra el mensaje en español del backend TAL CUAL y,
+debajo, la misma resolución in-situ (`IncompleteNotice`) con las opciones — al terminar ofrece
+"Cerrar &lt;mes&gt;" que reintenta el cierre. La lista de datos se toma, en orden de preferencia, de
+`error.details.datosPendientes` (si el backend algún día la adjunta — hoy no la manda) y si no, de
+la última corrida (`pendingDatos`, que baja de la página). Si tampoco hay lista a mano (nunca se
+calculó en la sesión), un botón "Resolver los datos pendientes" lleva a la pestaña Resultado y
+recalcula para poblar el aviso. Nunca se muestra el 422 crudo ni ids (parámetros #5/#6).
+
+**Nota de vault (parámetro #4).** El vault NO está en la ruta documentada del prompt
+(`001 - Costear/001.3 - …`). Sí se encontraron en disco `C:\Users\Alan\Desktop\Manual-Trazabilidad-DEVS-v1.md`
+y una copia de `Test-Temporalidad-2-Periodos.md` en un output de AppData; el §3 del manual fue la
+fuente para las opciones de imputación (arriba). No se consultó Graphify.
+
+**Verificación.** `npm run typecheck` ✅, `npm run build` ✅ (mismos avisos preexistentes de tamaño
+de chunk), `vitest run` ✅ 14/14 (3 nuevos en `imputacion-error.test.ts`: reconocer el 422 de
+`periodoImputado` por `code`+`field` sin parsear texto; no confundirlo con otros `MISSING_INPUT` ni
+otros códigos; extraer `datosPendientes` del error si viniera, o null si no). NO se corrió el
+click-through en el navegador: exige Docker+Postgres(:5433)+backend+seed y el daemon de Docker está
+apagado / el puerto 5433 no escucha; mutar el backend de `dev` compartido (crear/cerrar períodos)
+sería una acción sobre datos compartidos que no corresponde hacer sin pedirlo. Los pasos para la
+confirmación visual local quedan en el resumen para Alan.

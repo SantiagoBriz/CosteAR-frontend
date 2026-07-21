@@ -34,6 +34,8 @@ import { LaborDepartmentsView } from './LaborDepartmentsView';
 import { ConfigHistoryPanel } from './ConfigHistoryPanel';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
+import { IncompleteNotice } from './ImputacionResolver';
+import type { Incompletitud } from './trazabilidad-types';
 import { usePeriods } from './period-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
 import { PeriodBar } from './components/PeriodBar';
@@ -91,6 +93,10 @@ export function CostStructurePage() {
   const { data: runsList } = useStructureRuns(id);
   const [tracedRunId, setTracedRunId] = useState<string | null>(null);
   const [tracedError, setTracedError] = useState<string | null>(null);
+  // Marca de incompletitud (F04/F05): datos sin imputar de la última corrida
+  // trazada de esta sesión. Alimenta la advertencia de la pestaña Resultado y
+  // el listado que ofrece el cierre para resolver los pendientes in-situ.
+  const [incompletitud, setIncompletitud] = useState<Incompletitud | null>(null);
   const effectiveRunId = tracedRunId ?? runsList?.[0]?.id ?? null;
 
   // Período de costeo que se está mirando (problema C — Fase 2). Por defecto, el
@@ -164,6 +170,7 @@ export function CostStructurePage() {
   const runCalculate = async () => {
     setError(null);
     setTracedError(null);
+    setIncompletitud(null);
     if (blockedByClosedPeriod()) return;
     try {
       const data = await calculate.mutateAsync();
@@ -177,6 +184,9 @@ export function CostStructurePage() {
     try {
       const traced = await calculateTraced.mutateAsync();
       setTracedRunId(traced.runId);
+      // F05: si la corrida trae datos sin imputar, guardamos la marca para
+      // pintar la advertencia accionable arriba de los números.
+      setIncompletitud(traced.incompleto ?? null);
     } catch (e) {
       setTracedError(apiErrorMessage(e));
     }
@@ -268,6 +278,9 @@ export function CostStructurePage() {
               selectedId={periodId}
               onSelect={setPeriodId}
               runIdToFreeze={effectiveRunId}
+              periodoCosto={structure?.period}
+              pendingDatos={incompletitud?.datosPendientes ?? []}
+              onGoToResolve={() => { setActiveTab('result'); void runCalculate(); }}
             />
             <span className="inline-flex items-center self-start rounded-full border border-line bg-surface-alt px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-soft">
               Captación: continua
@@ -502,6 +515,21 @@ export function CostStructurePage() {
 
       {activeTab === 'result' && (
         <div className="space-y-4">
+          {/* F05 — advertencia imposible de ignorar: va ARRIBA de los números.
+              Si el cálculo corrió con datos sin imputar, el margen de abajo no es
+              confiable; cada dato afectado se resuelve acá mismo, por su nombre. */}
+          {incompletitud?.incompleto && (
+            <IncompleteNotice
+              datos={incompletitud.datosPendientes}
+              motivos={incompletitud.motivos}
+              periodoCosto={structure?.period}
+              structureId={id}
+              doneTitle="Volvé a calcular para ver el resultado limpio."
+              doneLabel="Volver a calcular"
+              onDone={() => void runCalculate()}
+              busy={calculate.isPending || calculateTraced.isPending}
+            />
+          )}
           <DerivationTree
             runId={effectiveRunId}
             isMissingRun={!!tracedError}

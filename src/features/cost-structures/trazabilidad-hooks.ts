@@ -7,6 +7,7 @@ import type {
   SourceArea,
   CaptureMethod,
   CostElement,
+  Incompletitud,
 } from './trazabilidad-types';
 
 /** Corre el motor con árbol persistido (Trazabilidad Total v1, D.1). Endpoint
@@ -16,7 +17,9 @@ export function useCalculateTraced(structureId: string) {
   return useMutation({
     mutationFn: async () => {
       const res = await api.post<{
-        data: { runId: string; runN: number; results: unknown; tree: unknown };
+        // `incompleto` (F04): marca de datos sin imputar para pintar la
+        // advertencia en la pestaña Resultado en vez de un margen "sano".
+        data: { runId: string; runN: number; results: unknown; tree: unknown; incompleto: Incompletitud };
       }>(`/structures/${structureId}/calculate`, {});
       return res.data.data;
     },
