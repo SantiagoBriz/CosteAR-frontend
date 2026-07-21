@@ -3,8 +3,28 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Plus, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import type { IndirectCostConfig } from './cost-structure-types';
+import type { IndirectCostConfig, SecondaryDistributionPair } from './cost-structure-types';
 import { useAllocationBases, useCreateAllocationBase, type AllocationBase } from './allocation-base-hooks';
+
+/**
+ * Estado INTERNO del formulario para el reparto secundario. La UI edita los
+ * valores por CENTRO DESTINO (Records keyed by id: `toProductiveFixed` /
+ * `toProductiveVariable` en modo manual, `toProductive` = unidades en modo
+ * base). En el borde (cargar/guardar) se traduce desde/hacia el CONTRATO por
+ * PARES EXPLÍCITOS (`distributions` con `centroDestinoId`) que habla el backend.
+ * Así la posición de la columna nunca decide a qué centro va el valor.
+ */
+type ServiceRowFormState = {
+  serviceCenterId: string;
+  distributionMode?: 'manual' | 'base';
+  baseCode?: string;
+  toProductive?: Record<string, number>;
+  toProductiveFixed?: Record<string, number>;
+  toProductiveVariable?: Record<string, number>;
+};
+type IndirectCostsFormValues = Omit<IndirectCostConfig, 'serviceDistributions'> & {
+  serviceDistributions: ServiceRowFormState[];
+};
 
 /**
  * Desplegable de bases de asignación (3b-1). Reemplaza el texto libre: el
@@ -100,7 +120,7 @@ interface Props {
   companyId?: string;
 }
 
-function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
+export function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
   const base = cfg ?? emptyIndirectCosts();
 
   const cleanRecord = (rec?: Record<string, number>) => {
@@ -124,14 +144,31 @@ function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
       },
       distribution: cleanRecord(c.distribution),
     })),
-    serviceDistributions: (base.serviceDistributions ?? []).map((s) => ({
-      ...s,
-      distributionMode: s.distributionMode ?? 'manual',
-      baseCode: s.baseCode ?? '',
-      toProductive: cleanRecord(s.toProductive),
-      toProductiveFixed: cleanRecord(s.toProductiveFixed),
-      toProductiveVariable: cleanRecord(s.toProductiveVariable),
-    })),
+    serviceDistributions: (base.serviceDistributions ?? []).map((s) => {
+      // El backend entrega SIEMPRE la forma por pares (`distributions`). Se
+      // vuelca a los Records por id que edita la UI. Leer por id —no por
+      // posición— es justamente lo que evita mostrar los % contra el centro
+      // equivocado al abrir una estructura vieja (el adaptador de F01-A ya
+      // normalizó lo guardado antes de que llegue acá).
+      const fijoRec: Record<string, number> = {};
+      const varRec: Record<string, number> = {};
+      const unitsRec: Record<string, number> = {};
+      for (const p of s.distributions ?? []) {
+        if (!p || !p.centroDestinoId) continue;
+        fijoRec[p.centroDestinoId] = p.fijo;
+        varRec[p.centroDestinoId] = p.variable;
+        // En modo 'base' fijo y variable comparten la misma base: la unidad.
+        unitsRec[p.centroDestinoId] = p.fijo;
+      }
+      return {
+        serviceCenterId: s.serviceCenterId,
+        distributionMode: s.distributionMode ?? 'manual',
+        baseCode: s.baseCode ?? '',
+        toProductive: cleanRecord(unitsRec),
+        toProductiveFixed: cleanRecord(fijoRec),
+        toProductiveVariable: cleanRecord(varRec),
+      };
+    }),
     productiveSettings: (base.productiveSettings ?? []).map((p) => ({
       ...p,
       budget: {
@@ -145,7 +182,7 @@ function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
   };
 }
 
-function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
+export function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
   const fallbackNum = (val: any) => {
     if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
     return Number(val);
@@ -176,26 +213,34 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
     }),
     serviceDistributions: (data.serviceDistributions ?? []).map((s: any) => {
       const mode = s.distributionMode === 'base' ? 'base' : 'manual';
+      const serviceCenterId = s.serviceCenterId;
+
+      // Se manda SIEMPRE el contrato por PARES EXPLÍCITOS: cada valor viaja con
+      // su `centroDestinoId`, nunca por posición. Se descarta por seguridad el
+      // propio centro (un servicio no se reparte a sí mismo) y los pares vacíos.
+      let distributions: SecondaryDistributionPair[];
       if (mode === 'base') {
         // Modo automático: el reparto sale de las UNIDADES de la base (una por
-        // centro). Se limpian los % manuales para que el motor use toProductive.
-        return {
-          serviceCenterId: s.serviceCenterId,
-          distributionMode: 'base',
-          baseCode: (s.baseCode ?? '').trim(),
-          toProductive: cleanRecord(s.toProductive),
-          toProductiveFixed: {},
-          toProductiveVariable: {},
-        };
+        // centro). Fijo y variable comparten la misma base.
+        const units = cleanRecord(s.toProductive);
+        distributions = Object.keys(units)
+          .filter((id) => id && id !== serviceCenterId)
+          .map((id) => ({ centroDestinoId: id, fijo: units[id]!, variable: units[id]! }))
+          .filter((p) => p.fijo !== 0);
+      } else {
+        // Modo manual: % tipeados por centro (fijo y variable por separado).
+        const fx = cleanRecord(s.toProductiveFixed);
+        const va = cleanRecord(s.toProductiveVariable);
+        const ids = new Set([...Object.keys(fx), ...Object.keys(va)]);
+        distributions = [...ids]
+          .filter((id) => id && id !== serviceCenterId)
+          .map((id) => ({ centroDestinoId: id, fijo: fx[id] ?? 0, variable: va[id] ?? 0 }))
+          .filter((p) => p.fijo !== 0 || p.variable !== 0);
       }
-      // Modo manual: % tipeados. Se limpia toProductive (evita drivers viejos).
-      return {
-        serviceCenterId: s.serviceCenterId,
-        distributionMode: 'manual',
-        toProductive: {},
-        toProductiveFixed: cleanRecord(s.toProductiveFixed),
-        toProductiveVariable: cleanRecord(s.toProductiveVariable),
-      };
+
+      return mode === 'base'
+        ? { serviceCenterId, distributionMode: 'base' as const, baseCode: (s.baseCode ?? '').trim(), distributions }
+        : { serviceCenterId, distributionMode: 'manual' as const, distributions };
     }),
     productiveSettings: (data.productiveSettings ?? []).map((p: any) => ({
       ...p,
@@ -217,7 +262,7 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
 }
 
 export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: Props) {
-  const { register, control, handleSubmit, reset, getValues, setValue, formState: { isDirty } } = useForm<IndirectCostConfig>({
+  const { register, control, handleSubmit, reset, getValues, setValue, formState: { isDirty } } = useForm<IndirectCostsFormValues>({
     defaultValues: cleanIndirectCostsForForm(defaultValues) as any,
   });
 

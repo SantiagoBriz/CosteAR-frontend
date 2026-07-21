@@ -325,13 +325,13 @@ function CenterCard({
               ? <>Orden de cierre: <strong className="text-ink">#{closureIdx + 1}</strong>. Un servicio reparte a productivos y a servicios que aún no cerraron; al final queda en <strong>0</strong>.</>
               : <>Este servicio reparte su costo a los centros productivos; al final queda en <strong>0</strong>.</>}
           </p>
-          {myDist ? (
+          {myDist && myDist.distributions.length > 0 ? (
             <ul className="space-y-1 text-[12.5px]">
-              {Object.entries({ ...(myDist.toProductiveFixed ?? {}), ...(myDist.toProductive ?? {}) }).map(([target]) => (
-                <li key={target} className="flex justify-between rounded border border-line bg-surface px-2.5 py-1.5">
-                  <span className="text-ink">→ {config.centers.find((c) => c.id === target)?.name || target}</span>
+              {myDist.distributions.map((p) => (
+                <li key={p.centroDestinoId} className="flex justify-between rounded border border-line bg-surface px-2.5 py-1.5">
+                  <span className="text-ink">→ {config.centers.find((c) => c.id === p.centroDestinoId)?.name || p.centroDestinoId}</span>
                   <span className="text-ink-soft">
-                    fijo <strong className="text-ink">{fmt(myDist.toProductiveFixed?.[target])}</strong> · var <strong className="text-ink">{fmt(myDist.toProductiveVariable?.[target])}</strong>
+                    fijo <strong className="text-ink">{fmt(p.fijo)}</strong> · var <strong className="text-ink">{fmt(p.variable)}</strong>
                   </span>
                 </li>
               ))}

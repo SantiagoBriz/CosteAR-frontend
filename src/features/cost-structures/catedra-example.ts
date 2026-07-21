@@ -58,7 +58,13 @@ export const catedraExample = {
       { name: 'Energía', amount: { fixed: 0, variable: 180000 }, distribution: { prod1: 40, prod2: 50, serv1: 10 } },
     ],
     serviceDistributions: [
-      { serviceCenterId: 'serv1', toProductive: { prod1: 60, prod2: 40 } },
+      {
+        serviceCenterId: 'serv1',
+        distributions: [
+          { centroDestinoId: 'prod1', fijo: 60, variable: 60 },
+          { centroDestinoId: 'prod2', fijo: 40, variable: 40 },
+        ],
+      },
     ],
     productiveSettings: [
       { centerId: 'prod1', budget: { fixed: 200000, variable: 120000 }, normalCapacity: 9200, actualActivity: 9000, actualCip: 325000 },

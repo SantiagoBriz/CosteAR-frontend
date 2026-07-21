@@ -290,3 +290,55 @@ extra). No inventé un endpoint nuevo para esto.
   trabajo nuevo): `npm run typecheck` ✅, `npm run build` ✅ (solo avisos
   preexistentes de tamaño de chunk / import estático+dinámico de auth-store, no
   errores), `vitest run` ✅ 5/5. El único artefacto de T00 es esta entrada.
+
+## Sesión 2026-07-21 — F01-B: prorrateo secundario, el frontend habla PARES EXPLÍCITOS
+
+**Contexto.** F01-A (backend) reemplazó el array posicional del prorrateo secundario por
+pares explícitos con el id del centro destino. Esta tarea hace que el frontend hable ese
+mismo contrato. Antes de escribir nada se leyó el contrato real del backend
+(`src/shared/schemas/cost.schema.ts`) y su `DECISIONES.md` (estrategia de retrocompatibilidad).
+
+**Contrato espejado exacto.** Cada entrada del reparto secundario ahora lleva
+`distributions: { centroDestinoId: string, fijo: number, variable: number }[]` (mismos nombres
+de campo que el backend). Se sacaron del tipo los Records posicionales `toProductive` /
+`toProductiveFixed` / `toProductiveVariable`.
+
+**Decisión de diseño — traducir en el BORDE, no reescribir la UI.** El estado interno del
+formulario sigue editando por CENTRO (Records keyed by id): así la tabla, el salteo de la
+columna del propio centro y los `register` por `c.id` no cambian (eran correctos: ya eran por
+id, no por posición). Lo único que cambia es qué viaja en el payload:
+- Al **guardar** (`cleanIndirectCostsForSubmit`): los Records por id se convierten a
+  `distributions` con `centroDestinoId`. Se descarta por seguridad el propio centro (auto-reparto)
+  y los pares en cero. En modo 'base' se mandan las unidades como `fijo = variable` con su id.
+- Al **cargar** (`cleanIndirectCostsForForm`): se leen los `distributions` que entrega el backend
+  (que ya normaliza en `GET`, aun para estructuras guardadas antes del cambio) y se vuelcan a los
+  Records por id. Leer por id —no por posición— es lo que evita mostrar los % contra el centro
+  equivocado al abrir una estructura vieja.
+- Se introdujo un tipo de estado de formulario propio (`IndirectCostsFormValues`) separado del
+  tipo de cable (`IndirectCostConfig`), para que el `useForm` y los `register` sigan tipando los
+  Records mientras el contrato externo queda en pares.
+
+**Retrocompatibilidad (parámetro #4).** El backend eligió un adaptador de LECTURA: su `GET`
+devuelve SIEMPRE `distributions`, así que el frontend nunca ve la forma vieja y no necesita su
+propio adaptador. Si una config legada es ambigua (el propio centro como destino, o un centro
+inexistente), el backend responde 422 al calcular; el frontend ya surfacea ese mensaje tal cual
+(`apiErrorMessage` → `setError`), en español y con el NOMBRE humano del centro, sin exponer ids
+ni endpoints (parámetros #5 y #6). No hubo que tocar el manejo de errores.
+
+**Fuera de alcance (F02/F03, se respetó).** No se tocó el reordenar/borrar filas ni el bloqueo
+de la columna de un servicio ya cerrado en el escalonado. Solo cambió lo que viaja en el payload.
+
+**Vista de centro (`CostCentersView`).** El detalle de un centro de servicio ahora lista
+`distributions` mostrando el nombre humano del destino (fallback al id solo si faltara el nombre).
+
+**Verificación.** `npm run typecheck` ✅, `npm run build` ✅ (solo avisos preexistentes de tamaño
+de chunk / import de auth-store), `vitest run` ✅ 11/11 (6 nuevos en
+`prorrateo-secundario-pares.test.ts`: el submit manda `centroDestinoId`/`fijo`/`variable`, nunca
+el propio centro ni pares vacíos; el orden de las claves no cambia a qué centro va cada valor;
+modo base manda unidades como fijo=variable; load lee por id; round-trip estable). El seam de
+integración está cubierto por construcción: la forma que produce el submit del frontend es
+EXACTAMENTE la que el test de regresión de F01-A valida contra el schema Zod y el motor reales
+del backend (2 productivos + 2 servicios cierran en 0, reordenar da idéntico, un solo servicio
+anda). No se corrió un click-through en el navegador porque exige levantar Docker+DB+auth+seed
+(el daemon de Docker está apagado) y staging todavía no tiene F01-A; los pasos para la
+confirmación visual quedan en el resumen para Alan.
