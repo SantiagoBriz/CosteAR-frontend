@@ -447,7 +447,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: 
                 <th className="px-3 py-2 text-right font-medium">Variable $</th>
                 <th className="w-36 px-3 py-2 text-left font-medium">Modo</th>
                 {watchedCenters?.map((c) => (
-                  <th key={c.id} className="w-20 px-3 py-2 text-right font-medium">{c.name || c.id} %</th>
+                  <th key={c.id} className="w-20 px-3 py-2 text-right font-medium">{c.name || c.id} (base)</th>
                 ))}
                 <th className="px-3 py-2" />
               </tr>
@@ -518,7 +518,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: 
           </table>
         </div>
         <p className="mt-1 text-[11px] text-ink-soft">
-          En modo <em>Manual (%)</em>, los porcentajes por centro deben sumar 100 en cada fila. En modo <em>Automático (por base)</em>, elegís una base física (ej. superficie) y cargás la unidad de cada centro; el % lo deriva el sistema solo.
+          En modo <em>Manual (%)</em>, cargá un valor por centro para cada fila — no hace falta que sumen 100: el sistema reparte según la proporción entre centros (valor ÷ total de la fila). En modo <em>Automático (por base)</em>, elegís una base física (ej. superficie) y cargás la unidad de cada centro; el % lo deriva el sistema solo, de la misma forma.
         </p>
       </section>
 

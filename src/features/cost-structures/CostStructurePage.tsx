@@ -128,6 +128,12 @@ export function CostStructurePage() {
   const allReady = configured.mp && configured.mod && configured.cip && configured.sales;
   const shown    = result ?? (latest ? { result: latestToResult(latest), calculationId: latest.id } : null);
 
+  const IMPORTED_KEY_BY_SECTION = {
+    'raw-material': 'rawMaterialConfig',
+    'direct-labor': 'directLaborConfig',
+    'indirect-costs': 'indirectCostConfig',
+  } as const;
+
   /** Un período cerrado no se toca. Reabrirlo es la única puerta, y deja rastro. */
   const blockedByClosedPeriod = (): boolean => {
     if (!readOnly) return false;
@@ -137,12 +143,6 @@ export function CostStructurePage() {
     );
     return true;
   };
-
-  const IMPORTED_KEY_BY_SECTION = {
-    'raw-material': 'rawMaterialConfig',
-    'direct-labor': 'directLaborConfig',
-    'indirect-costs': 'indirectCostConfig',
-  } as const;
 
   const saveSection = async (
     section: 'raw-material' | 'direct-labor' | 'indirect-costs',
@@ -414,8 +414,8 @@ export function CostStructurePage() {
           structureId={id}
           historySection="rawMaterial"
         >
-          {importedDefaults?.rawMaterialConfig && configured.mp && <ImportOverwriteWarning />}
           <Frozen when={readOnly}>
+            {importedDefaults?.rawMaterialConfig && configured.mp && <ImportOverwriteWarning />}
             <RawMaterialForm
               structureId={id}
               period={structure?.period}
@@ -436,8 +436,8 @@ export function CostStructurePage() {
           structureId={id}
           historySection="directLabor"
         >
-          {importedDefaults?.directLaborConfig && configured.mod && <ImportOverwriteWarning />}
           <Frozen when={readOnly}>
+            {importedDefaults?.directLaborConfig && configured.mod && <ImportOverwriteWarning />}
             <DirectLaborSection
               config={(importedDefaults?.directLaborConfig ?? structure?.directLaborConfig) as DirectLaborConfig | undefined}
               directLabor={shown?.result?.detail?.directLabor}
@@ -456,8 +456,8 @@ export function CostStructurePage() {
           structureId={id}
           historySection="indirectCosts"
         >
-          {importedDefaults?.indirectCostConfig && configured.cip && <ImportOverwriteWarning />}
           <Frozen when={readOnly}>
+            {importedDefaults?.indirectCostConfig && configured.cip && <ImportOverwriteWarning />}
             <IndirectCostsSection
               config={(importedDefaults?.indirectCostConfig ?? structure?.indirectCostConfig) as IndirectCostConfig | undefined}
               perDepartment={shown?.result?.detail?.indirectCosts?.perDepartment}
@@ -471,8 +471,8 @@ export function CostStructurePage() {
       </div>
 
       <div className={cn(activeTab !== 'sales' && 'hidden')}>
-        {importedDefaults?.sales && configured.sales && <ImportOverwriteWarning />}
         <Frozen when={readOnly}>
+          {importedDefaults?.sales && configured.sales && <ImportOverwriteWarning />}
           <SalesTab
             defaultPrice={importedDefaults?.sales?.salesUnitPrice ?? (structure?.salesUnitPrice ? Number(structure.salesUnitPrice) : undefined)}
             defaultQty={importedDefaults?.sales?.salesQuantity ?? (structure?.salesQuantity ? Number(structure.salesQuantity) : undefined)}
