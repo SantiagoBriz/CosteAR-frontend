@@ -8,6 +8,9 @@ import {
   ClipboardCheck,
   Zap,
   ShieldCheck,
+  Users as UsersIcon,
+  MessageSquareText,
+  FileCheck2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -29,9 +32,14 @@ const NAV = [
     badge: true,
   },
   { to: "/alerts", label: "Alertas", icon: Bell },
+  { to: "/admin", label: "Resumen", icon: LayoutDashboard, adminOnly: true, exact: true },
+  { to: "/admin/users", label: "Gestión de Staff", icon: UsersIcon, adminOnly: true },
+  { to: "/admin/vault", label: "Entrenamiento Bóveda", icon: FileCheck2, adminOnly: true },
+  { to: "/admin/chat", label: "Consola IA", icon: MessageSquareText, adminOnly: true },
 ] as const;
 
 function isNavActive(pathname: string, item: (typeof NAV)[number]): boolean {
+  if ("exact" in item && item.exact) return pathname === item.to;
   if (pathname.startsWith(item.to)) return true;
   const matchAlso = "matchAlso" in item ? item.matchAlso : undefined;
   return matchAlso?.some((prefix) => pathname.startsWith(prefix)) ?? false;
@@ -49,7 +57,17 @@ export function AppShell({
   const { location } = useRouterState();
   const { data: pendingCount = 0 } = usePendingCount();
 
-  const activeIndex = NAV.findIndex((item) =>
+  const activeNavItems = NAV.filter((navItem) => {
+    const isAdminRoute = "adminOnly" in navItem && navItem.adminOnly;
+    if (isAdminRoute && user?.role !== 'ADMIN') return false;
+    
+    // Si el usuario es ADMIN, ocultamos TODAS las rutas excepto las exclusivas de admin.
+    if (user?.role === 'ADMIN' && !isAdminRoute) return false;
+    
+    return true;
+  });
+
+  const activeIndex = activeNavItems.findIndex((item) =>
     isNavActive(location.pathname, item),
   );
   const [prevIndex, setPrevIndex] = useState(activeIndex);
@@ -133,8 +151,9 @@ export function AppShell({
             <div className="absolute right-0 top-full w-4 h-4 bg-granate rounded-tr-[16px] pointer-events-none" />
           </div>
 
-          {NAV.map((navItem) => {
+          {activeNavItems.map((navItem) => {
             const { to, label, icon: Icon, ...rest } = navItem;
+
             const active = isNavActive(location.pathname, navItem);
             const showBadge = "badge" in rest && rest.badge && pendingCount > 0;
             return (
@@ -180,17 +199,19 @@ export function AppShell({
 
         {/* Bottom: Portal, Profile, Logout */}
         <div className="flex flex-col items-center gap-3.5 w-full overflow-visible">
-          {/* Operator Portal Link */}
-          <Link
-            to="/portal"
-            viewTransition
-            className="flex size-12 items-center justify-center rounded-[18px] text-granate-tenue hover:text-white hover:bg-white/10 transition-all duration-200 relative group"
-          >
-            <Zap className="size-[20px]" />
-            <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
-              Portal de Operador
-            </span>
-          </Link>
+          {/* Operator Portal Link - Oculto para admin */}
+          {user?.role !== 'ADMIN' && (
+            <Link
+              to="/portal"
+              viewTransition
+              className="flex size-12 items-center justify-center rounded-[18px] text-granate-tenue hover:text-white hover:bg-white/10 transition-all duration-200 relative group"
+            >
+              <Zap className="size-[20px]" />
+              <span className="absolute left-18 bg-granate-deep border border-white/10 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-xl pointer-events-none z-50">
+                Portal de Operador
+              </span>
+            </Link>
+          )}
 
           {/* Profile link (Static since it is separated at the bottom) */}
           <div className="relative w-full h-12 flex items-center justify-center overflow-visible">
@@ -281,8 +302,8 @@ export function AppShell({
       </aside>
 
       {/* MOBILE FLOATING TAB BAR (same dock language as the desktop sidebar) */}
-      <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-30 grid grid-cols-4 gap-1 rounded-[28px] bg-granate p-2 shadow-[0_16px_40px_rgba(74,21,27,0.18)] lg:hidden">
-        {NAV.map((navItem) => {
+      <nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-30 grid grid-cols-4 gap-1 rounded-[28px] bg-granate p-2 shadow-[0_16px_40px_rgba(74,21,27,0.18)] lg:hidden" style={{ gridTemplateColumns: `repeat(${activeNavItems.length}, minmax(0, 1fr))` }}>
+        {activeNavItems.map((navItem) => {
           const { to, label, icon: Icon, ...rest } = navItem;
           const active = isNavActive(location.pathname, navItem);
           const showBadge = "badge" in rest && rest.badge && pendingCount > 0;
@@ -330,7 +351,7 @@ export function AppShell({
           <div
             className={cn(
               "mx-auto px-0 pt-6 pb-8 lg:px-8 lg:pt-10",
-              wide ? "max-w-[90rem]" : "max-w-6xl",
+              wide ? "max-w-full" : "max-w-6xl",
             )}
           >
             {children}

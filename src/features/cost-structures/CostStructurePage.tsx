@@ -1,37 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
-import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Calculator, Package, Users, Factory, Activity,
   TrendingUp, BarChart2, CheckCircle2, History, GitCompare,
-  Download, Loader2, Upload, AlertTriangle, Lock,
+  Download, Upload, Lock,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { StatusBadge, marginStatus } from '@/components/ui/StatusBadge';
-import { Money, Percent } from '@/components/ui/Money';
 import {
   useCostStructure,
   useUpdateCostSection,
   useUpdateSales,
   useCalculate,
   useLatestCalculation,
-  useCalculationHistory,
   useExportExcel,
   useImportExcel,
   type ImportedExcelData,
 } from './cost-structure-hooks';
-import { useLedger } from '@/features/libro/libro-hooks';
-import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { RawMaterialForm } from './RawMaterialForm';
-import { DirectLaborForm } from './DirectLaborForm';
-import { IndirectCostsForm } from './IndirectCostsForm';
-import { CostCentersView } from './CostCentersView';
-import { LaborDepartmentsView } from './LaborDepartmentsView';
-import { ConfigHistoryPanel } from './ConfigHistoryPanel';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
 import { usePeriods } from './period-hooks';
@@ -40,9 +27,19 @@ import { PeriodBar } from './components/PeriodBar';
 import { PeriodComparison } from './components/PeriodComparison';
 import type { RawMaterialConfig, DirectLaborConfig, IndirectCostConfig } from './cost-structure-types';
 import { apiErrorMessage } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { CalculationResult } from '@/lib/types';
+
+// Extracted Components
+import { Frozen } from './components/shared/Frozen';
+import { SectionShell } from './components/shared/SectionShell';
+import { ImportOverwriteWarning } from './components/shared/ImportOverwriteWarning';
+import { FullScreenCalculatorLoader } from './components/shared/FullScreenCalculatorLoader';
+import { IndirectCostsTab } from './components/tabs/IndirectCostsTab';
+import { DirectLaborTab } from './components/tabs/DirectLaborTab';
+import { SalesTab } from './components/tabs/SalesTab';
+import { ResultTab, EmptyResult } from './components/tabs/ResultTab';
+import { HistoryTab } from './components/tabs/HistoryTab';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -438,7 +435,7 @@ export function CostStructurePage() {
         >
           <Frozen when={readOnly}>
             {importedDefaults?.directLaborConfig && configured.mod && <ImportOverwriteWarning />}
-            <DirectLaborSection
+            <DirectLaborTab
               config={(importedDefaults?.directLaborConfig ?? structure?.directLaborConfig) as DirectLaborConfig | undefined}
               directLabor={shown?.result?.detail?.directLabor}
               onSave={(d) => saveSection('direct-labor', d)}
@@ -458,7 +455,7 @@ export function CostStructurePage() {
         >
           <Frozen when={readOnly}>
             {importedDefaults?.indirectCostConfig && configured.cip && <ImportOverwriteWarning />}
-            <IndirectCostsSection
+            <IndirectCostsTab
               config={(importedDefaults?.indirectCostConfig ?? structure?.indirectCostConfig) as IndirectCostConfig | undefined}
               perDepartment={shown?.result?.detail?.indirectCosts?.perDepartment}
               onSave={(d) => saveSection('indirect-costs', d)}
@@ -509,7 +506,7 @@ export function CostStructurePage() {
             period={structure?.period}
           />
           {shown
-            ? <ResultPanel result={shown.result} companyId={structure?.companyId} period={structure?.period} />
+            ? <ResultTab result={shown.result} companyId={structure?.companyId} period={structure?.period} />
             : <EmptyResult />}
         </div>
       )}
@@ -523,550 +520,9 @@ export function CostStructurePage() {
       )}
 
       {activeTab === 'history' && (
-        <HistoryPanel structureId={id} />
+        <HistoryTab structureId={id} />
       )}
     </AppShell>
-  );
-}
-
-// ── Costos Indirectos: lista de centros ↔ configuración (Parte 3.3) ──────────
-function IndirectCostsSection({
-  config, perDepartment, onSave, saving, companyId, structureId,
-}: {
-  config?: IndirectCostConfig;
-  perDepartment?: CalculationResult['detail']['indirectCosts']['perDepartment'];
-  onSave: (data: IndirectCostConfig) => Promise<void>;
-  saving: boolean;
-  companyId?: string;
-  structureId?: string;
-}) {
-  // Arranca en la vista de centros si ya hay centros cargados; si no, en edición.
-  const [editing, setEditing] = useState(!config?.centers?.length);
-
-  if (editing) {
-    return (
-      <div className="space-y-2 pt-1">
-        {!!config?.centers?.length && (
-          <button type="button" onClick={() => setEditing(false)} className="inline-flex items-center gap-1 text-[13px] text-granate hover:text-action">
-            <ArrowLeft className="size-3.5" /> Volver a la lista de centros
-          </button>
-        )}
-        <IndirectCostsForm
-          defaultValues={config}
-          onSave={async (d) => { await onSave(d); setEditing(false); }}
-          saving={saving}
-          companyId={companyId}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <CostCentersView
-      config={config ?? { centers: [], concepts: [], serviceDistributions: [], productiveSettings: [] }}
-      perDepartment={perDepartment}
-      onEdit={() => setEditing(true)}
-      structureId={structureId}
-      companyId={companyId}
-    />
-  );
-}
-
-// ── Mano de Obra: lista de departamentos ↔ configuración (Parte 3.2) ─────────
-function DirectLaborSection({
-  config, directLabor, onSave, saving,
-}: {
-  config?: DirectLaborConfig;
-  directLabor?: CalculationResult['detail']['directLabor'];
-  onSave: (data: DirectLaborConfig) => Promise<void>;
-  saving: boolean;
-}) {
-  const [editing, setEditing] = useState(!config?.departments?.length);
-  const [loadExample, setLoadExample] = useState(false);
-
-  if (editing) {
-    return (
-      <div className="space-y-2 pt-1">
-        {!!config?.departments?.length && (
-          <button type="button" onClick={() => { setEditing(false); setLoadExample(false); }} className="inline-flex items-center gap-1 text-[13px] text-granate hover:text-action">
-            <ArrowLeft className="size-3.5" /> Volver a la lista de departamentos
-          </button>
-        )}
-        <DirectLaborForm
-          defaultValues={config}
-          autoLoadExample={loadExample}
-          onSave={async (d) => { await onSave(d); setEditing(false); setLoadExample(false); }}
-          saving={saving}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <LaborDepartmentsView
-      config={config ?? { workingDays: { totalDaysPerYear: 0, unpaidAbsence: { sundays: 0, saturdays: 0, unjustifiedAbsences: 0, holidaysOnWeekend: 0 }, paidAbsence: { holidays: 0, vacations: 0, sickness: 0, specialLeaves: 0, workAccidents: 0 } }, itcs: { derivationBase: 0, fixedArt: 0, uncertainRemunerative: [], uncertainNonRemunerative: [] }, departments: [] }}
-      directLabor={directLabor}
-      onEdit={() => { setLoadExample(false); setEditing(true); }}
-      onLoadExample={() => { setLoadExample(true); setEditing(true); }}
-    />
-  );
-}
-
-// ── Frozen ────────────────────────────────────────────────────────────────────
-
-/**
- * Congela un formulario cuando el período está cerrado (problema C — Fase 2).
- *
- * Es un `<fieldset disabled>`: el navegador apaga TODOS los campos y botones que
- * cuelgan adentro, sin que cada formulario tenga que enterarse. A diferencia de
- * tapar la sección, el texto se sigue pudiendo leer y seleccionar — que es
- * justamente para lo que se mira un mes cerrado.
- */
-function Frozen({ when, children }: { when: boolean; children: React.ReactNode }) {
-  if (!when) return <>{children}</>;
-  return (
-    <fieldset disabled className="m-0 min-w-0 border-0 p-0 opacity-70">
-      {children}
-    </fieldset>
-  );
-}
-
-// ── SectionShell ──────────────────────────────────────────────────────────────
-
-function SectionShell({
-  title, description, configured, children, structureId, historySection,
-}: {
-  title: string;
-  description: string;
-  configured: boolean;
-  children: React.ReactNode;
-  structureId?: string;
-  historySection?: string;
-}) {
-  return (
-    <Card>
-      <CardHeader
-        title={title}
-        description={description}
-        action={
-          configured ? (
-            <span className="flex items-center gap-1.5 text-[12px] font-medium text-ok">
-              <CheckCircle2 className="size-3.5" /> Guardado
-            </span>
-          ) : undefined
-        }
-      />
-      <CardBody className="px-6 pb-6 pt-0">
-        {children}
-        {structureId && historySection && (
-          <ConfigHistoryPanel structureId={structureId} section={historySection} />
-        )}
-      </CardBody>
-    </Card>
-  );
-}
-
-/**
- * Aviso no bloqueante: esta sección ya tenía datos guardados y la importación
- * de Excel está mostrando otros en su lugar en el formulario. Nada se persiste
- * todavía — solo se guarda si la costista clickea "Guardar" más abajo.
- */
-function ImportOverwriteWarning() {
-  return (
-    <div className="mb-4 flex items-center gap-2 rounded-xl border border-warn/30 bg-warn/10 px-4 py-2.5 text-[13px] text-warn">
-      <AlertTriangle className="size-4 shrink-0" />
-      <span>Esta sección ya tenía datos guardados. La importación reemplazó lo que ves abajo, pero no se guarda hasta que presiones "Guardar".</span>
-    </div>
-  );
-}
-
-// ── Sales Tab ─────────────────────────────────────────────────────────────────
-
-function SalesTab({
-  defaultPrice, defaultQty, defaultProducedQty, onSave, saving, allReady, onCalculate, calculating,
-}: {
-  defaultPrice?: number;
-  defaultQty?: number;
-  defaultProducedQty?: number;
-  onSave: (p: number, q: number, produced: number | null) => Promise<void>;
-  saving: boolean;
-  allReady: boolean;
-  onCalculate: () => void;
-  calculating: boolean;
-}) {
-  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ unitPrice: any; quantity: any; producedQuantity: any }>({
-    defaultValues: {
-      unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
-      quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
-      producedQuantity: defaultProducedQty === 0 ? '' : (defaultProducedQty ?? ''),
-    },
-  });
-
-  useEffect(() => {
-    reset({
-      unitPrice: defaultPrice === 0 ? '' : (defaultPrice ?? ''),
-      quantity: defaultQty === 0 ? '' : (defaultQty ?? ''),
-      producedQuantity: defaultProducedQty === 0 ? '' : (defaultProducedQty ?? ''),
-    });
-  }, [defaultPrice, defaultQty, defaultProducedQty, reset]);
-
-  const [pending, setPending] = useState<{ p: number; q: number; prod: number | null } | null>(null);
-
-  const onSubmit = (v: any) => {
-    const fallbackNum = (val: any) => {
-      if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
-      return Number(val);
-    };
-    // La cantidad producida es opcional: vacía = null (el sistema se cae a la
-    // vendida, como hacía antes de que este campo existiera).
-    const producedRaw = v.producedQuantity;
-    const produced =
-      producedRaw === '' || producedRaw === null || producedRaw === undefined || isNaN(Number(producedRaw))
-        ? null
-        : Number(producedRaw);
-
-    setPending({ p: fallbackNum(v.unitPrice), q: fallbackNum(v.quantity), prod: produced });
-  };
-
-  return (
-    <Card>
-      <CardHeader
-        title="Datos de venta"
-        description="Precio, unidades vendidas (para el margen) y unidades producidas (para el costo unitario)"
-      />
-      <CardBody>
-        <form onSubmit={handleSubmit(onSubmit)} className="max-w-sm space-y-4">
-          <Input label="Precio de venta unitario $" type="number" step="0.01" numeric
-            placeholder="Ej: 25000" info="Precio al que vendés una unidad del producto. En pesos."
-            {...register('unitPrice', { required: true })} />
-          <Input label="Unidades vendidas" type="number" step="1" numeric
-            placeholder="Ej: 800"
-            info="Lo que VENDISTE en el período. Con esto se calcula la facturación y el margen bruto."
-            {...register('quantity', { required: true })} />
-          <Input label="Unidades producidas (opcional)" type="number" step="1" numeric
-            placeholder="Ej: 1000"
-            info="Lo que FABRICASTE en el período. Con esto se saca el costo por unidad. Si producís y vendés lo mismo, dejalo vacío."
-            {...register('producedQuantity')} />
-          <p className="rounded-xl border border-line bg-surface-alt px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
-            No son lo mismo: si fabricaste 1.000 y vendiste 800, el costo del mes se reparte entre las
-            <strong className="text-ink"> 1.000 producidas</strong>, no entre las 800 vendidas. Dividir por lo
-            vendido infla el costo unitario.
-          </p>
-          {isDirty && (
-            <p className="flex items-center gap-1.5 text-[12px] font-medium text-warn">
-              <span className="size-1.5 rounded-full bg-warn" /> Tenés cambios sin guardar
-            </p>
-          )}
-          <div className="flex gap-3 pt-1">
-            <Button type="submit" variant="secondary" loading={saving}>Guardar precio</Button>
-            {allReady && (
-              <Button type="button" onClick={onCalculate} loading={calculating}>
-                <Calculator className="size-4" /> Calcular ahora
-              </Button>
-            )}
-          </div>
-        </form>
-      </CardBody>
-
-      <ConfirmDialog
-        open={!!pending}
-        title="Actualizar Venta"
-        message="¿Querés actualizar los datos de Venta?"
-        confirmLabel="Guardar"
-        loading={saving}
-        onConfirm={async () => {
-          if (!pending) return;
-          await onSave(pending.p, pending.q, pending.prod);
-          reset({ unitPrice: pending.p, quantity: pending.q, producedQuantity: pending.prod ?? '' }); // limpia "cambios sin guardar" al toque
-          setPending(null);
-        }}
-        onCancel={() => setPending(null)}
-      />
-    </Card>
-  );
-}
-
-function FullScreenCalculatorLoader({ active }: { active: boolean }) {
-  const [step, setStep] = useState(0);
-  const steps = [
-    { pct: 10, msg: "Obteniendo datos de la estructura..." },
-    { pct: 30, msg: "Calculando consumos de materia prima por ficha PPP..." },
-    { pct: 55, msg: "Procesando días hábiles efectivos y cargas sociales MOD..." },
-    { pct: 75, msg: "Ejecutando distribución primaria y secundaria dual de CIP..." },
-    { pct: 90, msg: "Analizando variaciones presupuestarias y de volumen..." },
-    { pct: 98, msg: "Generando reporte de costos finales..." }
-  ];
-
-  useEffect(() => {
-    if (!active) {
-      setStep(0);
-      return;
-    }
-    const interval = setInterval(() => {
-      setStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
-    }, 850);
-    return () => clearInterval(interval);
-  }, [active]);
-
-  if (!active) return null;
-
-  const current = steps[step]!;
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-md p-6 text-white animate-fade-in">
-      <div className="w-full max-w-sm text-center space-y-6">
-        <div className="relative flex justify-center">
-          <div className="absolute inset-0 size-16 rounded-full bg-granate/20 blur-xl animate-pulse mx-auto" />
-          <Loader2 className="size-16 animate-spin text-granate relative" />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-lg font-bold tracking-tight">Ejecutando Cálculo de Costos</h3>
-          <p className="text-sm text-zinc-400 min-h-[40px] px-4 leading-relaxed transition-all duration-300">
-            {current.msg}
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden border border-zinc-700/50">
-            <div
-              className="h-full bg-granate transition-all duration-500 ease-out rounded-full"
-              style={{ width: `${current.pct}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-[11px] font-semibold text-zinc-500 font-mono">
-            <span>PROGRESO</span>
-            <span>{current.pct}%</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Result Panel ──────────────────────────────────────────────────────────────
-
-function ResultPanel({ result, companyId, period }: { result: CalculationResult; companyId?: string; period?: string }) {
-  const rows = [
-    { label: 'Materia Prima consumida', value: result.rawMaterialConsumed },
-    { label: 'Mano de Obra Directa',    value: result.directLaborTotal },
-    { label: 'CIP aplicados',           value: result.indirectCostsApplied },
-  ];
-  return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-      {/* Izquierda: tablas */}
-      <div className="space-y-4">
-        <AdvisorPanel
-          kind="cost_result"
-          label="Analizar el resultado"
-          context={{
-            materiaPrima: result.rawMaterialConsumed,
-            manoDeObra: result.directLaborTotal,
-            costosIndirectos: result.indirectCostsApplied,
-            costoProduccion: result.productionCost,
-            cogs: result.costOfGoodsSold,
-            margenBruto: result.grossMargin,
-            margenBrutoPct: result.grossMarginPct,
-          }}
-        />
-        {companyId && period && (
-          <ReconciliationCard
-            companyId={companyId}
-            period={period}
-            structureCosts={{
-              MATERIA_PRIMA: result.rawMaterialConsumed,
-              MANO_DE_OBRA: result.directLaborTotal,
-              COSTOS_INDIRECTOS: result.indirectCostsApplied,
-            }}
-          />
-        )}
-        <Card>
-          <CardHeader title="Desglose de costos" />
-          <CardBody className="overflow-x-auto p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
-                  <th className="px-6 py-3 text-left font-semibold">Concepto</th>
-                  <th className="px-6 py-3 text-right font-semibold">Importe</th>
-                  <th className="px-6 py-3 text-right font-semibold">% s/costo</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {rows.map((r) => (
-                  <tr key={r.label} className="hover:bg-surface-alt/40">
-                    <td className="px-6 py-3 text-ink-soft">{r.label}</td>
-                    <td className="px-6 py-3 text-right"><Money value={r.value} /></td>
-                    <td className="px-6 py-3 text-right text-ink-soft">
-                      {result.productionCost > 0 ? `${((r.value / result.productionCost) * 100).toFixed(1)}%` : '—'}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="bg-surface-alt font-semibold">
-                  <td className="px-6 py-3.5 text-ink">Costo de producción</td>
-                  <td className="px-6 py-3.5 text-right"><Money value={result.productionCost} /></td>
-                  <td className="px-6 py-3.5 text-right text-ink-soft">100%</td>
-                </tr>
-                <tr className="bg-granate-tenue font-bold">
-                  <td className="px-6 py-3.5 text-granate">Costo de productos vendidos (COGS)</td>
-                  <td className="px-6 py-3.5 text-right"><Money value={result.costOfGoodsSold} className="text-granate" /></td>
-                  <td className="px-6 py-3.5" />
-                </tr>
-              </tbody>
-            </table>
-          </CardBody>
-        </Card>
-
-        {Object.keys(result.detail.indirectCosts.perDepartment).length > 0 && (
-          <Card>
-            <CardHeader title="Análisis de variaciones — CIP" description="Detalle de base, cuota, aplicación y variaciones de costos indirectos" />
-            <CardBody className="p-0 overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b-2 border-line bg-surface-alt uppercase tracking-wider text-ink-soft text-[10px]">
-                    <th className="px-4 py-3 text-left font-semibold">Dpto / Centro</th>
-                    <th className="px-4 py-3 text-right font-semibold">CIP Presup.</th>
-                    <th className="px-4 py-3 text-right font-semibold">Base Presup.</th>
-                    <th className="px-4 py-3 text-right font-semibold">Cuota Presup.</th>
-                    <th className="px-4 py-3 text-right font-semibold">Base Real</th>
-                    <th className="px-4 py-3 text-right font-semibold">CIP Aplicado</th>
-                    <th className="px-4 py-3 text-right font-semibold">CIP Real</th>
-                    <th className="px-4 py-3 text-right font-semibold">Var. Presup.</th>
-                    <th className="px-4 py-3 text-right font-semibold">Var. Volumen</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {Object.entries(result.detail.indirectCosts.perDepartment).map(([dept, d]) => {
-                    const normalCapacity = d.normalCapacity ?? 0;
-                    const quota = d.quota ?? 0;
-                    const budgetedCip = normalCapacity * quota;
-                    return (
-                      <tr key={dept} className="hover:bg-surface-alt/45">
-                        <td className="px-4 py-3 font-semibold text-ink">{dept}</td>
-                        <td className="px-4 py-3 text-right"><Money value={budgetedCip} /></td>
-                        <td className="px-4 py-3 text-right font-mono">{normalCapacity} hs</td>
-                        <td className="px-4 py-3 text-right"><Money value={quota} /></td>
-                        <td className="px-4 py-3 text-right font-mono">{d.actualActivity ?? 0} hs</td>
-                        <td className="px-4 py-3 text-right font-bold text-ink"><Money value={d.appliedCip} /></td>
-                        <td className="px-4 py-3 text-right font-bold text-ink"><Money value={d.actualCip ?? d.cipTotal} /></td>
-                        <td className={cn('px-4 py-3 text-right font-medium', d.budgetVariance < 0 ? 'text-danger' : 'text-ok')}>
-                          <Money value={d.budgetVariance} />
-                        </td>
-                        <td className={cn('px-4 py-3 text-right font-medium', d.volumeVariance < 0 ? 'text-danger' : 'text-ok')}>
-                          <Money value={d.volumeVariance} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </CardBody>
-          </Card>
-        )}
-      </div>
-
-      {/* Derecha: margen + detalles */}
-      <div className="space-y-4">
-        <Card>
-          <CardBody className="space-y-3 py-8 text-center">
-            <p className="text-[11px] uppercase tracking-widest text-ink-soft">Margen bruto</p>
-            <Percent value={result.grossMarginPct} colorize className="text-5xl font-bold" />
-            <Money value={result.grossMargin} className="block text-lg text-ink-soft" />
-            <div className="pt-2">
-              <StatusBadge status={marginStatus(result.grossMarginPct, 15)}>
-                {result.grossMarginPct < 0 ? 'Venta a pérdida' : result.grossMarginPct < 15 ? 'Margen ajustado' : 'Margen sano'}
-              </StatusBadge>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader title="Detalle MOD" />
-          <CardBody className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-ink-soft">Días hábiles efectivos</span><span className="font-medium">{result.detail.directLabor.workingDays} días</span></div>
-            <div className="flex flex-col gap-0.5">
-              <div className="flex justify-between"><span className="text-ink-soft">IAP — Inasistencias pagas</span><span className="font-medium">{result.detail.directLabor.iapPercent.toFixed(2)}%</span></div>
-              {result.detail.directLabor.paidDays != null && (
-                <span className="text-[11px] text-ink-soft">
-                  IAP = {result.detail.directLabor.paidDays} días pagos / {result.detail.directLabor.workingDays} efectivos = {result.detail.directLabor.iapPercent.toFixed(2)}% · derivado, solo lectura
-                </span>
-              )}
-            </div>
-            <div className="flex justify-between"><span className="text-ink-soft">ITCS</span><span className="font-medium">{result.detail.directLabor.itcsPercent.toFixed(2)}%</span></div>
-            {Object.entries(result.detail.directLabor.hourlyRates).map(([dept, rate]) => (
-              <div key={dept} className="flex justify-between">
-                <span className="text-ink-soft">{dept}</span>
-                <span><Money value={rate} className="font-medium" /><span className="ml-1 text-[11px] text-ink-soft">/h</span></span>
-              </div>
-            ))}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader title="Detalle MP" />
-          <CardBody className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-ink-soft">Lote óptimo</span><span className="font-medium">{result.detail.rawMaterial.optimalLot.toFixed(0)} u</span></div>
-            <div className="flex justify-between"><span className="text-ink-soft">Stock final</span><span className="font-medium">{result.detail.rawMaterial.finalStockQty.toFixed(0)} u</span></div>
-            <div className="flex justify-between"><span className="text-ink-soft">Valor stock final</span><Money value={result.detail.rawMaterial.finalStockValue} className="font-medium" /></div>
-          </CardBody>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function EmptyResult() {
-  return (
-    <Card>
-      <CardBody className="py-20 text-center">
-        <Calculator className="mx-auto size-10 text-idle" />
-        <p className="mt-3 text-sm text-ink-soft">
-          Completá las secciones y presioná <strong>Calcular</strong> para ver el estado de costos.
-        </p>
-      </CardBody>
-    </Card>
-  );
-}
-
-// ── History ───────────────────────────────────────────────────────────────────
-
-function HistoryPanel({ structureId }: { structureId: string }) {
-  const { data: history, isLoading } = useCalculationHistory(structureId);
-  if (isLoading) return <p className="text-sm text-ink-soft">Cargando…</p>;
-  if (!history?.length) {
-    return (
-      <Card>
-        <CardBody className="py-12 text-center">
-          <p className="text-sm text-ink-soft">No hay cálculos todavía. Presioná <strong>Calcular</strong> para crear el primero.</p>
-        </CardBody>
-      </Card>
-    );
-  }
-  return (
-    <Card>
-      <CardHeader title="Historial de cálculos" description="Últimos 50 snapshots" />
-      <CardBody className="overflow-x-auto p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
-              {['Fecha','Costo prod.','COGS','Margen'].map((h, i) => (
-                <th key={h} className={cn('px-6 py-3 font-semibold', i === 0 ? 'text-left' : 'text-right')}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {history.map((c: any, i) => (
-              <tr key={c.id} className={cn('hover:bg-surface-alt/50', i === 0 && 'bg-action/5')}>
-                <td className="px-6 py-3 text-ink">
-                  {formatDate(c.executedAt)}
-                  {i === 0 && <span className="ml-2 rounded-full bg-action/10 px-2 py-0.5 text-[10px] font-semibold text-action">Último</span>}
-                </td>
-                <td className="px-6 py-3 text-right"><Money value={Number(c.results.productionCost)} /></td>
-                <td className="px-6 py-3 text-right"><Money value={Number(c.results.costOfGoodsSold)} /></td>
-                <td className="px-6 py-3 text-right"><Percent value={Number(c.results.grossMarginPct)} colorize /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </CardBody>
-    </Card>
   );
 }
 
@@ -1074,98 +530,4 @@ function HistoryPanel({ structureId }: { structureId: string }) {
 
 function latestToResult(latest: any): CalculationResult {
   return latest.results;
-}
-
-// ── Reconciliación: estructura vs documentos (libro de costos) ──────────────────
-
-const RECON_LABELS: Record<string, string> = {
-  MATERIA_PRIMA: 'Materia Prima',
-  MANO_DE_OBRA: 'Mano de Obra',
-  COSTOS_INDIRECTOS: 'Costos Indirectos',
-};
-
-/**
- * Compara, sin tocar el modelo, lo que dice la estructura calculada contra los
- * costos reales del libro mayor (documentos aprobados) para el mismo período.
- * Le permite al costista detectar desvíos: "presupuestaste MP en $X pero tus
- * comprobantes suman $Y". Es read-only: reconcilia a ojo, no auto-inyecta.
- */
-function ReconciliationCard({ companyId, period, structureCosts }: {
-  companyId: string;
-  period: string;
-  structureCosts: Record<string, number>;
-}) {
-  const { data, isLoading } = useLedger(companyId, period);
-  const totals = data?.totalsBySection ?? {};
-  const hasLedger = Object.keys(RECON_LABELS).some((s) => totals[s] != null);
-
-  if (isLoading || !hasLedger) return null;
-
-  return (
-    <Card>
-      <CardHeader
-        title="Reconciliación con documentos"
-        description={`Tu estructura vs lo que suman los comprobantes aprobados del período ${period}`}
-      />
-      <CardBody className="overflow-x-auto p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b-2 border-line bg-surface-alt text-[11px] uppercase tracking-wider text-ink-soft">
-              <th className="px-6 py-3 text-left font-semibold">Elemento</th>
-              <th className="px-6 py-3 text-right font-semibold">Según estructura</th>
-              <th className="px-6 py-3 text-right font-semibold">Según documentos</th>
-              <th className="px-6 py-3 text-right font-semibold">Diferencia</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {Object.entries(RECON_LABELS).map(([section, label]) => {
-              const structureVal = structureCosts[section] ?? 0;
-              const ledgerVal = totals[section];
-              if (ledgerVal == null) {
-                return (
-                  <tr key={section} className="hover:bg-surface-alt/40">
-                    <td className="px-6 py-3 text-ink-soft">{label}</td>
-                    <td className="px-6 py-3 text-right"><Money value={structureVal} /></td>
-                    <td className="px-6 py-3 text-right text-ink-soft/50">sin documentos</td>
-                    <td className="px-6 py-3 text-right text-ink-soft/50">—</td>
-                  </tr>
-                );
-              }
-              const diff = structureVal - ledgerVal;
-              const pct = ledgerVal > 0 ? (diff / ledgerVal) * 100 : null;
-              const big = pct != null && Math.abs(pct) >= 10;
-              return (
-                <tr key={section} className="hover:bg-surface-alt/40">
-                  <td className="px-6 py-3 text-ink-soft">{label}</td>
-                  <td className="px-6 py-3 text-right"><Money value={structureVal} /></td>
-                  <td className="px-6 py-3 text-right"><Money value={ledgerVal} /></td>
-                  <td className={cn('px-6 py-3 text-right tabular-nums font-medium', big ? 'text-amber-600' : 'text-ink-soft')}>
-                    {diff >= 0 ? '+' : ''}{pct != null ? `${pct.toFixed(0)}%` : '—'}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div className="px-6 py-3">
-          <p className="mb-2 text-[11px] text-ink-soft/70">
-            Una diferencia grande (≥10%) sugiere revisar: o la estructura quedó desactualizada, o faltan/sobran comprobantes cargados.
-          </p>
-          <AdvisorPanel
-            kind="reconciliation"
-            label="Explicar los desvíos"
-            context={{
-              structureCosts,
-              ledgerCosts: {
-                MATERIA_PRIMA: totals['MATERIA_PRIMA'] ?? null,
-                MANO_DE_OBRA: totals['MANO_DE_OBRA'] ?? null,
-                COSTOS_INDIRECTOS: totals['COSTOS_INDIRECTOS'] ?? null,
-              },
-              period,
-            }}
-          />
-        </div>
-      </CardBody>
-    </Card>
-  );
 }
