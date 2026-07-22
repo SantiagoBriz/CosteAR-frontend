@@ -90,6 +90,26 @@ export function useRejectProposalMutation() {
   });
 }
 
+export interface UpdateProposalInput {
+  title?: string;
+  sourceFile?: string;
+  proposedText?: string;
+  justification?: string;
+}
+
+export function useUpdateProposalMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateProposalInput }) => {
+      const res = await api.patch(`/vault/proposals/${id}`, data);
+      return res.data.data as VaultProposal;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vault-proposals'] });
+    }
+  });
+}
+
 // ---- Users Hooks ----
 export function useAdminUsers() {
   return useQuery({
