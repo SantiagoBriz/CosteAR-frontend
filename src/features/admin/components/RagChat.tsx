@@ -283,7 +283,7 @@ export function RagChat() {
                 disabled={sendQuery.isPending || transcribeAudio.isPending || (!question.trim() && !activeSessionId)}
                 className="w-10 h-10 p-0 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 flex items-center justify-center transition-all hover:scale-105"
               >
-                {sendQuery.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
+                {sendQuery.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 mr-0.5 mt-0.5" />}
               </Button>
             </div>
           </div>
