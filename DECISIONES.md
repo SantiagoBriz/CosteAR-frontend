@@ -524,3 +524,39 @@ quedara en una columna recién bloqueada tras un reordenamiento **jamás llega a
   UI de F02-#1 (el `<select>` nativo) se fundamenta en el mecanismo conocido de react-hook-form +
   `<select>` filtrado; queda la verificación manual en navegador para el usuario (pasos en el
   resumen). Suites: `vitest run` 22✅, `typecheck` ✅, `build` ✅ (mismos avisos preexistentes de chunk).
+
+---
+
+## F06 — La ficha PPP muestra los movimientos pendientes de imputar y los hace accionables
+
+**Diagnóstico (STEP 1).** La tabla "Movimientos (ficha PPP)" (hoy en el sub-componente
+`MaterialDetailForm.tsx`, extraído en el refactor reciente) se dibujaba SÓLO con el JSON de la sección
+(`material.movements`), que no tiene noción de imputación ni vínculo con los `data_points`. El estado
+"pendiente" (`periodoImputado = null`) vive en el store de trazabilidad — el mismo que cuenta el motor
+(F04). **No había filtro por período en el componente ni un endpoint que filtrara: el dato nunca se
+cruzaba con su estado de imputación.** Capa culpable: el flujo de datos del frontend.
+
+**Fix (STEP 2).** Nuevo hook `useMpMovements(structureId)` (GET `/structures/:id/mp-movements`, backend)
+que trae los movimientos de MP con su `pending` y sus `dataPointIds`. En `MaterialDetailForm`:
+- Cada fila cuyo movimiento GUARDADO casa con un pendiente muestra el pill **"Pendiente de imputar"**
+  (`PendingBadge`). El pill ES el botón que abre el modal.
+- Al tocarlo se encola en el `imputacionQueue` ya existente → se reusa el mismo `ImputacionModal` +
+  `useImputar` + `proposeImputation` (NO se creó un segundo modal, criterio de la tarea).
+- Al resolver, `useImputar` invalida `['structures', id]` (prefijo de `['structures', id, 'mp-movements']`)
+  → la lista se refresca y el pill se limpia. Las filas ya imputadas no cambian.
+
+**Decisiones.**
+- **Clave natural** `(tipo · detalle · fecha)` para casar fila↔data points (la sección no guarda
+  `movementId`); detalle vacío → `'(sin detalle)'`. Se usa el movimiento GUARDADO (`material.movements[i]`),
+  no la fila en edición, para que el pill no parpadee mientras se tipea sin guardar.
+- **Huérfanos:** un pendiente que el motor cuenta pero sin fila en esta sección se muestra igual como
+  fila extra (sólo lectura, con pill accionable), para que ningún dato sin imputar quede invisible.
+- **Cache-key bajo `['structures', id, ...]`** a propósito, para colgar de la invalidación de `useImputar`
+  sin tocar la query de la config (`['cost-structures', id]`) → no resetea el formulario en edición.
+- Regla #6/#7: al usuario sólo se le muestra el detalle humano + una acción en pantalla; los
+  `dataPointIds` son internos y nunca se ven.
+
+**Verificación (navegador contra dev + DB real).** Ver DECISIONES.md del backend (`Costear.api`) — flujo
+end-to-end: alta de compra fuera de período → pill "Pendiente de imputar" → click → modal → imputar →
+pill limpio y fila normal, con el conteo del motor casando en todo momento. `typecheck` ✅, `build` ✅,
+`vitest` 22✅.
