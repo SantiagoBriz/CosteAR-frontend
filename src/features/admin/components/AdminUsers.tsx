@@ -152,9 +152,9 @@ export function AdminUsers() {
               <div>
                 <h3 className="text-lg font-bold text-ink flex items-center gap-2">
                   <UserPlus className="size-5 text-indigo-500" />
-                  Crear Nuevo Usuario
+                  Crear Nuevo Administrador
                 </h3>
-                <p className="text-xs text-ink-soft mt-1">Generá credenciales para el staff administrativo o costistas operativos.</p>
+                <p className="text-xs text-ink-soft mt-1">Generá credenciales para un nuevo miembro del staff administrativo.</p>
               </div>
               
               {errorMsg && <div className="text-red-600 text-xs font-bold bg-red-50 border border-red-200 p-3 rounded-lg">{errorMsg}</div>}
@@ -175,12 +175,6 @@ export function AdminUsers() {
                   <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-line bg-surface-alt rounded-lg p-2.5 text-sm font-medium text-ink focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all" placeholder="••••••••" />
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-soft mb-1.5">Nivel de Acceso (Rol)</label>
-                  <select value={role} onChange={e => setRole(e.target.value)} className="w-full border-line bg-surface-alt rounded-lg p-2.5 text-sm font-bold text-ink focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all appearance-none cursor-pointer">
-                    <option value="ADMIN">Administrador General (Acceso Total)</option>
-                    <option value="COSTISTA">Costista (Operador del Sistema)</option>
-                  </select>
                 </div>
               </div>
 
