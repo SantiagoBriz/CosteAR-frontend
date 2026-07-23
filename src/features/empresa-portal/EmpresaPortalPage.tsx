@@ -15,6 +15,7 @@ import { CompanyStructuresList } from './components/StructureSelector';
 import { ChatTimeline, Submission } from './components/ChatTimeline';
 import { ChatComposer } from './components/ChatComposer';
 import { SubmissionGrid } from './components/SubmissionGrid';
+import { MetricsDashboard } from './components/MetricsDashboard';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,8 +44,8 @@ export function EmpresaPortalPage() {
   const user = useAuthStore((s) => s.user);
   const qc = useQueryClient();
 
-  // Tab activa del menú del operador: chat, feed (list), o invite (unirse)
-  const [activeTab, setActiveTab] = useState<'chat' | 'feed' | 'invite'>('chat');
+  // Tab activa del menú del operador: chat, feed (list), metrics, o invite (unirse)
+  const [activeTab, setActiveTab] = useState<'chat' | 'feed' | 'metrics' | 'invite'>('chat');
 
   // Empresa y estructura activa
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
@@ -383,6 +384,18 @@ export function EmpresaPortalPage() {
                 onNavigateToChat={() => setActiveTab('chat')}
               />
             )}
+
+          {/* TAB: MÉTRICAS */}
+          {activeTab === 'metrics' && (
+            <div className="flex flex-1 overflow-y-auto bg-surface relative z-10 w-full h-full pb-20">
+              <div className="w-full">
+                <MetricsDashboard 
+                  activeConnectionId={activeConnectionId} 
+                  activeStructureId={activeStructureId} 
+                />
+              </div>
+            </div>
+          )}
 
             {activeTab === 'invite' && (
               <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 pb-28 lg:pb-8">

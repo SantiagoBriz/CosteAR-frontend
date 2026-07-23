@@ -12,8 +12,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
-  X, Send, Loader2, Sparkles, Building2, ClipboardCheck, Zap, User,
+  X, Send, Loader2, Sparkles, Building2, ClipboardCheck, Zap, User, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { CompanyChips, ActionCard, needsCompanySelection } from './components/ChatBubble';
@@ -100,6 +101,8 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [showQuick, setShowQuick] = useState(true);
+  const [feedbackMsgId, setFeedbackMsgId] = useState<string | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -191,6 +194,20 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
         },
       ]);
     },
+  });
+
+  const feedbackMutation = useMutation({
+    mutationFn: async (data: { type: 'ASSISTANT_MISS' | 'IMPROVEMENT_REPORT'; message: string; details?: string }) => {
+      await api.post('/costista-chat/feedback', data);
+    },
+    onSuccess: () => {
+      toast.success('¡Gracias por tu feedback!', { icon: '🤖' });
+      setFeedbackMsgId(null);
+      setFeedbackText('');
+    },
+    onError: () => {
+      toast.error('Error al enviar el feedback');
+    }
   });
 
   // --- Handlers ---
@@ -368,6 +385,56 @@ export function CostitaChat({ companies = [] }: { companies?: Company[] }) {
                       <div className="rounded-2xl rounded-tl-none bg-gray-50 px-4 py-3 text-[13px] leading-relaxed text-gray-700">
                         {msg.content}
                       </div>
+
+                      {/* Botones de Feedback (ThumbsUp / ThumbsDown) */}
+                      {!msg.aiResponse?.actionType || msg.aiResponse.actionType === 'INFO_ONLY' ? (
+                        <div className="flex items-center gap-1.5 mt-1 px-1">
+                          <button
+                            onClick={() => toast.success('¡Gracias por tu feedback!', { icon: '🤖' })}
+                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Respuesta útil"
+                          >
+                            <ThumbsUp className="size-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setFeedbackMsgId(msg.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Respuesta incorrecta"
+                          >
+                            <ThumbsDown className="size-3.5" />
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {/* Modal de Feedback Negativo (In-line) */}
+                      {feedbackMsgId === msg.id && (
+                        <div className="mt-2 rounded-xl border border-red-100 bg-red-50/50 p-3 shadow-sm">
+                          <p className="text-[11px] font-semibold text-red-800 mb-2">¿En qué se equivocó Costita?</p>
+                          <textarea
+                            autoFocus
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            placeholder="Ej: El concepto no es Materia Prima, es Mano de Obra..."
+                            className="w-full text-[12px] p-2 rounded-lg border border-red-200 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 min-h-[60px] resize-none"
+                          />
+                          <div className="flex justify-end gap-2 mt-2">
+                            <button
+                              onClick={() => { setFeedbackMsgId(null); setFeedbackText(''); }}
+                              className="px-3 py-1.5 text-[11px] font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={() => feedbackMutation.mutate({ type: 'ASSISTANT_MISS', message: msg.content, details: feedbackText })}
+                              disabled={feedbackMutation.isPending}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
+                            >
+                              {feedbackMutation.isPending && <Loader2 className="size-3 animate-spin" />}
+                              Enviar reporte
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Selector de empresa (cuando la IA no pudo identificarla) */}
                       {msg.aiResponse &&
