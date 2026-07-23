@@ -651,3 +651,53 @@ incluye el escenario exacto del reporte). Navegador contra dev: se importó el *
 aceptación → reporte (MP 0/CIP 0/53%) y F04-incompleto pintan "MARGEN NO CONFIABLE" ámbar; completo
 pinta "MARGEN SANO" verde. (No se pudo usar el flujo autenticado completo: ingresar contraseña es una
 acción que el asistente no ejecuta; la verificación se hizo sobre el componente shippeado real.)
+
+## F09 — Pulido de demo: cerrar los 🟡 del reporte del 20/07 (identificación, cierre, fechas, ids)
+
+Lote de defectos chicos e independientes de UI. Cada uno menor; juntos son lo que hace que el
+producto se sienta sin terminar en una demo. Se releyó el estado ACTUAL de cada pantalla (el equipo
+refactorizó varias desde el 20/07) y se trabajó contra el código como está hoy.
+
+**F09-1 — "Completa" exige identificación (no solo datos de cálculo).**
+Antes una materia prima con nombre/unidad vacíos mostraba el verde "Completa" (se veía "Sin nombre")
+con solo tener costo unitario y algún movimiento. Ahora "Completa" pide IDENTIFICACIÓN real.
+- **Decisión — set mínimo:** `nombre` + `unidad`. El `código de mercado` y el `proveedor habitual`
+  quedan OPCIONALES: no siempre se conocen al cargar y no hacen a la identidad mínima de la MP para
+  costear. Regla final: `complete = (nombre && unidad) && (costo unitario > 0 && ≥1 movimiento)`.
+- Archivo: `RawMaterialsList.tsx`. Sin identificación → badge gris "Incompleta".
+
+**F09-2 — "cierra en 0" distingue "cerró de verdad" de "no repartió nada".**
+Antes cualquier centro de servicio pintaba el mismo verde ("cierra en 0" + estado verde) aunque su
+reparto secundario estuviera vacío o roto. Ahora:
+- **Señal usada:** la CONFIG del prorrateo secundario (los pesos fijo/variable que cargó el costista).
+  Un servicio "repartió algo" solo si tiene fila de reparto, con destinos, y con al menos un peso ≠ 0.
+  Es exactamente el caso "reparto empty or broken" del reporte. (Se eligió la config y no el resultado
+  del cálculo porque es el origen del defecto y está siempre disponible en esta vista de lectura.)
+- Servicio que repartió → verde `Cerrado` + "cierra en 0". Servicio que no → estado ámbar
+  `Sin reparto` + texto "sin reparto", y en su ficha un aviso que explica que todavía no cerró.
+- Archivo: `CostCentersView.tsx` (helper `serviceDistributes`).
+
+**F09-3 — Fechas en DD/MM/AAAA (formato argentino), por helper compartido.**
+Barrido de todas las fechas visibles. Hallazgo: el código YA renderiza es-AR (DD/MM/AAAA) en todos
+lados — los helpers `formatDate` / `formatDateOnly` (`lib/utils.ts`) ya existían y estaban en uso, y el
+`07/17/2026` del reporte correspondía a pantallas ya refactorizadas desde el 20/07. Se completó el
+barrido ruteando por el helper los dos renders de fecha que quedaban con `toLocaleDateString('es-AR')`
+inline (`CostCentersView` traza de bases, `MetricsDashboard` "congelado el"). Los `<input type="date">`
+(fecha del hecho) son nativos: el navegador los pinta en el locale del SO por spec y NO se pueden forzar
+a DD/MM desde el código; su valor guardado y todo lo que se MUESTRA en modo lectura ya va por el helper
+en DD/MM/AAAA.
+
+**F09-4 — Sin ids internos en texto de usuario.**
+Antes, si un centro no tenía nombre cargado, la UI mostraba su id autogenerado (`prod1`/`serv2`…) como
+rótulo. Se creó `centerLabel(center)` en `lib/utils.ts` (`nombre || 'Centro sin nombre'`, nunca el id) y
+se ruteó por él TODA referencia de usuario a un centro: lista y ficha de centros, prorrateo primario y
+secundario, ajustes productivos, destinos del reparto. La base sin nombre cae a "Base sin nombre".
+- **Frontera documentada:** el ÚNICO lugar donde el id sigue visible es su propio campo editable en
+  "Centros de costo" (el costista asigna ahí el código a mano, como un SKU) — es un valor de input, no
+  un rótulo/mensaje. El `id inmutable: …` de la ficha de trazabilidad es un UUID de auditoría a propósito
+  (registro auditable), no un slug tipo `serv3` que reemplace a un nombre; se conserva.
+
+**Verificación.** `typecheck` ✅ + `build` (tsc + vite) ✅ + `vitest` 32✅ sin regresión. La verificación
+end-to-end en navegador contra dev requiere sesión autenticada (ingresar contraseña es una acción que el
+asistente no ejecuta); los cambios son de lógica de presentación pura y quedan cubiertos por
+typecheck/build/suite. Pasos de prueba manual para cada ítem, en el resumen al usuario.

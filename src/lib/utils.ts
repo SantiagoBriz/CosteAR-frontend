@@ -45,6 +45,18 @@ export function percentInputToFraction(pct: unknown): number {
   return Number((Number(pct) / 100).toFixed(8));
 }
 
+/**
+ * Etiqueta HUMANA de un centro de costo. Nunca expone el id interno
+ * (prod1/serv2…): esos códigos autogenerados jamás deben aparecer en un texto
+ * o rótulo que ve el usuario (regla del proyecto #7). Si el centro todavía no
+ * tiene nombre cargado, se muestra un genérico —nunca el id—.
+ */
+export function centerLabel(
+  center: { name?: string | null; id?: string | null } | null | undefined,
+): string {
+  return center?.name?.trim() || 'Centro sin nombre';
+}
+
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
   return new Intl.DateTimeFormat('es-AR', {
