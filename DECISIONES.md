@@ -450,3 +450,77 @@ el dato → "Resolver" abre el modal → imputar borra el dato de la lista sin r
 todos, el aviso pasa a verde → se crea otro pendiente → "Cerrar período" se bloquea con el mensaje
 en español (sin ids/endpoints) y ofrece resolver ahí mismo → resueltos, el período CIERRA. Suites:
 `vitest run` 20✅ (6 nuevos), `typecheck` ✅, `build` ✅ (mismos avisos preexistentes de chunk).
+
+---
+
+## Sesión 2026-07-22 — F02 + F03: identidad de fila, borrado de centro y escalonado en el prorrateo secundario
+
+Tres defectos relacionados del prorrateo secundario, hallados en pruebas de caja negra el 20/07.
+Se arreglan juntos, sin tocar el contrato F01-B (pares explícitos con `centroDestinoId`). El
+refactor reciente ya había partido la pantalla: la lógica vive en
+`components/indirect-costs/SecondaryAllocationSection.tsx` (tabla del reparto) y en
+`IndirectCostsForm.tsx` (estado del formulario); el borde de guardar/cargar en
+`components/indirect-costs/helpers.ts`. Se trabajó sobre el código como está HOY.
+
+### F02 — Reordenar/eliminar una fila secundaria perdía su centro
+
+**Causa raíz.** Las flechas ▲▼ (`serviceDists.move`) y el borrado (`serviceDists.remove`) mueven
+la fila entera del DOM con su `key={f.id}` estable (los `<input>` de % viajan bien, por eso el
+síntoma era "los números sí se mueven"). El que se rompía era el `<select>` de "Centro de
+servicio": su lista de `<option>` está **filtrada** para no ofrecer un centro ya usado en otra fila.
+Durante el reordenamiento hay un tick donde el valor observado (`watchedServiceDists`) va atrasado
+respecto de las filas ya movidas, y el centro propio aparece momentáneamente como "usado en otra
+fila" → se quita de las opciones de AMBAS filas → un `<select>` nativo que no encuentra su valor
+entre sus `<option>` se resetea solo a "Elegir…". Esa es la corrupción silenciosa (familia N4).
+
+**Fix (decisión).** En vez de cambiar la `key` (ya era estable, no el índice), se garantiza que **el
+centro ya elegido en la fila esté SIEMPRE entre las opciones**: `if (c.id === selfId) return true`
+antes del filtro de "usado en otras filas". `selfId` se lee con `getValues(...)` (valor VIVO y
+síncrono del formulario), no del `watch` atrasado, para que la opción presente coincida exactamente
+con el valor que react-hook-form va a fijar en el DOM tras el `move/remove`. Cierra la ventana de
+carrera. No se tocó el mecanismo de reordenamiento: sigue siendo puro reordenamiento.
+
+### F02 (defecto #2) — Borrar un CENTRO dejaba una referencia colgada
+
+**Causa raíz.** Al eliminar un centro (`centers.remove`) que se usaba como DESTINO, los `Record`
+del reparto (`toProductive*`) de las demás filas seguían con su clave → `centroDestinoId` colgado
+que se enviaba al backend (par a un centro inexistente).
+
+**Fix (doble red, decisión).**
+1. **En el formulario** (`IndirectCostsForm.tsx`): efecto nuevo, disparado por el cambio del
+   conjunto de centros destino, que purga de TODAS las filas cualquier clave que ya no corresponda a
+   un centro existente. Idempotente y auto-sanador (también limpia datos viejos corruptos al cargar).
+   Así no queda columna fantasma ni referencia colgada en la UI. Las columnas se dibujan desde la
+   lista viva de centros, con lo que un centro borrado no genera columna (no hay "columna fantasma").
+2. **En el borde del payload** (`helpers.ts`): al guardar, se descarta todo `centroDestinoId` que no
+   esté en `centers`. Garantía en el punto que ve el backend, aunque el estado del formulario
+   quedara con una clave vieja. Es la red testeable de forma determinista.
+
+### F03 — La regla del escalonado se explicaba pero no se aplicaba
+
+El texto ya decía que un servicio no puede repartir a uno que ya cerró, pero sólo se bloqueaba la
+columna propia de cada fila (`isSelf`).
+
+**Fix (decisión).** Para la fila *n* se bloquean las columnas de **todos los servicios de las filas
+0..n (incluida ella misma)** — los que ya cerraron según el orden de las flechas. Se calcula por
+fila `closedServiceIds` a partir del orden vivo de filas, así que **se recalcula tras cualquier
+reordenamiento**. Las columnas bloqueadas se renderizan como "—" (no un input editable en 0), tanto
+en modo Manual como en modo Automático (por base). Además, red de seguridad en el guardado
+(`helpers.ts`): se descarta todo destino a un servicio ya cerrado, de modo que un valor viejo que
+quedara en una columna recién bloqueada tras un reordenamiento **jamás llega al motor** (protege el
+"mismos números tras reordenar" del contrato F01).
+
+### Verificación
+
+- **Tests deterministas** (`prorrateo-secundario-pares.test.ts`, 8 casos, todo verde): se agregaron
+  2 casos nuevos — (F03) descarta el reparto a un servicio ya cerrado pero conserva el reparto hacia
+  adelante y mantiene `closureOrder`; (F02) un destino a un centro eliminado no llega al payload.
+  Los 6 casos previos del contrato F01-B siguen verdes (sin regresión de "mismos números").
+- **No se agregó infraestructura de test de DOM** (RTL/jsdom/user-event no están instalados y no hay
+  entorno jsdom configurado; instalarlos era un cambio pesado y fuera de alcance) **ni se levantó el
+  stack completo** (backend + login + datos) para un click-through extremo a extremo, porque esta es
+  una tarea sólo-frontend y hubiera sido un pozo. En su lugar se blindó y se testeó el BORDE del
+  contrato (el payload que ve el backend), que es donde importa la corrección. El comportamiento de
+  UI de F02-#1 (el `<select>` nativo) se fundamenta en el mecanismo conocido de react-hook-form +
+  `<select>` filtrado; queda la verificación manual en navegador para el usuario (pasos en el
+  resumen). Suites: `vitest run` 22✅, `typecheck` ✅, `build` ✅ (mismos avisos preexistentes de chunk).

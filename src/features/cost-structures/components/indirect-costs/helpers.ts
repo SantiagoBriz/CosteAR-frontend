@@ -66,6 +66,15 @@ export function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
 }
 
 export function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
+  // DEFECT 2 — red de seguridad en el BORDE del payload: sólo son destinos
+  // válidos los centros que existen. Si se eliminó un centro que se usaba como
+  // destino del reparto secundario, ningún par colgado (`centroDestinoId`
+  // apuntando a un centro inexistente) llega al backend, aunque el estado del
+  // formulario quedara con una clave vieja.
+  const validCenterIds = new Set<string>(
+    (data.centers ?? []).map((c: any) => c?.id).filter((x: any): x is string => !!x)
+  );
+
   const fallbackNum = (val: any) => {
     if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
     return Number(val);
@@ -92,15 +101,29 @@ export function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
       };
       return mode === 'base' ? { ...common, baseCode: (c.baseCode ?? '').trim() } : common;
     }),
-    serviceDistributions: (data.serviceDistributions ?? []).map((s: any) => {
+    serviceDistributions: (data.serviceDistributions ?? []).map((s: any, idx: number) => {
       const mode = s.distributionMode === 'base' ? 'base' : 'manual';
       const serviceCenterId = s.serviceCenterId;
+
+      // Escalonado (Parte 4.4): el orden de las filas es el orden de cierre. Un
+      // servicio sólo puede repartir a servicios que TODAVÍA NO cerraron (filas
+      // posteriores) y a los productivos; nunca a un servicio ya cerrado ni a sí
+      // mismo. Los servicios de las filas 0..idx ya cerraron para esta fila, así
+      // que descartamos cualquier destino que apunte a ellos. Es una red de
+      // seguridad: aunque la UI dejara un valor viejo en una columna que quedó
+      // bloqueada tras un reordenamiento, jamás llega al motor de cálculo.
+      const closedServiceIds = new Set<string>(
+        (data.serviceDistributions ?? [])
+          .slice(0, idx + 1)
+          .map((r: any) => r?.serviceCenterId)
+          .filter((x: any): x is string => !!x)
+      );
 
       let distributions: any[] = [];
       if (mode === 'base') {
         const units = cleanRecord(s.toProductive);
         distributions = Object.keys(units)
-          .filter((id) => id && id !== serviceCenterId)
+          .filter((id) => id && validCenterIds.has(id) && !closedServiceIds.has(id))
           .map((id) => ({ centroDestinoId: id, fijo: units[id]!, variable: units[id]! }))
           .filter((p) => p.fijo !== 0);
       } else {
@@ -108,7 +131,7 @@ export function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
         const va = cleanRecord(s.toProductiveVariable);
         const ids = new Set([...Object.keys(fx), ...Object.keys(va)]);
         distributions = [...ids]
-          .filter((id) => id && id !== serviceCenterId)
+          .filter((id) => id && validCenterIds.has(id) && !closedServiceIds.has(id))
           .map((id) => ({ centroDestinoId: id, fijo: fx[id] ?? 0, variable: va[id] ?? 0 }))
           .filter((p) => p.fijo !== 0 || p.variable !== 0);
       }

@@ -39,6 +39,20 @@ export function useVaultFeedbackMutation() {
   });
 }
 
+// ---- Index Hook ----
+export function useVaultIndexMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post('/vault/index');
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+    }
+  });
+}
+
 // ---- Stats Hook ----
 export function useAdminStats() {
   return useQuery({

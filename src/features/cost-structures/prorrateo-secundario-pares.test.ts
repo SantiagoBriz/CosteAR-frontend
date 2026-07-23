@@ -113,6 +113,73 @@ describe('F01-B — reparto secundario: enviar y leer por pares explícitos', ()
     });
   });
 
+  it('SUBMIT (F03): descarta el reparto a un servicio que YA cerró (escalonado), pero conserva el reparto hacia adelante', () => {
+    const twoServices = {
+      ...baseForm,
+      centers: [
+        { id: 'mecanizado', name: 'Mecanizado', type: 'productive' },
+        { id: 'terminado', name: 'Terminado', type: 'productive' },
+        { id: 'mant', name: 'Mantenimiento', type: 'service' },
+        { id: 'admplanta', name: 'Adm. Planta', type: 'service' },
+      ],
+    };
+    const config = cleanIndirectCostsForSubmit({
+      ...twoServices,
+      serviceDistributions: [
+        {
+          // Fila 1 (cierra primero): puede repartir a admplanta, que aún no cerró.
+          serviceCenterId: 'mant',
+          distributionMode: 'manual',
+          toProductiveFixed: { mecanizado: 50, terminado: 40, admplanta: 10 },
+          toProductiveVariable: { mecanizado: 50, terminado: 40, admplanta: 10 },
+        },
+        {
+          // Fila 2: NO puede repartir a mant (ya cerró) — valor viejo que quedó
+          // en una columna que ahora está bloqueada. Debe descartarse.
+          serviceCenterId: 'admplanta',
+          distributionMode: 'manual',
+          toProductiveFixed: { mecanizado: 55, terminado: 45, mant: 99 },
+          toProductiveVariable: { mecanizado: 55, terminado: 45, mant: 99 },
+        },
+      ],
+    });
+    // Fila 1 conserva el reparto hacia adelante (a admplanta, todavía abierto).
+    const row1 = config.serviceDistributions[0]!.distributions.map((p) => p.centroDestinoId);
+    expect(row1).toContain('admplanta');
+    expect(row1).toEqual(['mecanizado', 'terminado', 'admplanta']);
+    // Fila 2 descarta el destino a mant (servicio ya cerrado) y a sí misma.
+    const row2 = config.serviceDistributions[1]!.distributions.map((p) => p.centroDestinoId);
+    expect(row2).not.toContain('mant');
+    expect(row2).not.toContain('admplanta');
+    expect(row2).toEqual(['mecanizado', 'terminado']);
+    // El orden de cierre viaja como contrato F01.
+    expect(config.closureOrder).toEqual(['mant', 'admplanta']);
+  });
+
+  it('SUBMIT (F02): un destino que apunta a un centro ELIMINADO no llega al payload (sin referencia colgada)', () => {
+    // El centro 'terminado' fue eliminado: ya no está en `centers`, pero el
+    // Record del formulario todavía tiene su clave. No debe sobrevivir.
+    const config = cleanIndirectCostsForSubmit({
+      centers: [
+        { id: 'mecanizado', name: 'Mecanizado', type: 'productive' },
+        { id: 'mant', name: 'Mantenimiento', type: 'service' },
+      ],
+      concepts: [],
+      productiveSettings: [],
+      serviceDistributions: [
+        {
+          serviceCenterId: 'mant',
+          distributionMode: 'manual',
+          toProductiveFixed: { mecanizado: 60, terminado: 40 },
+          toProductiveVariable: { mecanizado: 60, terminado: 40 },
+        },
+      ],
+    });
+    const ids = config.serviceDistributions[0]!.distributions.map((p) => p.centroDestinoId);
+    expect(ids).not.toContain('terminado'); // centro eliminado → sin referencia colgada
+    expect(ids).toEqual(['mecanizado']);
+  });
+
   it('LOAD: lee distributions del backend a los Records por id que edita la UI', () => {
     const fromBackend: IndirectCostConfig = {
       centers: baseForm.centers as IndirectCostConfig['centers'],
