@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
+import { Toaster } from 'react-hot-toast';
 import axios from 'axios';
 import { router } from './router';
 import { API_BASE, refreshAccessToken } from './lib/api';
@@ -88,6 +89,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      <Toaster position="top-center" toastOptions={{ duration: 4000, style: { background: '#1c1c1c', color: '#fff', fontSize: '13px', fontWeight: 'bold' } }} />
       <AuthBootstrap>
         <RouterProvider router={router} />
       </AuthBootstrap>

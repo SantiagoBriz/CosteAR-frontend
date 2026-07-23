@@ -43,35 +43,49 @@ export function AdminUsers() {
 
   return (
     <div className="space-y-6 animate-in fade-in">
-      <div className="flex justify-between items-center bg-surface-alt p-5 rounded-xl border border-line shadow-sm">
-        <div>
-          <h2 className="text-lg font-bold text-ink flex items-center gap-2">
-            <UsersIcon className="size-5 text-indigo-500" />
-            Gestión de Staff y Accesos
-          </h2>
-          <p className="text-sm text-ink-soft mt-1">
-            Administrá las cuentas con permisos especiales para ingresar a CosteAR.
-          </p>
+      {/* Header */}
+      <div className="relative overflow-hidden bg-surface p-6 sm:p-8 rounded-[24px] border border-line shadow-sm">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-ink flex items-center gap-3 tracking-tight">
+              <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100/50">
+                <UsersIcon className="size-5" />
+              </div>
+              Staff & Accesos
+            </h2>
+            <p className="text-sm text-ink-soft mt-2 max-w-md leading-relaxed">
+              Administrá las cuentas con permisos especiales para operar y configurar la plataforma CosteAR.
+            </p>
+          </div>
+          <Button 
+            onClick={() => setShowForm(true)} 
+            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-5 shadow-sm shadow-indigo-200/50 transition-all hover:shadow-md hover:shadow-indigo-200"
+          >
+            <UserPlus className="size-4.5" />
+            Nuevo Usuario
+          </Button>
         </div>
-        <Button onClick={() => setShowForm(true)} className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
-          <UserPlus className="size-4" />
-          Nuevo Usuario
-        </Button>
       </div>
 
-      <div className="flex gap-2 bg-surface-alt p-1 rounded-lg border border-line w-fit">
+      {/* Tabs */}
+      <div className="flex items-center gap-2 bg-surface-alt/50 p-1.5 rounded-[18px] border border-line w-fit backdrop-blur-sm shadow-inner">
         <button
           onClick={() => setActiveTab('STAFF')}
-          className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
-            activeTab === 'STAFF' ? 'bg-surface shadow-sm text-indigo-700' : 'text-ink-soft hover:text-ink'
+          className={`px-5 py-2.5 rounded-[14px] text-sm font-bold transition-all duration-200 ${
+            activeTab === 'STAFF' 
+              ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] text-indigo-700 scale-100' 
+              : 'text-ink-soft hover:text-ink hover:bg-black/5 scale-95'
           }`}
         >
           Staff (Admins)
         </button>
         <button
           onClick={() => setActiveTab('COSTISTAS')}
-          className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
-            activeTab === 'COSTISTAS' ? 'bg-surface shadow-sm text-indigo-700' : 'text-ink-soft hover:text-ink'
+          className={`px-5 py-2.5 rounded-[14px] text-sm font-bold transition-all duration-200 ${
+            activeTab === 'COSTISTAS' 
+              ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] text-indigo-700 scale-100' 
+              : 'text-ink-soft hover:text-ink hover:bg-black/5 scale-95'
           }`}
         >
           Costistas / Operarios

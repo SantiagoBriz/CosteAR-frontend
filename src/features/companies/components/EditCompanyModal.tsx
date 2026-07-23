@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useUpdateCompany } from '../company-hooks';
 import { apiErrorMessage } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 interface EditCompanyModalProps {
   company: { id: string; name: string; industry: string | null; cuit?: string | null };
@@ -29,7 +30,7 @@ export function EditCompanyModal({ company, onClose }: EditCompanyModalProps) {
       });
       onClose();
     } catch (e) {
-      alert('Error al actualizar los datos: ' + apiErrorMessage(e));
+      toast.error('Error al actualizar los datos: ' + apiErrorMessage(e));
     }
   });
 

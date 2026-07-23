@@ -11,6 +11,7 @@ import { CompanyStructuresList } from './components/CompanyStructuresList';
 import { CompanyLedgerTab } from './components/CompanyLedgerTab';
 import { CompanyHistoryTab } from './components/CompanyHistoryTab';
 import { CompanyOperatorsTab } from './components/CompanyOperatorsTab';
+import toast from 'react-hot-toast';
 
 export function CompanyDetailPage() {
   const { id } = useParams({ from: '/companies/$id' });
@@ -28,7 +29,7 @@ export function CompanyDetailPage() {
         await delCompany.mutateAsync(id);
         navigate({ to: '/companies' });
       } catch (e) {
-        alert('Error al eliminar la empresa: ' + apiErrorMessage(e));
+        toast.error('Error al eliminar la empresa: ' + apiErrorMessage(e));
       }
     }
   };
