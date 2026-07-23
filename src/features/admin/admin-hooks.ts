@@ -47,7 +47,7 @@ export function useAdminStats() {
       const res = await api.get('/admin/stats');
       return res.data.data as {
         saas: { totalUsers: number; activeUsersToday: number; totalCompanies: number };
-        vault: { totalChunks: number; totalSignals: number; pendingSignals: number; ragMisses: number; userCorrections: number };
+        vault: { totalChunks: number; totalSignals: number; pendingSignals: number; ragMisses: number; userCorrections: number; signalsBySource: Record<string, number> };
       };
     }
   });

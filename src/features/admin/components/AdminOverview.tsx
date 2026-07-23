@@ -137,6 +137,24 @@ export function AdminOverview() {
               </p>
             </div>
           </Card>
+          {/* Learning Sources */}
+          <Card className="p-6 border-line bg-surface col-span-1 md:col-span-2">
+            <h3 className="text-sm font-semibold text-ink-soft mb-4">Señales por Fuente de Origen</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-surface-alt border border-line">
+                <p className="text-[11px] font-bold text-ink-soft uppercase">Pipeline Nocturno</p>
+                <p className="text-2xl font-black text-ink mt-1">{stats?.vault.signalsBySource?.['PIPELINE_NOCTURNO'] ?? 0}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-surface-alt border border-line">
+                <p className="text-[11px] font-bold text-ink-soft uppercase">Validaciones (Humano)</p>
+                <p className="text-2xl font-black text-ink mt-1">{stats?.vault.signalsBySource?.['VALIDACIONES_CORRECCION'] ?? 0}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-surface-alt border border-line">
+                <p className="text-[11px] font-bold text-ink-soft uppercase">Chat Costita</p>
+                <p className="text-2xl font-black text-ink mt-1">{stats?.vault.signalsBySource?.['COSTISTA_CHAT'] ?? 0}</p>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
 
