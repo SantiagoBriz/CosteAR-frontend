@@ -229,7 +229,7 @@ export function RagChat() {
               placeholder="Escribí tu consulta..."
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              className="flex-1 resize-none bg-transparent min-h-[44px] max-h-[120px] p-2 focus:outline-none text-sm"
+              className="flex-1 resize-none bg-transparent min-h-[44px] max-h-[120px] p-2 focus:outline-none outline-none border-none ring-0 focus:ring-0 text-sm"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();

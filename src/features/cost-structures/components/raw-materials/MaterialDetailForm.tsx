@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useCreateDataPoint, useImputar } from '../../trazabilidad-hooks';
-import { proposeImputation } from '../../imputacion';
+import { proposeImputation, newTrazableMovements } from '../../imputacion';
 import { ImputacionModal } from '../../ImputacionModal';
 import { type RawMaterialConfig, type StockMovement } from '../../cost-structure-types';
 import type { ImputacionOption } from '../../trazabilidad-types';
@@ -53,12 +53,14 @@ export function MaterialDetailForm({ structureId, period, material, onBack, onSa
   const [imputacionQueue, setImputacionQueue] = useState<ImputacionQueueItem[]>([]);
   const currentImputacion = imputacionQueue[0];
 
-  async function registerTrazableMovements(saved: RawMaterialConfig) {
-    const baseCount = baseMovementsCountRef.current;
-    const newMovements = saved.movements.slice(baseCount).filter((m) => m.date);
+  // Recibe la lista de movimientos nuevos YA calculada (con `baseCount`
+  // capturado antes de guardar; ver `newTrazableMovements`). No la recalcula
+  // acá: al llegar a este punto el guardado ya subió el contador base y el
+  // slice daría vacío (ese era el bug F04).
+  async function registerTrazableMovements(newMovements: StockMovement[]) {
     const queueItems: ImputacionQueueItem[] = [];
 
-    for (const m of newMovements as StockMovement[]) {
+    for (const m of newMovements) {
       try {
         const movementId = crypto.randomUUID();
         const label = `${m.type === 'purchase' ? 'Compra' : 'Consumo'} — ${m.detail || '(sin detalle)'}`;
@@ -345,9 +347,14 @@ export function MaterialDetailForm({ structureId, period, material, onBack, onSa
       loading={saving}
       onConfirm={async () => {
         if (!pending) return;
+        // D.3: capturar los movimientos nuevos ANTES de guardar. Guardar
+        // re-sincroniza el prop `material` y sube `baseMovementsCountRef` al
+        // total nuevo; si se calculara después, el slice daría vacío y no se
+        // registraría ningún dato trazable (bug F04).
+        const nuevos = newTrazableMovements(pending.movements, baseMovementsCountRef.current);
         await onSaveMaterial(pending);
         reset(cleanRawMaterialForForm(pending));
-        void registerTrazableMovements(pending);
+        void registerTrazableMovements(nuevos);
         setPending(null);
       }}
       onCancel={() => setPending(null)}

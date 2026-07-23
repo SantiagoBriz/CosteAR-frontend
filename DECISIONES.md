@@ -413,3 +413,40 @@ click-through en el navegador: exige Docker+Postgres(:5433)+backend+seed y el da
 apagado / el puerto 5433 no escucha; mutar el backend de `dev` compartido (crear/cerrar períodos)
 sería una acción sobre datos compartidos que no corresponde hacer sin pedirlo. Los pasos para la
 confirmación visual local quedan en el resumen para Alan.
+
+---
+
+## F04-FIX (2026-07-22) — El dato sin imputar nunca se creaba (bug de timing al guardar)
+
+**Síntoma (verificado en navegador, esta vez con Docker+Postgres+seed levantados).** Agregar una
+compra de Materia Prima con fecha de OTRO mes y guardar NO abría el modal de imputación, NO creaba
+ningún data point y el movimiento entraba silencioso al cálculo. Consecuencia: la marca de
+"resultado incompleto" (F04) y el bloqueo de cierre (F05) nunca se disparaban — no había datos sin
+imputar que detectar. El backend estaba OK; el eslabón roto era el alta desde la UI.
+
+**Causa raíz (frontend, `RawMaterialForm.tsx`).** `registerTrazableMovements` calculaba los
+movimientos nuevos con `movimientos.slice(baseMovementsCountRef.current)`, pero ese contador lo
+pisa el `useEffect` de la prop `material` DURANTE el `await onSaveMaterial`: al guardar, el estado
+local sube el conteo al total nuevo y, cuando la registración corría (después del await), el slice
+daba vacío y nunca se llamaba a `createDataPoint`. Race determinista (el await de red da tiempo a
+React a re-renderizar y correr el efecto).
+
+**Fix.** Capturar los movimientos nuevos ANTES de guardar. Se extrajo `newTrazableMovements(all,
+baseCount)` (función pura, en `imputacion.ts`) y en el `onConfirm` se lee `baseMovementsCountRef`
+antes del `await`, pasándole la lista explícita a `registerTrazableMovements`. Cambio mínimo, sin
+tocar el contrato de datos ni el backend. Los movimientos del mismo mes siguen auto-imputándose
+(prop `period` = `structure.period`), sin regresión.
+
+**Test que faltaba (el hueco que dejó pasar el bug).** Nuevo `imputacion-registro.test.ts`:
+`newTrazableMovements` selecciona solo los movimientos nuevos de la sesión (incluida la primera
+compra de una MP, que el bug también perdía) y descarta los sin fecha; `proposeImputation` deja
+"pendiente" (NULL) un movimiento de otro mes y auto-imputa el del mismo mes. (La contraparte
+backend agrega el `create → NULL` y el `datosPendientes` del cierre — ver DECISIONES del back.)
+
+**Verificación en navegador (flujo completo, extremo a extremo).** Compra de otro mes → modal con
+las 2 opciones → "Decidir más tarde" → 2 POST `/data-points` 201 (cantidad+precio, `periodoImputado`
+NULL) → Calcular muestra el aviso rojo "Este resultado está incompleto y no es confiable" nombrando
+el dato → "Resolver" abre el modal → imputar borra el dato de la lista sin recargar → resueltos
+todos, el aviso pasa a verde → se crea otro pendiente → "Cerrar período" se bloquea con el mensaje
+en español (sin ids/endpoints) y ofrece resolver ahí mismo → resueltos, el período CIERRA. Suites:
+`vitest run` 20✅ (6 nuevos), `typecheck` ✅, `build` ✅ (mismos avisos preexistentes de chunk).
