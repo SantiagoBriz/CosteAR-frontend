@@ -139,9 +139,11 @@ export function ChatComposer({
   };
 
   return (
-    <div className="border-t border-line bg-surface px-4 py-4 sm:px-6 shadow-[0_-4px_16px_rgba(0,0,0,0.02)] shrink-0">
-      {file && (
-        <div className="mb-2 flex items-center gap-3 rounded-xl border border-granate/20 bg-granate-tenue px-4 py-2.5">
+    <div className="shrink-0 bg-transparent px-4 py-4 pb-6 sm:px-6 lg:px-8 z-10 relative pointer-events-none">
+      <div className="mx-auto max-w-3xl rounded-[32px] bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_40px_rgba(74,21,27,0.08)] p-2 pointer-events-auto transition-all duration-300">
+        
+        {file && (
+          <div className="mb-2 mx-2 mt-2 flex items-center gap-3 rounded-2xl border border-granate/10 bg-granate-tenue/50 px-4 py-3 shadow-inner">
           {file.type.startsWith('image/') ? (
             <img
               src={URL.createObjectURL(file)}
@@ -167,18 +169,20 @@ export function ChatComposer({
       {fileError && <p className="mb-2 text-xs text-danger">{fileError}</p>}
       {sendError && <p className="mb-2 text-xs text-danger">{sendError}</p>}
 
-      {/* Antes, cuando el dictado fallaba, el botón dejaba de titilar y nada más. */}
+      {/* Audio soundwave visualization helper when listening */}
       {dictado.listening && (
-        <p className="mb-2 flex items-center gap-1.5 text-xs text-action font-medium">
-          <span className="inline-block size-1.5 rounded-full bg-action animate-ping" />
-          Escuchando… hablá tranquilo, podés frenar a pensar.
+        <p className="mx-4 mb-2 flex items-center gap-2 text-xs text-granate font-bold">
+          <span className="flex items-center gap-1">
+            <span className="w-1 h-1 bg-granate rounded-full animate-ping" />
+          </span>
+          Escuchando… podés frenar a pensar.
         </p>
       )}
-      {dictado.error && <p className="mb-2 text-xs text-danger">{dictado.error}</p>}
+      {dictado.error && <p className="mx-4 mb-2 text-xs text-danger font-medium">{dictado.error}</p>}
 
-      <div className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface-alt px-4 py-2 focus-within:border-granate transition-all">
+      <div className="flex items-end gap-2.5 rounded-[24px] bg-surface/50 border border-transparent focus-within:border-granate/20 focus-within:bg-white px-2 py-2 transition-all duration-300">
         {/* Attach File */}
-        <label className="shrink-0 cursor-pointer flex items-center justify-center size-8 rounded-xl text-ink-soft hover:text-action hover:bg-surface-alt transition-colors" title="Adjuntar archivo o imagen">
+        <label className="shrink-0 cursor-pointer flex items-center justify-center size-10 rounded-full text-ink-soft hover:text-granate hover:bg-granate-tenue transition-all" title="Adjuntar archivo o imagen">
           <Paperclip className="size-5" />
           <input
             ref={fileInputRef}
@@ -190,7 +194,7 @@ export function ChatComposer({
         </label>
 
         {/* Direct Camera Capture */}
-        <label className="shrink-0 cursor-pointer flex items-center justify-center size-8 rounded-xl text-ink-soft hover:text-action hover:bg-surface-alt transition-colors" title="Sacar foto directamente">
+        <label className="shrink-0 cursor-pointer flex items-center justify-center size-10 rounded-full text-ink-soft hover:text-granate hover:bg-granate-tenue transition-all" title="Sacar foto directamente">
           <Camera className="size-5" />
           <input
             ref={cameraInputRef}
@@ -209,10 +213,10 @@ export function ChatComposer({
             onClick={dictado.toggle}
             disabled={!activeConnectionId}
             className={cn(
-              "shrink-0 flex items-center justify-center size-8 rounded-xl transition-all",
+              "shrink-0 flex items-center justify-center size-10 rounded-full transition-all duration-300",
               dictado.listening
-                ? "bg-action text-white animate-pulse"
-                : "text-ink-soft hover:text-action hover:bg-surface-alt"
+                ? "bg-granate text-white shadow-lg shadow-granate/30 scale-110"
+                : "text-ink-soft hover:text-granate hover:bg-granate-tenue"
             )}
             title={dictado.listening ? "Detener el dictado" : "Dictar por voz"}
           >
@@ -221,41 +225,43 @@ export function ChatComposer({
         )}
 
         {/* Textarea */}
-        <textarea
-          ref={textareaRef}
-          className="flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-soft/45 focus:!outline-none focus-visible:!outline-none focus-visible:!ring-0 max-h-32 min-h-[32px] py-1.5 leading-relaxed"
-          placeholder={
-            dictado.listening
-              ? 'Escuchando... Hablá ahora...'
-              : activeConnectionId
-                ? 'Escribí una nota o adjuntá facturas/recibos de este producto...'
-                : 'Seleccioná una empresa primero'
-          }
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              onSend();
+        <div className="flex-1 flex flex-col justify-center min-h-[40px] py-1">
+          <textarea
+            ref={textareaRef}
+            className="w-full resize-none bg-transparent text-[14px] text-ink placeholder:text-ink-soft/50 focus:!outline-none focus-visible:!outline-none focus-visible:!ring-0 max-h-32 min-h-[20px] leading-relaxed scrollbar-thin"
+            placeholder={
+              dictado.listening
+                ? 'Escuchando... Hablá ahora...'
+                : activeConnectionId
+                  ? 'Escribí una nota o adjuntá comprobantes...'
+                  : 'Seleccioná una empresa primero'
             }
-          }}
-          disabled={!activeConnectionId || dictado.listening}
-          rows={1}
-          style={{ height: 'auto' }}
-          onInput={(e) => {
-            const t = e.currentTarget;
-            t.style.height = 'auto';
-            t.style.height = `${Math.min(t.scrollHeight, 128)}px`;
-          }}
-        />
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onSend();
+              }
+            }}
+            disabled={!activeConnectionId || dictado.listening}
+            rows={1}
+            style={{ height: 'auto' }}
+            onInput={(e) => {
+              const t = e.currentTarget;
+              t.style.height = 'auto';
+              t.style.height = `${Math.min(t.scrollHeight, 128)}px`;
+            }}
+          />
+        </div>
 
         {/* Audio soundwave visualization helper */}
         {dictado.listening && (
-          <div className="flex items-center gap-1.5 px-2 h-8 shrink-0">
-            <span className="w-[3px] h-3 bg-action rounded-full animate-pulse" />
-            <span className="w-[3px] h-5 bg-action rounded-full animate-pulse delay-75" />
-            <span className="w-[3px] h-4 bg-action rounded-full animate-pulse delay-150" />
-            <span className="w-[3px] h-2 bg-action rounded-full animate-pulse delay-200" />
+          <div className="flex items-center gap-1.5 px-3 h-10 shrink-0">
+            <span className="w-[3px] h-3 bg-granate rounded-full animate-pulse" />
+            <span className="w-[3px] h-5 bg-granate rounded-full animate-pulse delay-75" />
+            <span className="w-[3px] h-4 bg-granate rounded-full animate-pulse delay-150" />
+            <span className="w-[3px] h-2 bg-granate rounded-full animate-pulse delay-200" />
           </div>
         )}
 
@@ -264,21 +270,21 @@ export function ChatComposer({
           type="button"
           onClick={onSend}
           disabled={(!text.trim() && !file) || sending || !activeConnectionId}
-          className="flex shrink-0 size-8 items-center justify-center rounded-xl bg-action text-white hover:bg-action-soft hover:shadow-md transition-all active:scale-95 disabled:opacity-30 disabled:scale-100"
+          className="flex shrink-0 size-10 items-center justify-center rounded-full bg-granate text-white hover:bg-granate-deep shadow-md shadow-granate/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
         >
           {sending ? (
-            <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           ) : (
-            <Send className="size-4" />
+            <Send className="size-4 mr-0.5 mt-0.5" />
           )}
         </button>
       </div>
 
       {/* Selector de Producto rápido */}
-      <div className="mt-2.5 flex items-center justify-between gap-4">
+      <div className="mt-3 px-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-soft">
-            Asignar a producto:
+          <span className="text-[10px] font-black uppercase tracking-widest text-ink-soft/70">
+            Imputar a:
           </span>
           {activeConnectionId ? (
             <StructureSelectDropdown
@@ -287,12 +293,13 @@ export function ChatComposer({
               onSelect={onSelectStructure}
             />
           ) : (
-            <span className="text-[10px] text-danger">Selecciona empresa</span>
+            <span className="text-[10px] text-danger font-bold">Empresa requerida</span>
           )}
         </div>
-        <p className="text-[10px] text-ink-soft/60 hidden sm:block">
+        <p className="text-[10px] text-ink-soft/50 hidden sm:block font-medium tracking-wide">
           Enter para enviar · Shift+Enter para salto de línea
         </p>
+      </div>
       </div>
     </div>
   );

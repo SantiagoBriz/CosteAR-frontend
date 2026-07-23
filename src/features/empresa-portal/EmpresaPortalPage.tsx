@@ -177,34 +177,37 @@ export function EmpresaPortalPage() {
 
   if (companies.length === 0) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-surface-alt px-4 font-sans">
-        <div className="w-full max-w-sm">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-granate-tenue/50 to-surface-alt px-4 font-sans relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-0 left-0 w-full h-64 bg-granate/5 rounded-b-[100%] blur-3xl -translate-y-1/2" />
+        
+        <div className="w-full max-w-sm relative z-10">
           {/* Volver atrás */}
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="mb-4 flex items-center gap-1 text-[13px] text-ink-soft transition-colors hover:text-granate font-medium"
+            className="mb-6 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider text-ink-soft hover:text-granate transition-colors bg-white/50 backdrop-blur px-3 py-1.5 rounded-full border border-line w-fit"
           >
-            <ArrowLeft className="size-4" /> Volver
+            <ArrowLeft className="size-3.5" /> Volver
           </button>
 
           {/* Logo */}
-          <div className="mb-6 flex items-center gap-2.5">
-            <div className="flex size-10 items-center justify-center rounded-[14px] bg-surface text-granate shadow-md">
-              <CosteARLogo className="h-5 w-auto text-granate" />
+          <div className="mb-8 flex flex-col items-center gap-3">
+            <div className="flex size-14 items-center justify-center rounded-[20px] bg-white text-granate shadow-[0_8px_30px_rgba(74,21,27,0.12)] border border-granate/10">
+              <CosteARLogo className="h-7 w-auto text-granate" />
             </div>
-            <span className="text-lg font-extrabold tracking-tight text-granate font-outfit">CosteAR</span>
+            <span className="text-2xl font-black tracking-tight text-granate font-outfit">CosteAR</span>
           </div>
 
           {/* Card */}
-          <Card className="p-6">
-            <div className="mb-5 flex size-12 items-center justify-center rounded-[18px] bg-granate-tenue text-granate shadow-inner">
+          <Card className="p-8 shadow-[0_20px_60px_rgba(0,0,0,0.06)] border-line/50 bg-white/80 backdrop-blur-md rounded-[28px]">
+            <div className="mb-6 flex size-12 items-center justify-center rounded-[18px] bg-granate text-white shadow-lg shadow-granate/20">
               <Upload className="size-5" />
             </div>
 
-            <h1 className="mb-1.5 text-lg font-extrabold tracking-tight text-ink font-outfit">Hola, {user?.name?.split(' ')[0] ?? 'operador'}</h1>
-            <p className="mb-5 text-[13px] text-ink-soft leading-relaxed">
-              Tu cuenta de operador está lista. Ingresá el código de invitación que te envió tu costista para vincular tu empresa.
+            <h1 className="mb-2 text-xl font-black tracking-tight text-ink font-outfit">Hola, {user?.name?.split(' ')[0] ?? 'operador'}</h1>
+            <p className="mb-8 text-[13px] text-ink-soft leading-relaxed font-medium">
+              Tu cuenta de operador está lista. Ingresá el código de invitación de tu costista para vincular tu empresa.
             </p>
 
             {inviteSuccess ? (
@@ -213,24 +216,24 @@ export function EmpresaPortalPage() {
                 <p className="mt-1 text-[12px] text-ok/80">Cargando tus accesos…</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <Input
-                  label="Código de invitación"
+                  label="Código de vinculación"
                   value={inviteCode}
                   onChange={(e) => { setInviteCode(e.target.value.toUpperCase()); setInviteError(null); }}
                   placeholder="Ej: METAL-A3F2B1"
                   error={inviteError ?? undefined}
-                  className="font-mono tracking-wide"
+                  className="font-mono tracking-widest text-center text-lg h-14 bg-surface-alt border-line focus:border-granate focus:ring-granate/20 rounded-xl"
                 />
                 <Button
                   onClick={() => acceptInvite.mutate(inviteCode.trim())}
                   disabled={inviteCode.trim().length < 5 || acceptInvite.isPending}
                   loading={acceptInvite.isPending}
-                  className="w-full py-3"
+                  className="w-full h-12 rounded-xl bg-granate hover:bg-granate-deep text-white text-[13px] shadow-lg shadow-granate/20 hover:shadow-xl transition-all font-bold"
                 >
-                  Acceder a la empresa
+                  Vincularme ahora
                 </Button>
-                <p className="text-center text-[11px] text-ink-soft/70">
+                <p className="text-center text-[11.5px] text-ink-soft/80 font-medium">
                   ¿No tenés un código? Solicitáselo al costista a cargo.
                 </p>
               </div>
@@ -283,30 +286,34 @@ export function EmpresaPortalPage() {
       <div className="flex-1 flex flex-col lg:pl-[104px] h-screen overflow-hidden">
         
         {/* Header Principal con la Tarjetita de Contexto Estilo Costista */}
-        <header className="h-16 shrink-0 border-b border-line bg-surface px-6 flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <header className="h-16 shrink-0 border-b border-line bg-surface/80 backdrop-blur-md px-6 flex items-center justify-between z-20">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-granate-deep/70 bg-granate-tenue/60 px-3 py-1 rounded-full border border-granate/10 inline-block font-sans">
-              Portal de Operario
+            <span className="text-[10px] font-black uppercase tracking-widest text-granate-deep bg-granate-tenue px-3 py-1.5 rounded-full border border-granate/10 shadow-sm">
+              Panel Operario
             </span>
-            <span className="text-xs text-ink-soft hidden sm:inline-block">
-              {activeCompany ? `· Operando en ${activeCompany.connection.company.name}` : '· Seleccioná una empresa'}
+            <div className="h-4 w-px bg-line hidden sm:block" />
+            <span className="text-xs font-bold text-ink hidden sm:inline-block">
+              {activeCompany ? activeCompany.connection.company.name : 'Seleccioná una empresa'}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             {companies.length > 1 && (
-              <Button variant="secondary" size="sm" onClick={() => setShowCompanyPicker(true)}>
-                <Building2 className="size-4 mr-1.5" /> Cambiar empresa
-              </Button>
+              <button 
+                onClick={() => setShowCompanyPicker(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line bg-surface-alt/50 hover:bg-surface-alt text-xs font-bold text-ink-soft hover:text-ink transition-colors shadow-sm"
+              >
+                <Building2 className="size-3.5" /> Cambiar empresa
+              </button>
             )}
             {/* Tarjetita del perfil del costista / operario */}
-            <div className="hidden items-center gap-2.5 rounded-full border border-line bg-surface-alt/80 px-3.5 py-1.5 shadow-sm lg:flex">
-              <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-granate-tenue text-[10.5px] font-extrabold text-granate border border-granate/10">
+            <div className="hidden items-center gap-2.5 rounded-full border border-line bg-surface px-3 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.03)] lg:flex cursor-default hover:border-granate/30 transition-colors">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-granate text-[11px] font-black text-white shadow-inner">
                 {user?.name?.[0]?.toUpperCase() ?? 'U'}
               </span>
-              <div className="text-left leading-none pr-1">
-                <p className="text-[11.5px] font-bold text-ink">{user?.name ?? 'Usuario'}</p>
-                <p className="text-[8.5px] text-ink-soft mt-0.5 font-bold uppercase tracking-wider">Operador</p>
+              <div className="text-left leading-none pr-2">
+                <p className="text-[12px] font-extrabold text-ink tracking-tight">{user?.name ?? 'Usuario'}</p>
+                <p className="text-[9px] text-ink-soft mt-0.5 font-bold uppercase tracking-wider">Operador</p>
               </div>
             </div>
           </div>
@@ -427,15 +434,15 @@ export function EmpresaPortalPage() {
 
       {/* 4. MODAL SELECTOR DE EMPRESAS */}
       {showCompanyPicker && companies.length > 1 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4">
-          <div className="w-full max-w-sm rounded-[28px] bg-surface p-6 shadow-xl border border-line animate-rise">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-extrabold tracking-tight text-ink font-outfit">¿Qué empresa querés ver?</h2>
-              <button type="button" onClick={() => setShowCompanyPicker(false)} className="text-ink-soft hover:text-ink">
-                <X className="size-5" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-[32px] bg-surface p-6 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-line animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-5 px-1">
+              <h2 className="text-lg font-black tracking-tight text-ink font-outfit">Cambiar de Empresa</h2>
+              <button type="button" onClick={() => setShowCompanyPicker(false)} className="text-ink-soft hover:text-ink bg-surface-alt p-1.5 rounded-full transition-colors">
+                <X className="size-4" />
               </button>
             </div>
-            <div className="space-y-2 max-h-80 overflow-y-auto scrollbar-hidden">
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto scrollbar-hidden pb-2">
               {companies.map((c) => (
                 <button
                   key={c.connectionId}
@@ -446,15 +453,18 @@ export function EmpresaPortalPage() {
                     setActiveStructureId(null);
                     setActiveStructureName(null);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl border border-line px-4 py-3 text-left hover:border-action/40 hover:bg-granate-tenue transition-all"
+                  className="group flex w-full items-center gap-4 rounded-2xl border border-line bg-surface-alt px-4 py-3.5 text-left hover:border-granate/30 hover:bg-white hover:shadow-md transition-all duration-300"
                 >
-                  <Building2 className="size-5 text-action shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-ink truncate">{c.connection.company.name}</p>
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-white border border-line shadow-sm group-hover:bg-granate-tenue group-hover:text-granate transition-colors">
+                    <Building2 className="size-5 text-ink-soft group-hover:text-granate transition-colors" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14px] font-bold text-ink truncate group-hover:text-granate transition-colors">{c.connection.company.name}</p>
                     {c.connection.company.industry && (
-                      <p className="text-xs text-ink-soft truncate">{c.connection.company.industry}</p>
+                      <p className="text-[11px] font-semibold text-ink-soft truncate uppercase tracking-wide mt-0.5">{c.connection.company.industry}</p>
                     )}
                   </div>
+                  <div className="size-2 rounded-full bg-granate opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               ))}
             </div>
