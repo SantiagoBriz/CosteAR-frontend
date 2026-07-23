@@ -14,7 +14,7 @@ export function AdminUsers() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState('ADMIN');
+  const [role] = useState('ADMIN');
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -173,8 +173,6 @@ export function AdminUsers() {
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-soft mb-1.5">Contraseña Temporal</label>
                   <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-line bg-surface-alt rounded-lg p-2.5 text-sm font-medium text-ink focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all" placeholder="••••••••" />
-                </div>
-
                 </div>
               </div>
 

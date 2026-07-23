@@ -16,67 +16,84 @@ export function SubmissionCard({ s }: SubmissionCardProps) {
   const isPdf = s.fileMimeType === 'application/pdf';
 
   return (
-    <Card className="hover:-translate-y-1 transition-all duration-300">
+    <Card className="group relative overflow-hidden bg-white hover:-translate-y-1.5 transition-all duration-400 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgba(74,21,27,0.12)] border-line/40 hover:border-granate/20">
+      {/* Decal background */}
+      <div className="absolute -right-6 -top-6 size-24 bg-gradient-to-br from-granate/5 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      
       <CardHeader
         title={
           <div className="flex items-center gap-2">
-            {isImage ? (
-              <Image className="size-4 text-action shrink-0" />
-            ) : isPdf ? (
-              <FileText className="size-4 text-action shrink-0" />
-            ) : (
-              <FileText className="size-4 text-ink-soft shrink-0" />
-            )}
-            <span className="truncate max-w-[150px] font-bold text-ink" title={s.fileName ?? 'Texto sin archivo'}>
+            <div className="flex size-7 items-center justify-center rounded-[10px] bg-surface-alt border border-line shadow-sm group-hover:bg-granate group-hover:text-white transition-colors duration-300 shrink-0">
+              {isImage ? (
+                <Image className="size-3.5" />
+              ) : isPdf ? (
+                <FileText className="size-3.5" />
+              ) : (
+                <FileText className="size-3.5" />
+              )}
+            </div>
+            <span className="truncate max-w-[150px] font-black text-[13px] tracking-tight text-ink group-hover:text-granate transition-colors" title={s.fileName ?? 'Texto sin archivo'}>
               {s.fileName ?? 'Nota de texto'}
             </span>
           </div>
         }
-        description={`Enviado: ${formatDate(s.createdAt)}`}
+        description={
+          <span className="text-[10px] font-medium tracking-wide text-ink-soft/70">
+            Enviado: {formatDate(s.createdAt)}
+          </span>
+        }
         action={
-          <span className={cn('rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border', st.color)}>
+          <span className={cn('rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider border', st.color)}>
             {st.label}
           </span>
         }
       />
-      <CardBody className="space-y-4">
+      <CardBody className="space-y-4 pt-1 pb-5 px-5">
         {s.rawContent && (
-          <p className="text-xs text-ink-soft bg-surface-alt p-3.5 rounded-xl border border-line whitespace-pre-wrap leading-relaxed">
+          <p className="text-[13px] text-ink-soft bg-surface/50 p-4 rounded-[16px] border border-line/60 whitespace-pre-wrap leading-relaxed shadow-inner">
             {s.rawContent}
           </p>
         )}
 
         {isImage && s.fileUrl && (
-          <a href={s.fileUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-line">
+          <a href={s.fileUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-[16px] border border-line/60 bg-black/5 relative group/img shadow-sm">
             <img
               src={s.fileUrl}
               alt="Documento"
-              className="w-full max-h-40 object-cover hover:scale-[1.02] transition-transform duration-300"
+              className="w-full max-h-48 object-cover group-hover/img:scale-[1.03] transition-transform duration-500"
             />
+            <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors duration-300 flex items-center justify-center">
+              <span className="opacity-0 group-hover/img:opacity-100 bg-white/90 text-granate text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg transform translate-y-2 group-hover/img:translate-y-0 transition-all duration-300">Ampliar</span>
+            </div>
           </a>
         )}
 
         {isPdf && s.fileUrl && (
-          <div className="flex items-center justify-between rounded-xl border border-line bg-surface-alt p-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <FileText className="size-5 text-action shrink-0" />
-              <span className="text-xs font-semibold text-ink truncate max-w-[100px]">{s.fileName}</span>
+          <div className="flex items-center justify-between rounded-[16px] border border-line/60 bg-surface/50 p-3.5 shadow-sm group-hover:border-granate/20 transition-colors">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="size-8 rounded-full bg-granate-tenue text-granate flex items-center justify-center shrink-0">
+                <FileText className="size-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-ink truncate">{s.fileName}</p>
+                <p className="text-[9px] text-ink-soft uppercase tracking-wider font-semibold mt-0.5">Documento PDF</p>
+              </div>
             </div>
             <a
               href={s.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] font-bold uppercase tracking-wider text-action hover:text-action-soft bg-surface border border-line rounded-lg px-2.5 py-1.5 shadow-sm transition-all"
+              className="text-[10px] font-black uppercase tracking-wider text-granate bg-white border border-line hover:border-granate hover:shadow-md rounded-full px-3 py-1.5 transition-all active:scale-95 shrink-0"
             >
-              Ver PDF
+              Abrir
             </a>
           </div>
         )}
 
         {s.costistaNote && (
-          <div className="rounded-xl border border-line bg-granate-tenue p-3.5 text-xs text-ink-soft leading-relaxed border-l-4 border-l-action">
-            <p className="font-bold text-ink mb-0.5">Nota de revisión de tu costista:</p>
-            <p className="italic">"{s.costistaNote}"</p>
+          <div className="mt-4 rounded-[16px] border-l-4 border-l-granate bg-granate-tenue p-4 shadow-inner group-hover:bg-granate/10 transition-colors">
+            <p className="font-black text-[10px] uppercase tracking-wider text-granate-deep mb-1.5">Nota de revisión de tu costista:</p>
+            <p className="italic text-[12px] text-ink/80 leading-relaxed font-medium">"{s.costistaNote}"</p>
           </div>
         )}
       </CardBody>
