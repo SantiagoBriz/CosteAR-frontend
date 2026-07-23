@@ -10,6 +10,26 @@ import { PrimaryAllocationSection } from './components/indirect-costs/PrimaryAll
 import { SecondaryAllocationSection } from './components/indirect-costs/SecondaryAllocationSection';
 import { ProductiveSettingsSection } from './components/indirect-costs/ProductiveSettingsSection';
 
+/**
+ * Estado INTERNO del formulario para el reparto secundario. La UI edita los
+ * valores por CENTRO DESTINO (Records keyed by id: `toProductiveFixed` /
+ * `toProductiveVariable` en modo manual, `toProductive` = unidades en modo
+ * base). En el borde (cargar/guardar) se traduce desde/hacia el CONTRATO por
+ * PARES EXPLÍCITOS (`distributions` con `centroDestinoId`) que habla el backend.
+ * Así la posición de la columna nunca decide a qué centro va el valor.
+ */
+type ServiceRowFormState = {
+  serviceCenterId: string;
+  distributionMode?: 'manual' | 'base';
+  baseCode?: string;
+  toProductive?: Record<string, number>;
+  toProductiveFixed?: Record<string, number>;
+  toProductiveVariable?: Record<string, number>;
+};
+type IndirectCostsFormValues = Omit<IndirectCostConfig, 'serviceDistributions'> & {
+  serviceDistributions: ServiceRowFormState[];
+};
+
 interface Props {
   defaultValues?: IndirectCostConfig;
   onSave: (data: IndirectCostConfig) => Promise<void>;
@@ -18,7 +38,7 @@ interface Props {
 }
 
 export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: Props) {
-  const { register, control, handleSubmit, reset, getValues, setValue, formState: { isDirty } } = useForm<IndirectCostConfig>({
+  const { register, control, handleSubmit, reset, getValues, setValue, formState: { isDirty } } = useForm<IndirectCostsFormValues>({
     defaultValues: cleanIndirectCostsForForm(defaultValues) as any,
   });
 
@@ -60,7 +80,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: 
 
     for (const center of serviceCenters) {
       if (!existingIds.has(center.id)) {
-        serviceDists.append({ serviceCenterId: center.id, distributionMode: 'manual', baseCode: '', toProductive: {}, toProductiveFixed: {}, toProductiveVariable: {} });
+        serviceDists.append({ serviceCenterId: center.id, distributionMode: 'manual', baseCode: '', toProductive: {}, toProductiveFixed: {}, toProductiveVariable: {} } as any);
       }
     }
     for (let i = currentDists.length - 1; i >= 0; i--) {

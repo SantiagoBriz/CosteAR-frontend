@@ -1,0 +1,381 @@
+﻿diff --git a/src/features/companies/CompanyDetailPage.tsx b/src/features/companies/CompanyDetailPage.tsx
+index cda56f9..6969934 100644
+--- a/src/features/companies/CompanyDetailPage.tsx
++++ b/src/features/companies/CompanyDetailPage.tsx
+@@ -372,12 +372,18 @@ function LedgerTabSection({ companyId, companyName }: { companyId: string; compa
+   };
+ 
+   const entries = data?.entries ?? [];
+-  const SECTION_ORDER = ['MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS'];
++  const SECTION_ORDER = [
++    'MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS',
++    'GASTO_COMERCIALIZACION', 'GASTO_ADMINISTRACION', 'GASTO_FINANCIERO',
++  ];
+   const SECTION_LABELS: Record<string, string> = {
+     MATERIA_PRIMA: 'Materia Prima',
+     MANO_DE_OBRA: 'Mano de Obra',
+     COSTOS_INDIRECTOS: 'Costos Indirectos',
+     VENTAS: 'Ventas',
++    GASTO_COMERCIALIZACION: 'Gasto de Comercialización',
++    GASTO_ADMINISTRACION: 'Gasto de Administración',
++    GASTO_FINANCIERO: 'Gasto Financiero',
+   };
+ 
+   const grouped = SECTION_ORDER
+diff --git a/src/features/cost-structures/CostStructurePage.tsx b/src/features/cost-structures/CostStructurePage.tsx
+index 2aea174..db221a0 100644
+--- a/src/features/cost-structures/CostStructurePage.tsx
++++ b/src/features/cost-structures/CostStructurePage.tsx
+@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
+ import {
+   ArrowLeft, Calculator, Package, Users, Factory, Activity,
+   TrendingUp, BarChart2, CheckCircle2, History, GitCompare,
+-  Download, Loader2, Upload, AlertTriangle, Lock,
++  Download, Loader2, Lock, Upload, AlertTriangle,
+ } from 'lucide-react';
+ import { AppShell } from '@/components/layout/AppShell';
+ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+@@ -34,6 +34,8 @@ import { LaborDepartmentsView } from './LaborDepartmentsView';
+ import { ConfigHistoryPanel } from './ConfigHistoryPanel';
+ import { DerivationTree } from './DerivationTree';
+ import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
++import { IncompleteNotice } from './ImputacionResolver';
++import type { Incompletitud } from './trazabilidad-types';
+ import { usePeriods } from './period-hooks';
+ import { ScenarioSimulator } from './components/ScenarioSimulator';
+ import { PeriodBar } from './components/PeriodBar';
+@@ -91,6 +93,10 @@ export function CostStructurePage() {
+   const { data: runsList } = useStructureRuns(id);
+   const [tracedRunId, setTracedRunId] = useState<string | null>(null);
+   const [tracedError, setTracedError] = useState<string | null>(null);
++  // Marca de incompletitud (F04/F05): datos sin imputar de la última corrida
++  // trazada de esta sesión. Alimenta la advertencia de la pestaña Resultado y
++  // el listado que ofrece el cierre para resolver los pendientes in-situ.
++  const [incompletitud, setIncompletitud] = useState<Incompletitud | null>(null);
+   const effectiveRunId = tracedRunId ?? runsList?.[0]?.id ?? null;
+ 
+   // Período de costeo que se está mirando (problema C — Fase 2). Por defecto, el
+@@ -164,6 +170,7 @@ export function CostStructurePage() {
+   const runCalculate = async () => {
+     setError(null);
+     setTracedError(null);
++    setIncompletitud(null);
+     if (blockedByClosedPeriod()) return;
+     try {
+       const data = await calculate.mutateAsync();
+@@ -177,6 +184,9 @@ export function CostStructurePage() {
+     try {
+       const traced = await calculateTraced.mutateAsync();
+       setTracedRunId(traced.runId);
++      // F05: si la corrida trae datos sin imputar, guardamos la marca para
++      // pintar la advertencia accionable arriba de los números.
++      setIncompletitud(traced.incompleto ?? null);
+     } catch (e) {
+       setTracedError(apiErrorMessage(e));
+     }
+@@ -268,6 +278,9 @@ export function CostStructurePage() {
+               selectedId={periodId}
+               onSelect={setPeriodId}
+               runIdToFreeze={effectiveRunId}
++              periodoCosto={structure?.period}
++              pendingDatos={incompletitud?.datosPendientes ?? []}
++              onGoToResolve={() => { setActiveTab('result'); void runCalculate(); }}
+             />
+             <span className="inline-flex items-center self-start rounded-full border border-line bg-surface-alt px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-soft">
+               Captación: continua
+@@ -307,6 +320,18 @@ export function CostStructurePage() {
+         </div>
+       )}
+ 
++      {/* Período cerrado: se mira, no se toca. */}
++      {readOnly && (
++        <div className="mb-4 flex items-center gap-2 rounded-xl border border-line bg-surface-alt px-4 py-2.5 text-[13px] text-ink">
++          <Lock className="size-4 shrink-0 text-ink-soft" />
++          <span>
++            Estás viendo <strong>{selectedPeriod?.label}</strong>, que está cerrado. Los números
++            quedaron congelados: podés consultarlos, pero no editarlos ni recalcular. Para corregir
++            algo, reabrí el período.
++          </span>
++        </div>
++      )}
++
+       {/* Revisión del import: nada se aplica a los formularios hasta que la
+           costista confirma acá — ve qué se encontró (y qué no) antes de que
+           toque la pantalla real. */}
+@@ -349,18 +374,6 @@ export function CostStructurePage() {
+         </div>
+       )}
+ 
+-      {/* Período cerrado: se mira, no se toca. */}
+-      {readOnly && (
+-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-line bg-surface-alt px-4 py-2.5 text-[13px] text-ink">
+-          <Lock className="size-4 shrink-0 text-ink-soft" />
+-          <span>
+-            Estás viendo <strong>{selectedPeriod?.label}</strong>, que está cerrado. Los números
+-            quedaron congelados: podés consultarlos, pero no editarlos ni recalcular. Para corregir
+-            algo, reabrí el período.
+-          </span>
+-        </div>
+-      )}
+-
+       {/* Aviso de progreso */}
+       {!allReady && !readOnly && (
+         <div className="mb-4 rounded-xl border border-action/20 bg-action/5 px-4 py-2.5 text-[13px] text-ink">
+@@ -487,7 +500,8 @@ export function CostStructurePage() {
+                   productionQuantity: produced,
+                 });
+                 // Se queda en Venta tras guardar (no salta a Resultado).
+-                // Una vez guardado, el aviso de importación pendiente ya no aplica para Venta.
++                // Igual que en saveSection: una vez guardado, el aviso de
++                // importación pendiente ya no aplica para Venta.
+                 setImportedDefaults((prev) => (prev ? { ...prev, sales: undefined } : prev));
+               } catch (e) { setError(apiErrorMessage(e)); }
+             }}
+@@ -501,6 +515,21 @@ export function CostStructurePage() {
+ 
+       {activeTab === 'result' && (
+         <div className="space-y-4">
++          {/* F05 — advertencia imposible de ignorar: va ARRIBA de los números.
++              Si el cálculo corrió con datos sin imputar, el margen de abajo no es
++              confiable; cada dato afectado se resuelve acá mismo, por su nombre. */}
++          {incompletitud?.incompleto && (
++            <IncompleteNotice
++              datos={incompletitud.datosPendientes}
++              motivos={incompletitud.motivos}
++              periodoCosto={structure?.period}
++              structureId={id}
++              doneTitle="Volvé a calcular para ver el resultado limpio."
++              doneLabel="Volver a calcular"
++              onDone={() => void runCalculate()}
++              busy={calculate.isPending || calculateTraced.isPending}
++            />
++          )}
+           <DerivationTree
+             runId={effectiveRunId}
+             isMissingRun={!!tracedError}
+@@ -964,6 +993,19 @@ function ResultPanel({ result, companyId, period }: { result: CalculationResult;
+ 
+       {/* Derecha: margen + detalles */}
+       <div className="space-y-4">
++        {result.detail.unitCost && (
++          <Card>
++            <CardBody className="space-y-2 py-8 text-center">
++              <p className="text-[11px] uppercase tracking-widest text-ink-soft">Costo unitario de producción</p>
++              <Money value={result.detail.unitCost.unitProductionCost} className="block text-5xl font-bold text-ink" />
++              {result.detail.unitCost.unitsProduced > 0 && (
++                <p className="text-[12px] text-ink-soft">
++                  costo de producción ÷ {result.detail.unitCost.unitsProduced.toLocaleString('es-AR')} u producidas
++                </p>
++              )}
++            </CardBody>
++          </Card>
++        )}
+         <Card>
+           <CardBody className="space-y-3 py-8 text-center">
+             <p className="text-[11px] uppercase tracking-widest text-ink-soft">Margen bruto</p>
+@@ -1072,8 +1114,21 @@ function HistoryPanel({ structureId }: { structureId: string }) {
+ 
+ // ── Helper ────────────────────────────────────────────────────────────────────
+ 
++// El endpoint /calculations/latest devuelve la fila CostCalculation (columnas
++// planas + `detail` JSON), NO un objeto `{ results }`. Antes leía `latest.results`
++// (inexistente) → al recargar la página el panel recibía `undefined` y quedaba en
++// blanco/estático. Mapeamos la fila al shape que espera ResultPanel.
+ function latestToResult(latest: any): CalculationResult {
+-  return latest.results;
++  return {
++    rawMaterialConsumed:  Number(latest.rawMaterialConsumed),
++    directLaborTotal:     Number(latest.directLaborTotal),
++    indirectCostsApplied: Number(latest.indirectCostsApplied),
++    productionCost:       Number(latest.productionCost),
++    costOfGoodsSold:      Number(latest.costOfGoodsSold),
++    grossMargin:          Number(latest.grossMargin),
++    grossMarginPct:       Number(latest.grossMarginPct),
++    detail:               latest.detail,
++  };
+ }
+ 
+ // ── Reconciliación: estructura vs documentos (libro de costos) ──────────────────
+diff --git a/src/features/cost-structures/IndirectCostsForm.tsx b/src/features/cost-structures/IndirectCostsForm.tsx
+index 93a5b73..6d96b53 100644
+--- a/src/features/cost-structures/IndirectCostsForm.tsx
++++ b/src/features/cost-structures/IndirectCostsForm.tsx
+@@ -3,9 +3,29 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+ import { Plus, Trash2, Lock } from 'lucide-react';
+ import { Button } from '@/components/ui/Button';
+ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+-import type { IndirectCostConfig } from './cost-structure-types';
++import type { IndirectCostConfig, SecondaryDistributionPair } from './cost-structure-types';
+ import { useAllocationBases, useCreateAllocationBase, type AllocationBase } from './allocation-base-hooks';
+ 
++/**
++ * Estado INTERNO del formulario para el reparto secundario. La UI edita los
++ * valores por CENTRO DESTINO (Records keyed by id: `toProductiveFixed` /
++ * `toProductiveVariable` en modo manual, `toProductive` = unidades en modo
++ * base). En el borde (cargar/guardar) se traduce desde/hacia el CONTRATO por
++ * PARES EXPLÍCITOS (`distributions` con `centroDestinoId`) que habla el backend.
++ * Así la posición de la columna nunca decide a qué centro va el valor.
++ */
++type ServiceRowFormState = {
++  serviceCenterId: string;
++  distributionMode?: 'manual' | 'base';
++  baseCode?: string;
++  toProductive?: Record<string, number>;
++  toProductiveFixed?: Record<string, number>;
++  toProductiveVariable?: Record<string, number>;
++};
++type IndirectCostsFormValues = Omit<IndirectCostConfig, 'serviceDistributions'> & {
++  serviceDistributions: ServiceRowFormState[];
++};
++
+ /**
+  * Desplegable de bases de asignación (3b-1). Reemplaza el texto libre: el
+  * costista elige una base del catálogo (sistema + propias) o crea una nueva.
+@@ -100,7 +120,7 @@ interface Props {
+   companyId?: string;
+ }
+ 
+-function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
++export function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
+   const base = cfg ?? emptyIndirectCosts();
+ 
+   const cleanRecord = (rec?: Record<string, number>) => {
+@@ -124,14 +144,31 @@ function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
+       },
+       distribution: cleanRecord(c.distribution),
+     })),
+-    serviceDistributions: (base.serviceDistributions ?? []).map((s) => ({
+-      ...s,
+-      distributionMode: s.distributionMode ?? 'manual',
+-      baseCode: s.baseCode ?? '',
+-      toProductive: cleanRecord(s.toProductive),
+-      toProductiveFixed: cleanRecord(s.toProductiveFixed),
+-      toProductiveVariable: cleanRecord(s.toProductiveVariable),
+-    })),
++    serviceDistributions: (base.serviceDistributions ?? []).map((s) => {
++      // El backend entrega SIEMPRE la forma por pares (`distributions`). Se
++      // vuelca a los Records por id que edita la UI. Leer por id —no por
++      // posición— es justamente lo que evita mostrar los % contra el centro
++      // equivocado al abrir una estructura vieja (el adaptador de F01-A ya
++      // normalizó lo guardado antes de que llegue acá).
++      const fijoRec: Record<string, number> = {};
++      const varRec: Record<string, number> = {};
++      const unitsRec: Record<string, number> = {};
++      for (const p of s.distributions ?? []) {
++        if (!p || !p.centroDestinoId) continue;
++        fijoRec[p.centroDestinoId] = p.fijo;
++        varRec[p.centroDestinoId] = p.variable;
++        // En modo 'base' fijo y variable comparten la misma base: la unidad.
++        unitsRec[p.centroDestinoId] = p.fijo;
++      }
++      return {
++        serviceCenterId: s.serviceCenterId,
++        distributionMode: s.distributionMode ?? 'manual',
++        baseCode: s.baseCode ?? '',
++        toProductive: cleanRecord(unitsRec),
++        toProductiveFixed: cleanRecord(fijoRec),
++        toProductiveVariable: cleanRecord(varRec),
++      };
++    }),
+     productiveSettings: (base.productiveSettings ?? []).map((p) => ({
+       ...p,
+       budget: {
+@@ -145,7 +182,7 @@ function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
+   };
+ }
+ 
+-function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
++export function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
+   const fallbackNum = (val: any) => {
+     if (val === '' || val === null || val === undefined || isNaN(Number(val))) return 0;
+     return Number(val);
+@@ -176,26 +213,34 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
+     }),
+     serviceDistributions: (data.serviceDistributions ?? []).map((s: any) => {
+       const mode = s.distributionMode === 'base' ? 'base' : 'manual';
++      const serviceCenterId = s.serviceCenterId;
++
++      // Se manda SIEMPRE el contrato por PARES EXPLÍCITOS: cada valor viaja con
++      // su `centroDestinoId`, nunca por posición. Se descarta por seguridad el
++      // propio centro (un servicio no se reparte a sí mismo) y los pares vacíos.
++      let distributions: SecondaryDistributionPair[];
+       if (mode === 'base') {
+         // Modo automático: el reparto sale de las UNIDADES de la base (una por
+-        // centro). Se limpian los % manuales para que el motor use toProductive.
+-        return {
+-          serviceCenterId: s.serviceCenterId,
+-          distributionMode: 'base',
+-          baseCode: (s.baseCode ?? '').trim(),
+-          toProductive: cleanRecord(s.toProductive),
+-          toProductiveFixed: {},
+-          toProductiveVariable: {},
+-        };
++        // centro). Fijo y variable comparten la misma base.
++        const units = cleanRecord(s.toProductive);
++        distributions = Object.keys(units)
++          .filter((id) => id && id !== serviceCenterId)
++          .map((id) => ({ centroDestinoId: id, fijo: units[id]!, variable: units[id]! }))
++          .filter((p) => p.fijo !== 0);
++      } else {
++        // Modo manual: % tipeados por centro (fijo y variable por separado).
++        const fx = cleanRecord(s.toProductiveFixed);
++        const va = cleanRecord(s.toProductiveVariable);
++        const ids = new Set([...Object.keys(fx), ...Object.keys(va)]);
++        distributions = [...ids]
++          .filter((id) => id && id !== serviceCenterId)
++          .map((id) => ({ centroDestinoId: id, fijo: fx[id] ?? 0, variable: va[id] ?? 0 }))
++          .filter((p) => p.fijo !== 0 || p.variable !== 0);
+       }
+-      // Modo manual: % tipeados. Se limpia toProductive (evita drivers viejos).
+-      return {
+-        serviceCenterId: s.serviceCenterId,
+-        distributionMode: 'manual',
+-        toProductive: {},
+-        toProductiveFixed: cleanRecord(s.toProductiveFixed),
+-        toProductiveVariable: cleanRecord(s.toProductiveVariable),
+-      };
++
++      return mode === 'base'
++        ? { serviceCenterId, distributionMode: 'base' as const, baseCode: (s.baseCode ?? '').trim(), distributions }
++        : { serviceCenterId, distributionMode: 'manual' as const, distributions };
+     }),
+     productiveSettings: (data.productiveSettings ?? []).map((p: any) => ({
+       ...p,
+@@ -217,7 +262,7 @@ function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
+ }
+ 
+ export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: Props) {
+-  const { register, control, handleSubmit, reset, getValues, setValue, formState: { isDirty } } = useForm<IndirectCostConfig>({
++  const { register, control, handleSubmit, reset, getValues, setValue, formState: { isDirty } } = useForm<IndirectCostsFormValues>({
+     defaultValues: cleanIndirectCostsForForm(defaultValues) as any,
+   });
+ 
+diff --git a/src/features/dashboard/CostitaChat.tsx b/src/features/dashboard/CostitaChat.tsx
+index 6e1ec99..40cd281 100644
+--- a/src/features/dashboard/CostitaChat.tsx
++++ b/src/features/dashboard/CostitaChat.tsx
+@@ -94,6 +94,9 @@ function sectionLabel(section: string) {
+     MANO_DE_OBRA: 'Mano de Obra',
+     COSTOS_INDIRECTOS: 'Costos Indirectos',
+     VENTAS: 'Ventas',
++    GASTO_COMERCIALIZACION: 'Gasto de Comercialización',
++    GASTO_ADMINISTRACION: 'Gasto de Administración',
++    GASTO_FINANCIERO: 'Gasto Financiero',
+     DESCONOCIDO: 'Sin clasificar',
+   };
+   return map[section] ?? section;
+diff --git a/src/features/validaciones/ValidacionesPage.tsx b/src/features/validaciones/ValidacionesPage.tsx
+index 8083ed4..236bb56 100644
+--- a/src/features/validaciones/ValidacionesPage.tsx
++++ b/src/features/validaciones/ValidacionesPage.tsx
+@@ -62,6 +62,10 @@ const SECTION_LABELS: Record<string, string> = {
+   MANO_DE_OBRA: "Mano de Obra",
+   COSTOS_INDIRECTOS: "Costos Indirectos",
+   VENTAS: "Ventas",
++  // Gastos (no-costo): no forman parte del costo del producto.
++  GASTO_COMERCIALIZACION: "Gasto de Comercialización",
++  GASTO_ADMINISTRACION: "Gasto de Administración",
++  GASTO_FINANCIERO: "Gasto Financiero",
+   MULTIPLE: "Múltiples Secciones",
+   DESCONOCIDO: "Sin clasificar",
+ };

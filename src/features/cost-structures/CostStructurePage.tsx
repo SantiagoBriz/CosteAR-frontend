@@ -21,6 +21,8 @@ import {
 import { RawMaterialForm } from './RawMaterialForm';
 import { DerivationTree } from './DerivationTree';
 import { useCalculateTraced, useStructureRuns } from './trazabilidad-hooks';
+import { IncompleteNotice } from './ImputacionResolver';
+import type { Incompletitud } from './trazabilidad-types';
 import { usePeriods } from './period-hooks';
 import { ScenarioSimulator } from './components/ScenarioSimulator';
 import { PeriodBar } from './components/PeriodBar';
@@ -88,6 +90,7 @@ export function CostStructurePage() {
   const { data: runsList } = useStructureRuns(id);
   const [tracedRunId, setTracedRunId] = useState<string | null>(null);
   const [tracedError, setTracedError] = useState<string | null>(null);
+  const [incompletitud, setIncompletitud] = useState<Incompletitud | null>(null);
   const effectiveRunId = tracedRunId ?? runsList?.[0]?.id ?? null;
 
   // Período de costeo que se está mirando (problema C — Fase 2). Por defecto, el
@@ -161,6 +164,7 @@ export function CostStructurePage() {
   const runCalculate = async () => {
     setError(null);
     setTracedError(null);
+    setIncompletitud(null);
     if (blockedByClosedPeriod()) return;
     try {
       const data = await calculate.mutateAsync();
@@ -174,6 +178,7 @@ export function CostStructurePage() {
     try {
       const traced = await calculateTraced.mutateAsync();
       setTracedRunId(traced.runId);
+      setIncompletitud(traced.incompleto ?? null);
     } catch (e) {
       setTracedError(apiErrorMessage(e));
     }
@@ -265,6 +270,9 @@ export function CostStructurePage() {
               selectedId={periodId}
               onSelect={setPeriodId}
               runIdToFreeze={effectiveRunId}
+              periodoCosto={structure?.period}
+              pendingDatos={incompletitud?.datosPendientes ?? []}
+              onGoToResolve={() => { setActiveTab('result'); void runCalculate(); }}
             />
             <span className="inline-flex items-center self-start rounded-full border border-line bg-surface-alt px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-soft">
               Captación: continua
@@ -498,6 +506,18 @@ export function CostStructurePage() {
 
       {activeTab === 'result' && (
         <div className="space-y-4">
+          {incompletitud?.incompleto && (
+            <IncompleteNotice
+              datos={incompletitud.datosPendientes}
+              motivos={incompletitud.motivos}
+              periodoCosto={structure?.period}
+              structureId={id}
+              doneTitle="Volvé a calcular para ver el resultado limpio."
+              doneLabel="Volver a calcular"
+              onDone={() => void runCalculate()}
+              busy={calculate.isPending || calculateTraced.isPending}
+            />
+          )}
           <DerivationTree
             runId={effectiveRunId}
             isMissingRun={!!tracedError}
@@ -529,5 +549,14 @@ export function CostStructurePage() {
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 function latestToResult(latest: any): CalculationResult {
-  return latest.results;
+  return {
+    rawMaterialConsumed:  Number(latest.rawMaterialConsumed),
+    directLaborTotal:     Number(latest.directLaborTotal),
+    indirectCostsApplied: Number(latest.indirectCostsApplied),
+    productionCost:       Number(latest.productionCost),
+    costOfGoodsSold:      Number(latest.costOfGoodsSold),
+    grossMargin:          Number(latest.grossMargin),
+    grossMarginPct:       Number(latest.grossMarginPct),
+    detail:               latest.detail,
+  };
 }

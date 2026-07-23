@@ -33,14 +33,25 @@ export function cleanIndirectCostsForForm(cfg?: IndirectCostConfig): any {
       },
       distribution: cleanRecord(c.distribution),
     })),
-    serviceDistributions: (base.serviceDistributions ?? []).map((s) => ({
-      ...s,
-      distributionMode: s.distributionMode ?? 'manual',
-      baseCode: s.baseCode ?? '',
-      toProductive: cleanRecord(s.toProductive),
-      toProductiveFixed: cleanRecord(s.toProductiveFixed),
-      toProductiveVariable: cleanRecord(s.toProductiveVariable),
-    })),
+    serviceDistributions: (base.serviceDistributions ?? []).map((s) => {
+      const fijoRec: Record<string, number> = {};
+      const varRec: Record<string, number> = {};
+      const unitsRec: Record<string, number> = {};
+      for (const p of s.distributions ?? []) {
+        if (!p || !p.centroDestinoId) continue;
+        fijoRec[p.centroDestinoId] = p.fijo;
+        varRec[p.centroDestinoId] = p.variable;
+        unitsRec[p.centroDestinoId] = p.fijo;
+      }
+      return {
+        serviceCenterId: s.serviceCenterId,
+        distributionMode: s.distributionMode ?? 'manual',
+        baseCode: s.baseCode ?? '',
+        toProductive: cleanRecord(unitsRec),
+        toProductiveFixed: cleanRecord(fijoRec),
+        toProductiveVariable: cleanRecord(varRec),
+      };
+    }),
     productiveSettings: (base.productiveSettings ?? []).map((p) => ({
       ...p,
       budget: {
@@ -83,23 +94,28 @@ export function cleanIndirectCostsForSubmit(data: any): IndirectCostConfig {
     }),
     serviceDistributions: (data.serviceDistributions ?? []).map((s: any) => {
       const mode = s.distributionMode === 'base' ? 'base' : 'manual';
+      const serviceCenterId = s.serviceCenterId;
+
+      let distributions: any[] = [];
       if (mode === 'base') {
-        return {
-          serviceCenterId: s.serviceCenterId,
-          distributionMode: 'base',
-          baseCode: (s.baseCode ?? '').trim(),
-          toProductive: cleanRecord(s.toProductive),
-          toProductiveFixed: {},
-          toProductiveVariable: {},
-        };
+        const units = cleanRecord(s.toProductive);
+        distributions = Object.keys(units)
+          .filter((id) => id && id !== serviceCenterId)
+          .map((id) => ({ centroDestinoId: id, fijo: units[id]!, variable: units[id]! }))
+          .filter((p) => p.fijo !== 0);
+      } else {
+        const fx = cleanRecord(s.toProductiveFixed);
+        const va = cleanRecord(s.toProductiveVariable);
+        const ids = new Set([...Object.keys(fx), ...Object.keys(va)]);
+        distributions = [...ids]
+          .filter((id) => id && id !== serviceCenterId)
+          .map((id) => ({ centroDestinoId: id, fijo: fx[id] ?? 0, variable: va[id] ?? 0 }))
+          .filter((p) => p.fijo !== 0 || p.variable !== 0);
       }
-      return {
-        serviceCenterId: s.serviceCenterId,
-        distributionMode: 'manual',
-        toProductive: {},
-        toProductiveFixed: cleanRecord(s.toProductiveFixed),
-        toProductiveVariable: cleanRecord(s.toProductiveVariable),
-      };
+
+      return mode === 'base'
+        ? { serviceCenterId, distributionMode: 'base' as const, baseCode: (s.baseCode ?? '').trim(), distributions }
+        : { serviceCenterId, distributionMode: 'manual' as const, distributions };
     }),
     productiveSettings: (data.productiveSettings ?? []).map((p: any) => ({
       ...p,

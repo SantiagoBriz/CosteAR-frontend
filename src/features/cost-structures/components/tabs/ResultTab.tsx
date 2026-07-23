@@ -53,6 +53,19 @@ export function ResultTab({ result, companyId, period }: { result: CalculationRe
             }}
           />
         )}
+        {result.detail.unitCost && (
+          <Card>
+            <CardBody className="space-y-2 py-8 text-center">
+              <p className="text-[11px] uppercase tracking-widest text-ink-soft">Costo unitario de producción</p>
+              <Money value={result.detail.unitCost.unitProductionCost} className="block text-5xl font-bold text-ink" />
+              {result.detail.unitCost.unitsProduced > 0 && (
+                <p className="text-[12px] text-ink-soft">
+                  costo de producción ÷ {result.detail.unitCost.unitsProduced.toLocaleString('es-AR')} u producidas
+                </p>
+              )}
+            </CardBody>
+          </Card>
+        )}
         <Card>
           <CardHeader title="Desglose de costos" />
           <CardBody className="overflow-x-auto p-0">

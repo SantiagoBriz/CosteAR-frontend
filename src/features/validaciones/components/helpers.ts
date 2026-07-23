@@ -29,6 +29,10 @@ export const SECTION_LABELS: Record<string, string> = {
   MANO_DE_OBRA: "Mano de Obra",
   COSTOS_INDIRECTOS: "Costos Indirectos",
   VENTAS: "Ventas",
+  // Gastos (no-costo): no forman parte del costo del producto.
+  GASTO_COMERCIALIZACION: "Gasto de Comercialización",
+  GASTO_ADMINISTRACION: "Gasto de Administración",
+  GASTO_FINANCIERO: "Gasto Financiero",
   MULTIPLE: "Múltiples Secciones",
   DESCONOCIDO: "Sin clasificar",
 };
