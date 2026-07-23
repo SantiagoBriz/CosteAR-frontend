@@ -1,13 +1,15 @@
-import { useAdminStats } from '../admin-hooks';
+import { useAdminStats, useVaultIndexMutation } from '../admin-hooks';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { 
   Users, Activity, Database, TrendingUp, DollarSign, 
-  Server, ShieldAlert, CheckCircle2 
+  Server, ShieldAlert, CheckCircle2, RefreshCw 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function AdminOverview() {
   const { data: stats } = useAdminStats();
+  const { mutate: indexVault, isPending: isIndexing } = useVaultIndexMutation();
 
   // Mocked MRR calculation based on total users for demo purposes
   const mrr = (stats?.saas.totalUsers || 0) * 49.99; 
@@ -100,8 +102,20 @@ export function AdminOverview() {
                 <CheckCircle2 className="size-3.5 text-emerald-500" />
               </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-ink-soft">Volumen de la Bóveda</p>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-ink-soft">Volumen de la Bóveda</p>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => indexVault()} 
+                  disabled={isIndexing}
+                  className="h-7 text-[10px] uppercase font-bold text-ink-soft hover:text-blue-600 bg-blue-50/50"
+                >
+                  <RefreshCw className={cn("size-3 mr-1.5", isIndexing && "animate-spin")} />
+                  {isIndexing ? 'Indexando...' : 'Re-indexar Manual'}
+                </Button>
+              </div>
               <div className="flex items-end gap-2 mt-1">
                 <span className="text-2xl font-black text-ink">{stats?.vault.totalChunks ?? '-'}</span>
                 <span className="text-xs font-bold text-ink-soft mb-1">fragmentos indexados (chunks)</span>
