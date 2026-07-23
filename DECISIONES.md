@@ -600,3 +600,54 @@ muestra "—". Ningún caso crashea.
 **Verificación.** `typecheck` ✅, `build` ✅, `vitest` 22✅. Navegador contra dev: ver DECISIONES del
 backend (`Costear.api`) para el escenario de factura tardía (hecho 27/06 en estructura 07/2026 →
 modal de imputación → se comporta como F06).
+
+---
+
+## F08 — El badge de margen no miente: nunca "MARGEN SANO" sobre un resultado no confiable
+
+**Problema.** El panel de resultados podía mostrar un badge verde "MARGEN BRUTO 53,0 % · MARGEN
+SANO" sobre un cálculo con **Materia Prima $0 y CIP $0** (número que no contiene materia prima ni
+costos indirectos), o sobre un resultado marcado incompleto por F04. Un costista lee ese verde y
+confía en un margen sano que no es real. Es la mitad visible del problema F04.
+
+**Regla implementada.** El estado "sano" (verde/`ok`) NO se renderiza cuando se cumple cualquiera de:
+- el resultado viene marcado `incompleto` (flag F04, `incompletitud.incompleto`), **o**
+- Materia Prima consumida ≤ 0, **o**
+- CIP aplicados ≤ 0.
+
+En esos casos el badge pasa a **advertencia** (tono `warn`, "Margen no confiable") con una explicación
+breve en español debajo (motivo específico: sin MP, sin CIP, ambos, o incompleto). El badge de un
+resultado genuinamente completo (MP > 0, CIP > 0, no marcado) sigue funcionando igual — sin
+sobre-disparo.
+
+**Dónde vive el piso de plausibilidad — decisión (DO #3).** En `marginStatus` (`StatusBadge.tsx`),
+no en el panel. Se agregó:
+- `marginStatus(marginPct, thresholdPct, trustworthy = true)`: un tercer parámetro con default `true`
+  (retrocompatible con los llamados existentes de 2 args). Si `trustworthy === false`, degrada a
+  `warn` **antes** de evaluar el margen — ni siquiera un margen alto ni uno negativo se afirman como
+  algo cuando el número no es confiable.
+- `isResultTrustworthy({ rawMaterialConsumed, indirectCostsApplied, incompleto? })`: regla de negocio
+  reusable que decide la confiabilidad. Vive junto a `marginStatus` para que **cualquier** consumidor
+  del semáforo (no solo el panel) herede el mismo piso. El `ResultTab` solo la invoca y pasa el
+  resultado a `marginStatus`.
+
+**Por qué degradar a `warn` y no mantener `danger` en pérdida.** El requisito es no afirmar "sano".
+Con MP=0/CIP=0 el propio margen no es confiable, así que tampoco tiene sentido afirmar "venta a
+pérdida" (`danger`) sobre él: se muestra una advertencia neutral que dice explícitamente que el número
+no es confiable. Reusa los tonos existentes de `StatusBadge` (`warn`) — no se inventaron colores.
+
+**Alcance del flag F04 (`incompleto`).** Llega por el estado `incompletitud` de `CostStructurePage`
+(corrida de trazabilidad de esta sesión). Para un resultado cacheado (`latest`, recién abierta la
+página sin recalcular) el flag no está disponible, pero el piso MP=0/CIP=0 —que se computa sobre los
+propios valores del `CalculationResult`— sigue actuando como guarda siempre presente. Es exactamente
+el caso del reporte, así que queda cubierto con o sin sesión de trazabilidad.
+
+**Terminología (regla #6/#7).** Los mensajes usan términos de cátedra en español ("Materia Prima
+consumida", "CIP aplicados") y no exponen identificadores internos ni endpoints.
+
+**Verificación.** `typecheck` ✅, `build` ✅, `vitest` 32✅ (nuevo `StatusBadge.test.ts`, 10 casos,
+incluye el escenario exacto del reporte). Navegador contra dev: se importó el **módulo compilado real**
+(`StatusBadge.tsx` servido por Vite) y se renderizó el `<StatusBadge>` real para los 3 escenarios de
+aceptación → reporte (MP 0/CIP 0/53%) y F04-incompleto pintan "MARGEN NO CONFIABLE" ámbar; completo
+pinta "MARGEN SANO" verde. (No se pudo usar el flujo autenticado completo: ingresar contraseña es una
+acción que el asistente no ejecuta; la verificación se hizo sobre el componente shippeado real.)
