@@ -9,12 +9,17 @@ export function AdminUsers() {
   const { mutateAsync: createUser, isPending } = useCreateAdminUserMutation();
   
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'STAFF' | 'COSTISTAS'>('STAFF');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('ADMIN');
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const staffUsers = users?.filter((u: any) => u.role === 'ADMIN') || [];
+  const costistaUsers = users?.filter((u: any) => u.role !== 'ADMIN') || [];
+  const displayedUsers = activeTab === 'STAFF' ? staffUsers : costistaUsers;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +58,25 @@ export function AdminUsers() {
         </Button>
       </div>
 
+      <div className="flex gap-2 bg-surface-alt p-1 rounded-lg border border-line w-fit">
+        <button
+          onClick={() => setActiveTab('STAFF')}
+          className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
+            activeTab === 'STAFF' ? 'bg-surface shadow-sm text-indigo-700' : 'text-ink-soft hover:text-ink'
+          }`}
+        >
+          Staff (Admins)
+        </button>
+        <button
+          onClick={() => setActiveTab('COSTISTAS')}
+          className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
+            activeTab === 'COSTISTAS' ? 'bg-surface shadow-sm text-indigo-700' : 'text-ink-soft hover:text-ink'
+          }`}
+        >
+          Costistas / Operarios
+        </button>
+      </div>
+
       <Card className="overflow-hidden border-line bg-surface">
         {isLoading ? (
           <div className="p-8 text-center text-ink-soft font-medium animate-pulse">Cargando personal...</div>
@@ -67,7 +91,7 @@ export function AdminUsers() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {users?.map((user: any) => (
+                {displayedUsers.map((user: any) => (
                   <tr key={user.id} className="hover:bg-black/5 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -92,10 +116,10 @@ export function AdminUsers() {
                     </td>
                   </tr>
                 ))}
-                {users?.length === 0 && (
+                {displayedUsers.length === 0 && (
                   <tr>
                     <td colSpan={3} className="px-6 py-12 text-center text-ink-soft font-medium">
-                      No hay usuarios registrados en el sistema.
+                      No hay usuarios en esta categoría.
                     </td>
                   </tr>
                 )}
