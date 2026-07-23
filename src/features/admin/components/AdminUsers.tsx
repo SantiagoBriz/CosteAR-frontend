@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAdminUsers, useCreateAdminUserMutation } from '../admin-hooks';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -130,8 +131,8 @@ export function AdminUsers() {
       </Card>
 
       {/* Modal / Overlay for User Creation */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+      {showForm && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <Card className="w-full max-w-md p-6 bg-surface border-line shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in zoom-in-95 duration-200">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
@@ -185,7 +186,8 @@ export function AdminUsers() {
               )}
             </form>
           </Card>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
