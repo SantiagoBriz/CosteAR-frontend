@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { Trash2 } from 'lucide-react';
-import { UseFormRegister, UseFieldArrayReturn, UseFormSetValue } from 'react-hook-form';
+import { UseFormRegister, UseFieldArrayReturn, UseFormSetValue, UseFormGetValues } from 'react-hook-form';
 import { BaseSelect } from './BaseSelect';
 import { type AllocationBase } from '../../allocation-base-hooks';
 
@@ -10,6 +10,7 @@ export function SecondaryAllocationSection({
   serviceDists,
   register,
   setValue,
+  getValues,
   watchedServiceDists,
   allocationBases,
   companyId
@@ -19,6 +20,7 @@ export function SecondaryAllocationSection({
   serviceDists: UseFieldArrayReturn<any, 'serviceDistributions'>;
   register: UseFormRegister<any>;
   setValue: UseFormSetValue<any>;
+  getValues: UseFormGetValues<any>;
   watchedServiceDists: any[];
   allocationBases: AllocationBase[] | undefined;
   companyId?: string;
@@ -74,9 +76,24 @@ export function SecondaryAllocationSection({
           </thead>
           <tbody className="flex flex-col gap-3 sm:table-row-group sm:gap-0 sm:divide-y sm:divide-line">
             {serviceDists.fields.map((f, i) => {
-              const rowServiceId = (watchedServiceDists ?? [])[i]?.serviceCenterId;
               const rowMode = (watchedServiceDists ?? [])[i]?.distributionMode ?? 'manual';
               const rowDrivers = (watchedServiceDists ?? [])[i]?.toProductive as Record<string, any> | undefined;
+              // DEFECT 1 — valor VIVO del <select> leído del form (no del watch,
+              // que puede ir un tick atrasado al reordenar/eliminar). Se usa para
+              // garantizar que el centro ya elegido SIEMPRE esté entre las
+              // opciones: un <select> nativo que no encuentra su valor entre sus
+              // <option> se resetea solo a "Elegir…" — ese era el bug.
+              const selfId = getValues(`serviceDistributions.${i}.serviceCenterId`) as string | undefined;
+              // DEFECT 3 — escalonado: los servicios de las filas 0..i ya
+              // cerraron para esta fila (el orden de filas = orden de cierre), así
+              // que sus columnas se bloquean. Incluye el propio centro de la fila.
+              // Se recalcula en cada render, con lo que sigue al reordenamiento.
+              const closedServiceIds = new Set<string>(
+                (watchedServiceDists ?? [])
+                  .slice(0, i + 1)
+                  .map((d) => d?.serviceCenterId)
+                  .filter((x): x is string => !!x)
+              );
               return (
               <tr key={f.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
                 <td data-label="Orden de cierre" className="flex items-center gap-1 before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
@@ -91,6 +108,7 @@ export function SecondaryAllocationSection({
                     <option value="">Elegir…</option>
                     {serviceCenters
                       .filter(c => {
+                        if (c.id === selfId) return true; // el centro ya elegido en ESTA fila jamás se quita de la lista
                         const usedInOtherRows = (watchedServiceDists ?? [])
                           .some((d, j) => j !== i && d.serviceCenterId === c.id);
                         return !usedInOtherRows;
@@ -120,7 +138,7 @@ export function SecondaryAllocationSection({
                         />
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {targetCenters.filter((c) => c.id !== rowServiceId).map((c) => (
+                        {targetCenters.filter((c) => !closedServiceIds.has(c.id)).map((c) => (
                           <div key={c.id} className="flex items-center gap-1.5 rounded border border-line bg-surface px-2 py-1">
                             <span className="text-[12px] text-ink-soft">{c.name || c.id}</span>
                             <input type="number" step="any" inputMode="decimal" className="w-16 rounded border border-line bg-surface px-1.5 py-0.5 text-right text-sm text-ink focus:border-granate focus:outline-none" placeholder="0" {...register(`serviceDistributions.${i}.toProductive.${c.id}`, { valueAsNumber: true })} />
@@ -133,15 +151,18 @@ export function SecondaryAllocationSection({
                   </td>
                 ) : (
                   targetCenters.map((c) => {
-                  const isSelf = !!rowServiceId && c.id === rowServiceId;
+                  // DEFECT 3 — bloqueada si es un servicio que ya cerró para esta
+                  // fila (filas 0..i, incluyéndose a sí misma). Se renderiza "—":
+                  // no puede recibir reparto (regla del escalonado).
+                  const isBlocked = closedServiceIds.has(c.id);
                   return (
                   <Fragment key={c.id}>
                     <td data-label={`${c.name || c.id} — Fijo %`} className="block text-left before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
-                      {isSelf ? <span className="block text-center text-ink-soft/40">—</span> :
+                      {isBlocked ? <span className="block text-center text-ink-soft/40">—</span> :
                       <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveFixed.${c.id}`, { valueAsNumber: true })} />}
                     </td>
                     <td data-label={`${c.name || c.id} — Var %`} className="block text-left before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-1 sm:py-1.5 sm:text-center sm:before:hidden">
-                      {isSelf ? <span className="block text-center text-ink-soft/40">—</span> :
+                      {isBlocked ? <span className="block text-center text-ink-soft/40">—</span> :
                       <input type="number" step="any" inputMode="decimal" className="w-full rounded border border-line bg-surface px-2 py-1 text-right text-sm text-ink focus:border-granate focus:outline-none sm:w-20" placeholder="0" {...register(`serviceDistributions.${i}.toProductiveVariable.${c.id}`, { valueAsNumber: true })} />}
                     </td>
                   </Fragment>

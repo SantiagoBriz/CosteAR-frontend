@@ -112,6 +112,33 @@ export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: 
     }
   }, [productiveIdKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // DEFECT 2 — al eliminar un centro (productivo o de servicio) que se usa como
+  // DESTINO del reparto secundario, quitamos su columna de TODAS las filas. Así
+  // no sobrevive una referencia colgada (`centroDestinoId` apuntando a un centro
+  // que ya no existe) que ensuciaría el payload y el cálculo. Es idempotente y
+  // auto-sanador: ante cualquier cambio del conjunto de centros destino, purga
+  // toda clave que ya no corresponda a un centro existente.
+  const prevTargetKey = useRef('');
+  const targetIdKey = targetCenters.map((c) => c.id).join(',');
+  useEffect(() => {
+    if (targetIdKey === prevTargetKey.current) return;
+    prevTargetKey.current = targetIdKey;
+
+    const validIds = new Set(targetCenters.map((c) => c.id));
+    const dists: any[] = getValues('serviceDistributions') ?? [];
+    dists.forEach((d, i) => {
+      (['toProductive', 'toProductiveFixed', 'toProductiveVariable'] as const).forEach((key) => {
+        const rec = d?.[key] as Record<string, any> | undefined;
+        if (!rec) return;
+        const stale = Object.keys(rec).filter((id) => !validIds.has(id));
+        if (stale.length === 0) return;
+        const next = { ...rec };
+        stale.forEach((id) => delete next[id]);
+        setValue(`serviceDistributions.${i}.${key}`, next, { shouldDirty: true });
+      });
+    });
+  }, [targetIdKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <>
       <form onSubmit={handleSubmit((data) => setPending(cleanIndirectCostsForSubmit(data)))} className="space-y-6 pt-3">
@@ -133,6 +160,7 @@ export function IndirectCostsForm({ defaultValues, onSave, saving, companyId }: 
           serviceDists={serviceDists}
           register={register}
           setValue={setValue}
+          getValues={getValues}
           watchedServiceDists={watchedServiceDists}
           allocationBases={allocationBases}
           companyId={companyId}
