@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { AlertTriangle, CalendarDays, Lock, LockOpen, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { apiErrorMessage } from '@/lib/api';
+import { apiErrorMessage, isUnimputedError, unimputedDatosFromError } from '@/lib/api';
 import { cn, formatMoney } from '@/lib/utils';
+import { IncompleteNotice } from '../ImputacionResolver';
 import {
   usePeriods,
   usePeriodPreview,
@@ -23,6 +24,12 @@ interface PeriodBarProps {
   onSelect: (periodId: string) => void;
   /** Cálculo que queda congelado con el cierre, si hay uno a mano. */
   runIdToFreeze?: string | null;
+  /** Período de costo de la estructura ('YYYY-MM'): base de la imputación (F05). */
+  periodoCosto?: string;
+  /** Datos sin imputar de la última corrida, para resolverlos in-situ si el cierre los bloquea. */
+  pendingDatos?: { id: string; nombre: string }[];
+  /** Fallback: si no hay lista a mano, llevar a la pestaña Resultado a resolverlos. */
+  onGoToResolve?: () => void;
 }
 
 /**
@@ -38,6 +45,9 @@ export function PeriodBar({
   selectedId,
   onSelect,
   runIdToFreeze,
+  periodoCosto,
+  pendingDatos,
+  onGoToResolve,
 }: PeriodBarProps) {
   const { data: periods, isLoading } = usePeriods(structureId);
   const openNext = useOpenNextPeriod(structureId);
@@ -48,6 +58,11 @@ export function PeriodBar({
   const [carryAmounts, setCarryAmounts] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // F05 — cuando el cierre lo bloquea el 422 de datos sin imputar, guardamos la
+  // lista para ofrecer la resolución acá mismo, sin que el costista tenga que ir
+  // a buscar los datos. Preferimos la lista estructurada del error (si el
+  // backend la adjunta) y caemos a la de la última corrida (`pendingDatos`).
+  const [blockDatos, setBlockDatos] = useState<{ id: string; nombre: string }[] | null>(null);
 
   const selected = periods?.find((p) => p.id === selectedId) ?? null;
   const hasOpen = periods?.some((p) => p.status === 'OPEN') ?? false;
@@ -61,6 +76,24 @@ export function PeriodBar({
       setReason('');
     } catch (e) {
       setError(apiErrorMessage(e));
+    }
+  };
+
+  /** Cierre con su propio manejo: el 422 de datos sin imputar no es un error
+   *  muerto — abre la resolución in-situ en vez de dejar al costista trabado. */
+  const runClose = async () => {
+    setError(null);
+    setBlockDatos(null);
+    try {
+      const period = await closePeriod.mutateAsync({ periodId: selected!.id, runId: runIdToFreeze ?? null });
+      onSelect(period.id);
+      setDialog(null);
+    } catch (e) {
+      setError(apiErrorMessage(e)); // siempre mostramos el texto en español del backend
+      if (isUnimputedError(e)) {
+        setDialog(null); // cerramos el confirm para que se vea la resolución en la barra
+        setBlockDatos(unimputedDatosFromError(e) ?? pendingDatos ?? []);
+      }
     }
   };
 
@@ -146,6 +179,33 @@ export function PeriodBar({
         </div>
       )}
 
+      {/* F05 — el cierre lo bloqueó el 422 de datos sin imputar: acá mismo se
+          resuelven, sin salir a buscarlos. Si no tenemos la lista a mano
+          (nunca se calculó en esta sesión), llevamos a Resultado a resolverlos. */}
+      {blockDatos && selected && (
+        blockDatos.length > 0 ? (
+          <div className="max-w-xl">
+            <IncompleteNotice
+              datos={blockDatos}
+              periodoCosto={periodoCosto}
+              structureId={structureId}
+              doneTitle={`Ya podés cerrar ${selected.label}.`}
+              doneLabel={`Cerrar ${selected.label}`}
+              onDone={() => { setBlockDatos(null); setError(null); setDialog('close'); }}
+              busy={closePeriod.isPending}
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setBlockDatos(null); onGoToResolve?.(); }}
+            className="self-start rounded-lg bg-granate px-3 py-1.5 text-[12px] font-bold text-white hover:bg-granate-deep"
+          >
+            Resolver los datos pendientes
+          </button>
+        )
+      )}
+
       {/* Abrir (apertura inteligente): antes de tocar nada, se muestra con qué
           existencia arranca cada MP y qué importes hay para traer. */}
       {dialog === 'open' && (
@@ -166,11 +226,7 @@ export function PeriodBar({
         confirmLabel="Cerrar período"
         loading={closePeriod.isPending}
         onCancel={() => setDialog(null)}
-        onConfirm={() =>
-          void run(() =>
-            closePeriod.mutateAsync({ periodId: selected!.id, runId: runIdToFreeze ?? null }),
-          )
-        }
+        onConfirm={() => void runClose()}
         message={
           <p>
             Los números quedan <strong>congelados</strong> y el mes pasa a solo lectura. Si a algún

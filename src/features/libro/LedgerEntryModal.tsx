@@ -8,6 +8,10 @@ const SECTIONS = [
   { v: 'MANO_DE_OBRA', l: 'Mano de Obra' },
   { v: 'COSTOS_INDIRECTOS', l: 'Costos Indirectos' },
   { v: 'VENTAS', l: 'Ventas' },
+  // Gastos (no-costo): separados de los costos del producto.
+  { v: 'GASTO_COMERCIALIZACION', l: 'Gasto de Comercialización' },
+  { v: 'GASTO_ADMINISTRACION', l: 'Gasto de Administración' },
+  { v: 'GASTO_FINANCIERO', l: 'Gasto Financiero' },
 ];
 
 function todayPeriod() {

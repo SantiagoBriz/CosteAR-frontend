@@ -85,6 +85,17 @@ export interface DirectLaborConfig {
   }>;
 }
 
+/**
+ * Un PAR EXPLÍCITO del reparto secundario (F01-B): a qué centro DESTINO va y
+ * cuánto (base fija y variable). Espeja `SecondaryDistributionPair` del backend
+ * (`cost.schema.ts`). El id del destino viaja SIEMPRE con el valor.
+ */
+export interface SecondaryDistributionPair {
+  centroDestinoId: string;
+  fijo: number;
+  variable: number;
+}
+
 export interface IndirectCostConfig {
   centers: Array<{ id: string; name: string; type: 'productive' | 'service' }>;
   concepts: Array<{
@@ -102,9 +113,11 @@ export interface IndirectCostConfig {
     // los % desde las unidades de una base física, ej. horas-máquina).
     distributionMode?: 'manual' | 'base';
     baseCode?: string;
-    toProductive?: Record<string, number>;
-    toProductiveFixed?: Record<string, number>;
-    toProductiveVariable?: Record<string, number>;
+    // CONTRATO F01-B — PARES EXPLÍCITOS: cada valor viaja con el id del centro
+    // DESTINO. Reemplaza a los Records posicionales `toProductive*`: así la
+    // posición de la columna ya no decide a qué centro va el valor (era el bug
+    // del prorrateo secundario). El backend (F01-A) espera y devuelve esta forma.
+    distributions: SecondaryDistributionPair[];
   }>;
   productiveSettings: Array<{
     centerId: string;

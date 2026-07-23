@@ -69,3 +69,19 @@ export interface ImputacionOption {
   label: string;
   recommended?: boolean;
 }
+
+/**
+ * Marca de incompletitud de una corrida (contrato F04, espejo de
+ * `calculation-run-service.ts` del backend). Viaja tanto en
+ * `results.incompletitud` como suelta en `data.incompleto`. Si `incompleto`
+ * es true, el resultado corrió con datos sin decisión de imputación de período
+ * y NO es confiable: el front pinta la advertencia en vez de un margen "sano".
+ *
+ * `datosPendientes[].id` es SOLO para abrir la ficha del dato; lo que se le
+ * muestra al costista es siempre el `nombre` humano (regla #6/#7).
+ */
+export interface Incompletitud {
+  incompleto: boolean;
+  motivos: string[];
+  datosPendientes: { id: string; nombre: string }[];
+}

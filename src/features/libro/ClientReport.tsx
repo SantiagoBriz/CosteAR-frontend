@@ -8,8 +8,16 @@ const SECTION_LABELS: Record<string, string> = {
   MANO_DE_OBRA: 'Mano de Obra',
   COSTOS_INDIRECTOS: 'Costos Indirectos',
   VENTAS: 'Ventas',
+  GASTO_COMERCIALIZACION: 'Gasto de Comercialización',
+  GASTO_ADMINISTRACION: 'Gasto de Administración',
+  GASTO_FINANCIERO: 'Gasto Financiero',
 };
-const SECTION_ORDER = ['MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS'];
+// Gastos: NO son costo del producto. Se listan y totalizan aparte del "Costo total".
+const GASTO_SECTIONS = ['GASTO_COMERCIALIZACION', 'GASTO_ADMINISTRACION', 'GASTO_FINANCIERO'];
+const SECTION_ORDER = [
+  'MATERIA_PRIMA', 'MANO_DE_OBRA', 'COSTOS_INDIRECTOS', 'VENTAS',
+  ...GASTO_SECTIONS,
+];
 
 function periodLabel(p: string): string {
   if (!p) return 'Todos los períodos';
@@ -36,9 +44,12 @@ export function ClientReport({
   onClose: () => void;
 }) {
   const sections = SECTION_ORDER.filter((s) => totalsBySection[s] != null);
-  // Costos = todo menos VENTAS. Ventas se muestra aparte si existe.
-  const costSections = sections.filter((s) => s !== 'VENTAS');
+  // Costos del PRODUCTO = MP + MOD + CIP. Ventas y gastos (no inventariables)
+  // se muestran aparte para no inflar el costo unitario.
+  const costSections = sections.filter((s) => s !== 'VENTAS' && !GASTO_SECTIONS.includes(s));
+  const gastoSections = sections.filter((s) => GASTO_SECTIONS.includes(s));
   const totalCosts = costSections.reduce((sum, s) => sum + (totalsBySection[s] ?? 0), 0);
+  const totalGastos = gastoSections.reduce((sum, s) => sum + (totalsBySection[s] ?? 0), 0);
   const totalSales = totalsBySection['VENTAS'] ?? 0;
   const margin = totalSales > 0 ? ((totalSales - totalCosts) / totalSales) * 100 : null;
   const docCount = entries.filter((e) => e.dataEntryId).length;
@@ -119,6 +130,35 @@ export function ClientReport({
               {margin != null && (
                 <div className="mt-1.5 flex justify-between border-t border-granate/10 pt-1.5"><span className="font-bold text-ink">Margen bruto</span><span className="font-extrabold tabular-nums text-granate">{margin.toFixed(1)}%</span></div>
               )}
+            </div>
+          )}
+
+          {/* Gastos (no forman parte del costo del producto) */}
+          {gastoSections.length > 0 && (
+            <div className="mb-6 overflow-x-auto print:overflow-visible">
+              <table className="w-full min-w-[420px] text-sm">
+                <thead>
+                  <tr className="border-b-2 border-ink/10 text-left text-[10.5px] font-extrabold uppercase tracking-wider text-ink-soft">
+                    <th className="pb-2.5">Gastos del período (no inventariables)</th>
+                    <th className="pb-2.5 text-right">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gastoSections.map((s) => (
+                    <tr key={s} className="border-b border-ink/5">
+                      <td className="py-2.5 text-ink">{SECTION_LABELS[s] ?? s}</td>
+                      <td className="py-2.5 text-right tabular-nums text-ink">{formatMoney(totalsBySection[s])}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t-2 border-ink/20 font-extrabold text-granate-deep">
+                    <td className="py-2.5">Total gastos</td>
+                    <td className="py-2.5 text-right tabular-nums">{formatMoney(totalGastos)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="mt-2 text-[10.5px] leading-relaxed text-ink-soft">
+                Los gastos de comercialización, administración y financieros no integran el costo del producto.
+              </p>
             </div>
           )}
 

@@ -73,11 +73,15 @@ const SOURCE_CONFIG: Record<DataEntrySourceType, { label: string; icon: typeof F
 };
 
 const SECTION_LABELS: Record<string, string> = {
-  MATERIA_PRIMA:    'Mat. Prima',
-  MANO_DE_OBRA:     'M. de Obra',
-  COSTOS_INDIRECTOS:'C. Indirectos',
-  VENTAS:           'Ventas',
-  DESCONOCIDO:      'Sin sección',
+  MATERIA_PRIMA:         'Mat. Prima',
+  MANO_DE_OBRA:          'M. de Obra',
+  COSTOS_INDIRECTOS:     'C. Indirectos',
+  VENTAS:                'Ventas',
+  // Gastos (no-costo): grupo aparte, no forman parte del costo del producto.
+  GASTO_COMERCIALIZACION:'Gasto Comerc.',
+  GASTO_ADMINISTRACION:  'Gasto Admin.',
+  GASTO_FINANCIERO:      'Gasto Financ.',
+  DESCONOCIDO:           'Sin sección',
 };
 
 const SECTION_COLORS: Record<string, string> = {
@@ -85,6 +89,10 @@ const SECTION_COLORS: Record<string, string> = {
   MANO_DE_OBRA:     'border-blue-200 bg-blue-50 text-blue-700',
   COSTOS_INDIRECTOS:'border-orange-200 bg-orange-50 text-orange-700',
   VENTAS:           'border-emerald-200 bg-emerald-50 text-emerald-700',
+  // Familia rosa/rojo = gasto (no inventariable), distinta de los costos.
+  GASTO_COMERCIALIZACION:'border-rose-200 bg-rose-50 text-rose-700',
+  GASTO_ADMINISTRACION:  'border-pink-200 bg-pink-50 text-pink-700',
+  GASTO_FINANCIERO:      'border-red-200 bg-red-50 text-red-700',
   DESCONOCIDO:      'border-line bg-zinc-50 text-ink-soft',
 };
 

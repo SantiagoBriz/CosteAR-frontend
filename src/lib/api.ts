@@ -94,10 +94,41 @@ export function apiErrorMessage(error: unknown): string {
     const data = error.response?.data as
       | { error?: { message?: string; details?: Array<{ message: string }> } }
       | undefined;
-    if (data?.error?.details?.length) {
+    if (Array.isArray(data?.error?.details) && data.error.details.length) {
       return data.error.details.map((d) => d.message).join(' · ');
     }
     return data?.error?.message ?? 'Ocurrió un error inesperado';
   }
   return 'Ocurrió un error inesperado';
+}
+
+/**
+ * Detecta el 422 accionable que agregó F04 al cerrar un período: hay datos sin
+ * decisión de imputación de período (`MISSING_INPUT` sobre `periodoImputado`).
+ * El cierre es irreversible y no puede pasar sobre datos sin asignar a un mes.
+ */
+export function isUnimputedError(error: unknown): boolean {
+  if (error instanceof AxiosError) {
+    const err = (error.response?.data as { error?: { code?: string; details?: { field?: string } } } | undefined)?.error;
+    return err?.code === 'MISSING_INPUT' && err?.details?.field === 'periodoImputado';
+  }
+  return false;
+}
+
+/**
+ * Si el backend adjunta la lista estructurada de datos pendientes en el error
+ * (contrato aditivo: `error.details.datosPendientes`), la devuelve para ofrecer
+ * la resolución in-situ. Si no la trae, devuelve null y el llamador cae al
+ * listado que ya tiene a mano (la última corrida). Nunca expone ids al usuario.
+ */
+export function unimputedDatosFromError(error: unknown): { id: string; nombre: string }[] | null {
+  if (error instanceof AxiosError) {
+    const details = (error.response?.data as { error?: { details?: { datosPendientes?: unknown } } } | undefined)
+      ?.error?.details;
+    const list = details?.datosPendientes;
+    if (Array.isArray(list) && list.every((d) => d && typeof d.id === 'string' && typeof d.nombre === 'string')) {
+      return list as { id: string; nombre: string }[];
+    }
+  }
+  return null;
 }
