@@ -113,7 +113,7 @@ export function SidebarDock({ activeTab, setActiveTab }: SidebarDockProps) {
                   setActiveTab(item.id);
                 }}
                 className={cn(
-                  'w-full h-12 relative flex items-center justify-center rounded-l-[24px] z-25 group transition-colors duration-155',
+                  'w-full h-12 relative flex items-center justify-center pl-2.5 rounded-l-[24px] z-25 group transition-colors duration-155',
                   active ? 'text-granate' : 'text-white/70 hover:text-white'
                 )}
               >
