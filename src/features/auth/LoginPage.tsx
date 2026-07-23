@@ -52,6 +52,8 @@ export function LoginPage() {
       const result = await login.mutateAsync(values);
       if (result?.user?.mustChangePassword) {
         await navigate({ to: '/change-password' });
+      } else if (result?.user?.role === 'ADMIN') {
+        await navigate({ to: '/admin' });
       } else {
         await navigate({ to: '/dashboard' });
       }

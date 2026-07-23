@@ -4,101 +4,26 @@ import { CostitaChat } from './CostitaChat';
 import {
   Building2, Bell, ArrowRight, ClipboardCheck,
   DollarSign, AlertTriangle, CheckCircle2, FileText,
-  ChevronRight, Activity, Percent, Search, FileInput,
-  Image, MessageSquare, User, ShieldCheck,
+  ChevronRight, Activity, Percent, Search,
+  User, ShieldCheck,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/AppShell';
 import { Button } from '@/components/ui/Button';
 import { useCompanies } from '@/features/companies/company-hooks';
 import { useAlerts } from '@/features/alerts/alert-hooks';
 import { usePendingCount, usePendingEntries, useAttention } from '@/features/validaciones/validaciones-hooks';
 import { useAuthStore } from '@/stores/auth-store';
-import { api } from '@/lib/api';
 import { formatDate, cn } from '@/lib/utils';
-import type { MacroSnapshot } from '@/lib/types';
-
-function useRecentDocs() {
-  return useQuery({
-    queryKey: ['automatizacion', 'feed'],
-    queryFn: async () => {
-      const res = await api.get<{ data: RecentDoc[]; total: number }>('/validaciones/feed');
-      return res.data.data
-        .filter((d) => d.status === 'APPROVED')
-        .slice(0, 5);
-    },
-    staleTime: 2 * 60 * 1000,
-  });
-}
-
-interface RecentDoc {
-  id: string;
-  status: string;
-  sourceType: 'TEXT' | 'PDF' | 'IMAGE' | 'WHATSAPP';
-  fileName: string | null;
-  rawContent: string;
-  createdAt: string;
-  connection: { company: { id: string; name: string } };
-  classificationAudits: Array<{ documentType: string; costSection: string }>;
-}
-
-const SOURCE_ICON: Record<string, typeof FileText> = {
-  TEXT: FileText, PDF: FileInput, IMAGE: Image, WHATSAPP: MessageSquare,
-};
-
-// Colores sofisticados para los sectores de la cartera (Muted HSL)
-const INDUSTRY_CLASSES: Record<string, string> = {
-  'Agropecuaria':     'bg-amber-50 text-amber-700 border-amber-200/50',
-  'Manufactura':      'bg-granate-tenue text-granate border-granate/10',
-  'Transporte':       'bg-indigo-50 text-indigo-700 border-indigo-200/50',
-  'Construcción':     'bg-orange-50 text-orange-700 border-orange-200/50',
-  'Comercio':         'bg-sky-50 text-sky-700 border-sky-200/50',
-  'Servicios':        'bg-zinc-100 text-zinc-700 border-zinc-200/60',
-  'Logística':        'bg-emerald-50 text-emerald-700 border-emerald-200/50',
-  'Gastronomía':      'bg-rose-50 text-rose-700 border-rose-200/50',
-  'Salud':            'bg-teal-50 text-teal-700 border-teal-200/50',
-  'Tecnología':       'bg-violet-50 text-violet-700 border-violet-200/50',
-};
-
-function industryChip(industry: string | null | undefined): string {
-  if (!industry) return 'bg-zinc-50 text-zinc-400 border-zinc-100';
-  for (const [key, classes] of Object.entries(INDUSTRY_CLASSES)) {
-    if (industry.toLowerCase().includes(key.toLowerCase())) return classes;
-  }
-  return 'bg-zinc-100 text-zinc-700 border-zinc-200/60';
-}
-
-function companyHealth(structCount: number): { label: string; color: string; dot: string } {
-  if (structCount === 0) return { label: 'Sin datos',  color: 'text-zinc-400',   dot: 'bg-zinc-300' };
-  if (structCount <= 1)  return { label: 'Inicial',    color: 'text-zinc-500',  dot: 'bg-zinc-400' };
-  if (structCount <= 3)  return { label: 'En progreso',color: 'text-granate',   dot: 'bg-action-soft animate-pulse' };
-  return                         { label: 'Activo',    color: 'text-emerald-700',dot: 'bg-emerald-500' };
-}
-
-function useMacroLatest() {
-  return useQuery({
-    queryKey: ['macro', 'latest'],
-    queryFn: async () => {
-      const res = await api.get<{ data: MacroSnapshot[] }>('/macro/latest');
-      return res.data.data;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-function fmtARS(n: number) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency', currency: 'ARS', maximumFractionDigits: 0,
-  }).format(n);
-}
-
-function greet(name?: string | null) {
-  const h = new Date().getHours();
-  const firstName = name?.split(' ')[0] ?? 'costista';
-  if (h < 12) return `Buenos días, ${firstName}`;
-  if (h < 19) return `Buenas tardes, ${firstName}`;
-  return `Buenas noches, ${firstName}`;
-}
+import {
+  useRecentDocs,
+  SOURCE_ICON,
+  industryChip,
+  companyHealth,
+  useMacroLatest,
+  fmtARS,
+  greet,
+} from './components/DashboardHelpers';
+import { StatCard } from './components/StatCard';
 
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -151,7 +76,6 @@ export function DashboardPage() {
           font-family: 'JetBrains Mono', monospace;
         }
       `}</style>
-
 
       {/* ── CONTENT WRAPPER ── */}
       <div className="relative font-outfit pb-16 z-10 space-y-7">
@@ -291,15 +215,6 @@ export function DashboardPage() {
           />
         </div>
 
-        {/* ── MIDDLE ANALYTICAL ROW (Attention Feed) ──
-             Acá vivía "Variación de Costos País": un gráfico con datos INVENTADOS
-             (un índice Ene→Jun fijo en el código, y un "+20.4%" escrito a mano).
-             No salía de los períodos del costista ni del INDEC: no era un número,
-             era un dibujo. En una herramienta que fija precios reales, un número
-             que no se puede rastrear hasta su origen es peor que no tener número.
-             Se saca hasta que exista el dato de verdad (problema B — ver
-             DECISIONES.md del backend: el insumo es la comparación entre períodos,
-             que ya está construida y testeada). */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
 
           {/* Bento 4: Prioritized Feed (Alerts & Warnings) (Col: 12) */}
@@ -623,46 +538,3 @@ export function DashboardPage() {
     </AppShell>
   );
 }
-
-// ── Stat Card Component (Rediseñado con Glassmorphism)
-function StatCard({
-  label, value, sub, icon: Icon, to, variant,
-}: {
-  label: string;
-  value: number;
-  sub: string;
-  icon: typeof Building2;
-  to: string;
-  variant: 'neutral' | 'urgent' | 'warn' | 'ok';
-}) {
-  const styles = {
-    neutral: { card: 'border-line bg-white/90 hover:border-granate/20', num: 'text-granate-deep', icon: 'bg-zinc-50 text-zinc-500 border-zinc-200/50', dot: '' },
-    urgent:  { card: 'border-red-200 bg-white/90 hover:border-red-400', num: 'text-action', icon: 'bg-red-50 text-action border-red-100', dot: 'bg-action animate-pulse' },
-    warn:    { card: 'border-amber-200 bg-white/90 hover:border-amber-400', num: 'text-amber-700', icon: 'bg-amber-50 text-amber-600 border-amber-100/50', dot: 'bg-amber-500 animate-pulse' },
-    ok:      { card: 'border-emerald-250 bg-white/90 hover:border-emerald-400', num: 'text-emerald-700', icon: 'bg-emerald-50 text-emerald-600 border-emerald-100/50', dot: '' },
-  }[variant];
-
-  return (
-    <Link to={to} className="group">
-      <div className={cn(
-        'relative rounded-[28px] border p-5 transition-all duration-300 hover:shadow-md hover:-translate-y-1 shadow-[0_8px_24px_rgba(74,21,27,0.01)]',
-        styles.card,
-      )}>
-        {styles.dot && (
-          <span className={cn('absolute right-4.5 top-4.5 size-1.5 rounded-full', styles.dot)} />
-        )}
-        <div className={cn('mb-3.5 flex size-9 items-center justify-center rounded-xl border transition-transform group-hover:scale-105 duration-300 shadow-[0_2px_8px_rgba(0,0,0,0.015)]', styles.icon)}>
-          <Icon className="size-4.5" />
-        </div>
-        <p
-          className={cn('font-mono-jb text-[32px] leading-none tracking-tight font-bold', styles.num)}
-        >
-          {value}
-        </p>
-        <p className="mt-2 text-[12.5px] font-bold text-ink leading-tight">{label}</p>
-        <p className="mt-0.5 truncate text-[10.5px] text-ink-soft/75 font-semibold">{sub}</p>
-      </div>
-    </Link>
-  );
-}
-

@@ -27,17 +27,19 @@ export function TopBar() {
 
       {/* Right side: Alerts and User details */}
       <div className="flex items-center gap-3 lg:gap-4">
-        {/* Alerts Indicator */}
-        <Link
-          to="/alerts"
-          className="relative p-2 rounded-full border border-line bg-surface-alt/40 text-ink-soft hover:text-granate hover:bg-surface-alt/70 transition-all shadow-sm"
-          title="Alertas"
-        >
-          <Bell className="size-4" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-action animate-pulse" />
-          )}
-        </Link>
+        {/* Alerts Indicator - Hidden for Admin */}
+        {user?.role !== 'ADMIN' && (
+          <Link
+            to="/alerts"
+            className="relative p-2 rounded-full border border-line bg-surface-alt/40 text-ink-soft hover:text-granate hover:bg-surface-alt/70 transition-all shadow-sm"
+            title="Alertas"
+          >
+            <Bell className="size-4" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-action animate-pulse" />
+            )}
+          </Link>
+        )}
 
         {/* Profile Detail Card — desktop only */}
         <div className="hidden items-center gap-2.5 rounded-full border border-line bg-surface-alt/80 px-3.5 py-1.5 shadow-sm lg:flex">
@@ -50,7 +52,7 @@ export function TopBar() {
           )}
           <div className="text-left leading-none pr-1">
             <p className="text-[11.5px] font-bold text-ink">{user?.name ?? 'Usuario'}</p>
-            <p className="text-[8.5px] text-ink-soft mt-0.5 font-bold uppercase tracking-wider">Costista</p>
+            <p className="text-[8.5px] text-ink-soft mt-0.5 font-bold uppercase tracking-wider">{user?.role === 'ADMIN' ? 'Administrador' : 'Costista'}</p>
           </div>
         </div>
 
@@ -82,13 +84,15 @@ export function TopBar() {
                 >
                   <User className="size-4 text-granate" /> Mi Perfil
                 </Link>
-                <Link
-                  to="/portal"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-ink hover:bg-granate-tenue"
-                >
-                  <Zap className="size-4 text-granate" /> Portal de Operador
-                </Link>
+                {user?.role !== 'ADMIN' && (
+                  <Link
+                    to="/portal"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-ink hover:bg-granate-tenue"
+                  >
+                    <Zap className="size-4 text-granate" /> Portal de Operador
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={() => {
