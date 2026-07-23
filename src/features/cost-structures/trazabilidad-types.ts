@@ -99,6 +99,8 @@ export interface MpMovement {
   detail: string;
   type: 'purchase' | 'consumption';
   fechaHecho: string | null;
+  /** fecha_captación: timestamp del servidor (§3). Read-only, nunca del cliente. */
+  fechaCaptacion: string;
   periodoImputado: string | null;
   pending: boolean;
   dataPointIds: string[];

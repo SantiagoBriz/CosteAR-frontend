@@ -5,6 +5,7 @@ import { Plus, Trash2, ArrowLeft, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { formatDate, formatDateOnly } from '@/lib/utils';
 import { useCreateDataPoint, useImputar, useMpMovements } from '../../trazabilidad-hooks';
 import { proposeImputation, newTrazableMovements } from '../../imputacion';
 import { ImputacionModal } from '../../ImputacionModal';
@@ -95,9 +96,12 @@ export function MaterialDetailForm({ structureId, period, material, onBack, onSa
   // F06 — estado de imputación real de cada movimiento (fuente de verdad de lo
   // "pendiente"). Vive en los data points, no en el JSON de la sección.
   const { data: mpMovements } = useMpMovements(structureId);
-  const pendingByKey = new Map<string, MpMovement>();
+  // F07 — TODOS los movimientos trazables por clave natural (no solo los
+  // pendientes): cada fila necesita su `fecha_captación` (server) para mostrarla
+  // read-only, además del estado de imputación.
+  const movementByKey = new Map<string, MpMovement>();
   for (const mv of mpMovements ?? []) {
-    if (mv.pending) pendingByKey.set(movementKey(mv.type, mv.detail, mv.fechaHecho ?? ''), mv);
+    movementByKey.set(movementKey(mv.type, mv.detail, mv.fechaHecho ?? ''), mv);
   }
   // Movimientos guardados en la sección (clave estable, no la fila en edición).
   const savedKeys = new Set(
@@ -345,7 +349,8 @@ export function MaterialDetailForm({ structureId, period, material, onBack, onSa
           <table className="block w-full text-sm sm:table">
             <thead className="hidden bg-surface-alt text-[11px] uppercase tracking-wide text-ink-soft sm:table-header-group">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Fecha</th>
+                <th className="px-3 py-2 text-left font-medium">Fecha del hecho</th>
+                <th className="px-3 py-2 text-left font-medium">Fecha de captación</th>
                 <th className="px-3 py-2 text-left font-medium">Tipo</th>
                 <th className="px-3 py-2 text-left font-medium">Detalle</th>
                 <th className="px-3 py-2 text-right font-medium">Cantidad</th>
@@ -359,13 +364,21 @@ export function MaterialDetailForm({ structureId, period, material, onBack, onSa
                 // Estado pendiente por el movimiento GUARDADO (clave estable):
                 // así el badge no parpadea mientras se edita una fila sin guardar.
                 const saved = material.movements?.[i];
-                const pend = saved
-                  ? pendingByKey.get(movementKey(saved.type, saved.detail, saved.date))
+                const mv = saved
+                  ? movementByKey.get(movementKey(saved.type, saved.detail, saved.date))
                   : undefined;
+                const pend = mv?.pending ? mv : undefined;
                 return (
                   <tr key={field.id} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
-                    <td data-label="Fecha" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
-                      <input type="date" className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.date`)} />
+                    <td data-label="Fecha del hecho" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                      <input type="date" title="Cuándo ocurrió el hecho económico (fecha de la factura/remito). La ponés vos." className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none" {...register(`movements.${i}.date`)} />
+                    </td>
+                    <td data-label="Fecha de captación" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
+                      {mv ? (
+                        <span className="text-[13px] text-ink-soft" title="La fija el sistema cuando el dato entra (no se edita)">{formatDate(mv.fechaCaptacion)}</span>
+                      ) : (
+                        <span className="text-[12px] italic text-idle" title="Se fija en el servidor al guardar este movimiento">Al guardar</span>
+                      )}
                     </td>
                     <td data-label="Tipo" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-2 sm:py-1.5 sm:before:hidden">
                       <select className="w-full rounded border border-line bg-surface px-2 py-1 text-sm text-ink focus:border-granate focus:outline-none sm:w-auto" {...register(`movements.${i}.type`)}>
@@ -407,14 +420,15 @@ export function MaterialDetailForm({ structureId, period, material, onBack, onSa
                 );
               })}
               {movements.length === 0 && orphanPending.length === 0 && (
-                <tr className="block sm:table-row"><td colSpan={6} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin movimientos — agregá compras y consumos.</td></tr>
+                <tr className="block sm:table-row"><td colSpan={7} className="block px-4 py-6 text-center text-[13px] text-ink-soft sm:table-cell">Sin movimientos — agregá compras y consumos.</td></tr>
               )}
               {/* F06 — pendientes que el motor cuenta pero sin fila propia en esta
                   sección (desincronización histórica). Se muestran igual, en solo
                   lectura, para que ningún dato sin imputar quede invisible. */}
               {orphanPending.map((mv) => (
                 <tr key={mv.movementId} className="flex flex-col gap-2 rounded-xl border border-warn/30 bg-warn/5 p-3 sm:table-row sm:gap-0 sm:rounded-none sm:border-0 sm:bg-warn/5 sm:p-0">
-                  <td data-label="Fecha" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-3 sm:py-2 sm:before:hidden text-[13px] text-ink">{mv.fechaHecho ?? '—'}</td>
+                  <td data-label="Fecha del hecho" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-3 sm:py-2 sm:before:hidden text-[13px] text-ink">{formatDateOnly(mv.fechaHecho)}</td>
+                  <td data-label="Fecha de captación" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-3 sm:py-2 sm:before:hidden text-[13px] text-ink-soft">{formatDate(mv.fechaCaptacion)}</td>
                   <td data-label="Tipo" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-3 sm:py-2 sm:before:hidden text-[13px] text-ink">{mv.type === 'purchase' ? 'Compra' : 'Consumo'}</td>
                   <td data-label="Detalle" className="block before:block before:mb-1 before:text-[10px] before:font-semibold before:uppercase before:tracking-wide before:text-ink-soft before:content-[attr(data-label)] sm:table-cell sm:px-3 sm:py-2 sm:before:hidden">
                     <span className="text-[13px] text-ink">{mv.detail}</span>

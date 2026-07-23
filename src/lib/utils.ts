@@ -53,3 +53,16 @@ export function formatDate(value: string | Date | null | undefined): string {
     year: 'numeric',
   }).format(new Date(value));
 }
+
+/**
+ * 'YYYY-MM-DD' → 'DD/MM/AAAA' para fechas SIN hora (fecha_hecho, fecha de
+ * factura). No pasa por `new Date()` a propósito: `new Date('2026-06-27')` se
+ * interpreta como medianoche UTC y en Argentina (UTC-3) se mostraría un día
+ * antes. Con fechas date-only reordenamos el string y listo.
+ */
+export function formatDateOnly(value: string | null | undefined): string {
+  if (!value) return '—';
+  const [y, m, d] = value.slice(0, 10).split('-');
+  if (!y || !m || !d) return formatDate(value);
+  return `${d}/${m}/${y}`;
+}

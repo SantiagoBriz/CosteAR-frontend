@@ -560,3 +560,43 @@ que trae los movimientos de MP con su `pending` y sus `dataPointIds`. En `Materi
 end-to-end: alta de compra fuera de período → pill "Pendiente de imputar" → click → modal → imputar →
 pill limpio y fila normal, con el conteo del motor casando en todo momento. `typecheck` ✅, `build` ✅,
 `vitest` 22✅.
+
+## F07 — Doble fecha (fecha_hecho / fecha_captación) en la ficha PPP y en "Agregar"
+
+**Qué se separó.** La tabla de Movimientos (ficha PPP, dentro de `MaterialDetailForm`) tenía UNA sola
+columna "Fecha". Se partió en dos:
+- **"Fecha del hecho"** — editable, la pone el usuario (es el `movements.[i].date` de siempre; ya se
+  mandaba al backend como `fechaHecho`). Es la que dispara la imputación (§3 / F04-F05-F06).
+- **"Fecha de captación"** — sólo lectura, valor del servidor. Para un movimiento ya guardado se lee de
+  `MpMovement.fechaCaptacion` (nuevo campo del endpoint) y se muestra con `formatDate`. Para una fila
+  nueva sin guardar todavía se muestra "Al guardar" (la fija el servidor al registrar el dato — nunca
+  el reloj del cliente, regla #6).
+
+**"Agregar Manual" = la misma tabla.** En la ficha de MP, "Agregar" appendea una fila a esta tabla; no
+hay un modal aparte. Partir la fecha en la tabla cubre alta y edición. (El botón "Agregar Manual" de
+`companies/LedgerTabSection` es el **Libro de costos** de la empresa —`LedgerEntryModal`, con su propio
+`docDate` y sin flujo de imputación—, superficie distinta y fuera del alcance de F07.)
+
+**Imputación: se reusa, no se reimplementa.** Cargar una "Fecha del hecho" fuera del período de la
+estructura sigue disparando exactamente el flujo existente: `proposeImputation` → `ImputacionModal` →
+`useImputar`. F07 no crea lógica de imputación nueva.
+
+**Formato DD/MM/AAAA (regla #4 / anticipo de F09) — decisión.**
+- Los renders de sólo lectura usan formato AR: captación con `formatDate` (ISO con hora → DD/MM/AAAA);
+  fecha del hecho de las filas huérfanas con **`formatDateOnly`** (helper nuevo en `lib/utils`).
+- `formatDateOnly` NO pasa por `new Date()` a propósito: `new Date('2026-06-27')` se interpreta como
+  medianoche UTC y en Argentina (UTC-3) se mostraría **un día antes** (26/06). Con fechas date-only se
+  reordena el string y se evita el corrimiento.
+- El campo **editable** es un `<input type="date">` nativo: su display lo decide el navegador/SO (en un
+  equipo es-AR ya muestra DD/MM/AAAA) y su `value` es `YYYY-MM-DD`, que es lo que el backend espera. No
+  se le impone una máscara de texto: forzar DD/MM/AAAA en un input nativo rompería el binding y la
+  accesibilidad. Se documenta como límite aceptado (queda para F09 si se decide un date-picker propio).
+
+**Retrocompat (regla #5).** Un movimiento sin data point trazable (p. ej. cargado antes de la
+trazabilidad, o una fila de la sección sin registrar) no tiene captación conocida: se muestra "Al
+guardar"/"—" sin romper. Si tiene data point pero `fechaHecho` es `null`, la fecha del hecho se
+muestra "—". Ningún caso crashea.
+
+**Verificación.** `typecheck` ✅, `build` ✅, `vitest` 22✅. Navegador contra dev: ver DECISIONES del
+backend (`Costear.api`) para el escenario de factura tardía (hecho 27/06 en estructura 07/2026 →
+modal de imputación → se comporta como F06).
