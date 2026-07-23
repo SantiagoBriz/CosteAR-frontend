@@ -23,6 +23,7 @@ import { apiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { PERIODICITY_OPTIONS, type Periodicity } from "@/lib/types";
 import { useDictation } from "@/lib/use-dictation";
+import toast from 'react-hot-toast';
 
 const INDUSTRY_CLASSES: Record<string, string> = {
   Agropecuaria: "bg-amber-50 text-amber-700 border-amber-200/50",
@@ -77,7 +78,7 @@ export function CompaniesPage() {
       try {
         await deleteCompany.mutateAsync(companyId);
       } catch (e) {
-        alert("Error al eliminar la empresa: " + apiErrorMessage(e));
+        toast.error("Error al eliminar la empresa: " + apiErrorMessage(e));
       }
     }
   };

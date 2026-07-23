@@ -8,6 +8,7 @@ import {
 } from '../admin-hooks';
 import { Button } from '@/components/ui/Button';
 import { 
+import toast from 'react-hot-toast';
   Loader2, Send, CheckCircle2, AlertCircle, HelpCircle, 
   Mic, Square, Plus, MessageSquare, BookOpen
 } from 'lucide-react';
@@ -41,7 +42,7 @@ export function RagChat() {
       const session = await createSession.mutateAsync();
       setActiveSessionId(session.id);
     } catch (err) {
-      alert('Error al crear nueva sesión');
+      toast.error('Error al crear nueva sesión');
     }
   };
 
@@ -57,7 +58,7 @@ export function RagChat() {
         sessionIdToUse = newSession.id;
         setActiveSessionId(newSession.id);
       } catch (err) {
-        alert('Error al iniciar la sesión');
+        toast.error('Error al iniciar la sesión');
         return;
       }
     }
@@ -68,7 +69,7 @@ export function RagChat() {
     try {
       await sendQuery.mutateAsync({ sessionId: sessionIdToUse, question: currentQuestion });
     } catch (err) {
-      alert('Error al consultar la bóveda');
+      toast.error('Error al consultar la bóveda');
       // Put question back if failed
       setQuestion(currentQuestion);
     }
@@ -99,7 +100,7 @@ export function RagChat() {
             setQuestion((prev) => prev + (prev ? ' ' : '') + result.text);
           }
         } catch (err) {
-          alert('Error al transcribir el audio');
+          toast.error('Error al transcribir el audio');
         }
       };
 
@@ -107,7 +108,7 @@ export function RagChat() {
       setIsRecording(true);
     } catch (err) {
       console.error(err);
-      alert('No se pudo acceder al micrófono. Verificá los permisos del navegador.');
+      toast.error('No se pudo acceder al micrófono. Verificá los permisos del navegador.');
     }
   };
 

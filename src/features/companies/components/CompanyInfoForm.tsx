@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/Input';
 import { PERIODICITY_OPTIONS, type Periodicity } from '@/lib/types';
 import { apiErrorMessage } from '@/lib/api';
 import { useUpdateCompany } from '../company-hooks';
+import toast from 'react-hot-toast';
 
 export function CompanyInfoForm({
   company,
@@ -39,7 +40,7 @@ export function CompanyInfoForm({
       });
       onClose();
     } catch (e) {
-      alert('Error al actualizar los datos: ' + apiErrorMessage(e));
+      toast.error('Error al actualizar los datos: ' + apiErrorMessage(e));
     }
   });
 

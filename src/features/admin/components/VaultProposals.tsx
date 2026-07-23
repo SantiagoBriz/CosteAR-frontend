@@ -11,6 +11,7 @@ import {
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Loader2, CheckCircle2, XCircle, FileText, AlertTriangle, Zap, Pencil, Save, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export function VaultProposals() {
   const { data: proposals, isLoading, error } = usePendingProposals();
@@ -43,7 +44,7 @@ export function VaultProposals() {
       setEditingId(null);
       setDraft({});
     } catch (err) {
-      alert('No se pudieron guardar los cambios.');
+      toast.error('No se pudieron guardar los cambios.');
     }
   };
 

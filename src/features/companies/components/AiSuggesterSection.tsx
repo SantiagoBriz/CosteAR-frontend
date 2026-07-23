@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useDictation } from '@/lib/use-dictation';
+import toast from 'react-hot-toast';
 
 export function AiSuggesterSection({ companyName }: { companyName: string }) {
   const [promptText, setPromptText] = useState('');
@@ -25,7 +26,7 @@ export function AiSuggesterSection({ companyName }: { companyName: string }) {
       });
       setSuggs(res.data.data.reply);
     } catch (e) {
-      alert('No se pudo obtener sugerencias. Intentá de nuevo.');
+      toast.error('No se pudo obtener sugerencias. Intentá de nuevo.');
     } finally {
       setLoading(false);
     }
