@@ -53,7 +53,7 @@ export function LoginPage() {
       if (result?.user?.mustChangePassword) {
         await navigate({ to: '/change-password' });
       } else if (result?.user?.role === 'ADMIN') {
-        await navigate({ to: '/admin' });
+        window.location.href = 'http://localhost:5176';
       } else {
         await navigate({ to: '/dashboard' });
       }

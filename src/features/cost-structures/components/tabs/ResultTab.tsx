@@ -5,7 +5,9 @@ import { AdvisorPanel } from '@/features/advisor/AdvisorPanel';
 import { ReconciliationCard } from '../shared/ReconciliationCard';
 import type { CalculationResult } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Calculator } from 'lucide-react';
+import { Calculator, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export function EmptyResult() {
   return (
@@ -26,9 +28,46 @@ export function ResultTab({ result, companyId, period }: { result: CalculationRe
     { label: 'Mano de Obra Directa',    value: result.directLaborTotal },
     { label: 'CIP aplicados',           value: result.indirectCostsApplied },
   ];
+
+  const handleExportPDF = async () => {
+    const input = document.getElementById('pdf-export-content');
+    if (!input) return;
+    
+    try {
+      const canvas = await html2canvas(input, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      // Añadir encabezado básico
+      pdf.setFontSize(18);
+      pdf.setTextColor(116, 33, 43); // granate
+      pdf.text('Reporte Ejecutivo de Costos', 15, 20);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Generado por CosteAR el ${new Date().toLocaleDateString('es-AR')}`, 15, 28);
+      
+      pdf.addImage(imgData, 'PNG', 15, 35, pdfWidth - 30, pdfHeight - 30);
+      pdf.save(`Reporte_Costos_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+    }
+  };
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-      <div className="space-y-4">
+      <div id="pdf-export-content" className="space-y-4 bg-surface p-2 rounded-xl">
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 rounded-lg bg-granate px-4 py-2 text-[13px] font-bold text-white hover:bg-granate-deep transition-colors shadow-sm"
+          >
+            <Download className="size-4" /> Exportar PDF Ejecutivo
+          </button>
+        </div>
         <AdvisorPanel
           kind="cost_result"
           label="Analizar el resultado"

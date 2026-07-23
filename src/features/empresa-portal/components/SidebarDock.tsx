@@ -1,21 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
-import { MessageSquare, FileText, Building2, ArrowLeft, LogOut } from 'lucide-react';
+import { MessageSquare, FileText, Building2, ArrowLeft, LogOut, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/features/auth/auth-hooks';
 import { CosteARLogo } from '@/components/layout/CosteARLogo';
 import { cn } from '@/lib/utils';
 
 interface SidebarDockProps {
-  activeTab: 'chat' | 'feed' | 'invite';
-  setActiveTab: (tab: 'chat' | 'feed' | 'invite') => void;
+  activeTab: 'chat' | 'feed' | 'metrics' | 'invite';
+  setActiveTab: (tab: 'chat' | 'feed' | 'metrics' | 'invite') => void;
 }
 
 export function SidebarDock({ activeTab, setActiveTab }: SidebarDockProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
 
-  const activeIndex = ['chat', 'feed', 'invite'].indexOf(activeTab);
+  const activeIndex = ['chat', 'feed', 'metrics', 'invite'].indexOf(activeTab);
   const [prevIndex, setPrevIndex] = useState(activeIndex);
   const [isMoving, setIsMoving] = useState(false);
   const [direction, setDirection] = useState<'up' | 'down' | null>(null);
@@ -97,6 +97,7 @@ export function SidebarDock({ activeTab, setActiveTab }: SidebarDockProps) {
         {[
           { id: 'chat' as const, label: 'Charla IA', icon: MessageSquare },
           { id: 'feed' as const, label: 'Comprobantes', icon: FileText },
+          { id: 'metrics' as const, label: 'Métricas', icon: BarChart3 },
           { id: 'invite' as const, label: 'Unirse', icon: Building2 },
         ].map((item, idx) => {
           const active = activeIndex === idx;

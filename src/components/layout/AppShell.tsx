@@ -8,9 +8,6 @@ import {
   ClipboardCheck,
   Zap,
   ShieldCheck,
-  Users as UsersIcon,
-  MessageSquareText,
-  FileCheck2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -32,10 +29,6 @@ const NAV = [
     badge: true,
   },
   { to: "/alerts", label: "Alertas", icon: Bell },
-  { to: "/admin", label: "Resumen", icon: LayoutDashboard, adminOnly: true, exact: true },
-  { to: "/admin/users", label: "Gestión de Staff", icon: UsersIcon, adminOnly: true },
-  { to: "/admin/vault", label: "Entrenamiento Bóveda", icon: FileCheck2, adminOnly: true },
-  { to: "/admin/chat", label: "Consola IA", icon: MessageSquareText, adminOnly: true },
 ] as const;
 
 function isNavActive(pathname: string, item: (typeof NAV)[number]): boolean {

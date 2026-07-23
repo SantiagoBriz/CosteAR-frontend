@@ -27,10 +27,6 @@ import { AutomatizacionPage } from '@/features/automatizacion/AutomatizacionPage
 import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage';
 import { LandingPage } from '@/features/landing/LandingPage';
 import { TrazabilidadDatoPage, TrazabilidadCalculoPage } from '@/features/trazabilidad/TrazabilidadPages';
-import { AdminOverviewPage } from '@/features/admin/AdminOverviewPage';
-import { AdminUsersPage } from '@/features/admin/AdminUsersPage';
-import { AdminVaultPage } from '@/features/admin/AdminVaultPage';
-import { AdminRagPage } from '@/features/admin/AdminRagPage';
 
 
 const rootRoute = createRootRoute({
@@ -54,17 +50,6 @@ function requireAuth() {
   }
 }
 
-/** Guardia: restringe el acceso solo a administradores. */
-function requireAdmin() {
-  const { accessToken, initializing, user } = useAuthStore.getState();
-  if (!accessToken && !initializing) {
-    throw redirect({ to: '/login' });
-  }
-  if (user && user.role !== 'ADMIN') {
-    throw redirect({ to: '/dashboard' });
-  }
-}
-
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
@@ -72,7 +57,6 @@ const indexRoute = createRoute({
     const { accessToken, user } = useAuthStore.getState();
     if (accessToken) {
       if (user?.role === 'EMPRESA_OPERATOR') throw redirect({ to: '/portal' });
-      if (user?.role === 'ADMIN') throw redirect({ to: '/admin' });
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -84,11 +68,6 @@ const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: '/login'
 const registerRoute = createRoute({ getParentRoute: () => rootRoute, path: '/register', component: RegisterPage });
 const forgotRoute = createRoute({ getParentRoute: () => rootRoute, path: '/forgot-password', component: ForgotPasswordPage });
 const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset-password', component: ResetPasswordPage });
-
-const adminOverviewRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', beforeLoad: requireAdmin, component: AdminOverviewPage });
-const adminUsersRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin/users', beforeLoad: requireAdmin, component: AdminUsersPage });
-const adminVaultRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin/vault', beforeLoad: requireAdmin, component: AdminVaultPage });
-const adminRagRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin/chat', beforeLoad: requireAdmin, component: AdminRagPage });
 
 const dashboardRoute = createRoute({ getParentRoute: () => rootRoute, path: '/dashboard', beforeLoad: requireAuth, component: DashboardPage });
 const companiesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/companies', beforeLoad: requireAuth, component: CompaniesPage });
@@ -153,10 +132,6 @@ const routeTree = rootRoute.addChildren([
   registerRoute,
   forgotRoute,
   resetRoute,
-  adminOverviewRoute,
-  adminUsersRoute,
-  adminVaultRoute,
-  adminRagRoute,
   dashboardRoute,
   companiesRoute,
   companyDetailRoute,
