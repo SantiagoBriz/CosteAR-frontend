@@ -19,7 +19,7 @@ export function useMacroHistory(indicatorCode: string) {
     queryKey: ['macro', 'history', indicatorCode],
     queryFn: async () => {
       const res = await api.get<{ data: MacroSnapshot[] }>('/macro/history', {
-        params: { indicatorCode },
+        params: { indicator: indicatorCode },
       });
       return res.data.data;
     },
