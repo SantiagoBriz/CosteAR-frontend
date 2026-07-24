@@ -13,6 +13,7 @@ import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CompaniesPage } from '@/features/companies/CompaniesPage';
 import { CompanyDetailPage } from '@/features/companies/CompanyDetailPage';
+import { CompanyTargetSetup } from '@/features/companies/CompanyTargetSetup';
 import { CostStructurePage } from '@/features/cost-structures/CostStructurePage';
 import { AlertsPage } from '@/features/alerts/AlertsPage';
 import { MacroPage } from '@/features/macro/MacroPage';
@@ -72,6 +73,7 @@ const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset-
 const dashboardRoute = createRoute({ getParentRoute: () => rootRoute, path: '/dashboard', beforeLoad: requireAuth, component: DashboardPage });
 const companiesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/companies', beforeLoad: requireAuth, component: CompaniesPage });
 const companyDetailRoute = createRoute({ getParentRoute: () => rootRoute, path: '/companies/$id', beforeLoad: requireAuth, component: CompanyDetailPage });
+const companySetupRoute = createRoute({ getParentRoute: () => rootRoute, path: '/companies/$id/setup', beforeLoad: requireAuth, component: CompanyTargetSetup });
 const costStructureRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cost-structures/$id', beforeLoad: requireAuth, component: CostStructurePage });
 const alertsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/alerts', beforeLoad: requireAuth, component: AlertsPage });
 const macroRoute = createRoute({ getParentRoute: () => rootRoute, path: '/macro', beforeLoad: requireAuth, component: MacroPage });
@@ -135,6 +137,7 @@ const routeTree = rootRoute.addChildren([
   dashboardRoute,
   companiesRoute,
   companyDetailRoute,
+  companySetupRoute,
   costStructureRoute,
   alertsRoute,
   macroRoute,

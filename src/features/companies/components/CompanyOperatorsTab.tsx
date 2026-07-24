@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useOperators, useGenerateOperatorAccess, useRevokeOperator, useResetOperatorPassword, type GeneratedAccess } from '@/features/empresa-portal/empresa-portal-hooks';
+import { useEmpresaConnections } from '@/features/empresa/empresa-hooks';
+import { WhatsappConfigModal } from '@/features/empresa/components/WhatsappConfigModal';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/api';
 
@@ -22,6 +24,10 @@ export function CompanyOperatorsTab({ companyId }: { companyId: string }) {
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+
+  const { data: connections = [] } = useEmpresaConnections();
+  const connection = connections.find(c => c.companyId === companyId);
 
   const emailValid = /\S+@\S+\.\S+/.test(operatorEmail);
 
@@ -60,9 +66,10 @@ export function CompanyOperatorsTab({ companyId }: { companyId: string }) {
   };
 
   return (
-    <Card>
-      <CardHeader
-        title="Personal autorizado"
+    <div className="space-y-4">
+      <Card>
+        <CardHeader
+          title="Personal autorizado"
         description="Usuarios de esta empresa que pueden cargar documentos al portal"
         action={
           <Button size="sm" variant="secondary" onClick={() => setShowForm((v) => !v)}>
@@ -270,6 +277,44 @@ export function CompanyOperatorsTab({ companyId }: { companyId: string }) {
         )}
       </CardBody>
     </Card>
+
+    {connection && (
+      <Card>
+        <CardHeader
+          title="Canal de WhatsApp"
+          description="Automatiza la ingesta conectando un número de WhatsApp"
+          action={
+            <Button size="sm" variant="secondary" onClick={() => setShowWhatsappModal(true)}>
+              {connection.whatsappPhoneNumber ? 'Cambiar número' : 'Configurar WhatsApp'}
+            </Button>
+          }
+        />
+        <CardBody>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <Eye className="size-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-ink">
+                {connection.whatsappPhoneNumber ? `WhatsApp configurado: +${connection.whatsappPhoneNumber}` : 'Sin configurar'}
+              </p>
+              <p className="text-xs text-ink-soft">
+                Los mensajes enviados a la IA desde este número se cargarán automáticamente.
+              </p>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    )}
+
+    {showWhatsappModal && connection && (
+      <WhatsappConfigModal
+        connectionId={connection.id}
+        currentNumber={connection.whatsappPhoneNumber}
+        onClose={() => setShowWhatsappModal(false)}
+      />
+    )}
+    </div>
   );
 }
 

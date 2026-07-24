@@ -11,6 +11,8 @@ import { CompanyStructuresList } from './components/CompanyStructuresList';
 import { CompanyLedgerTab } from './components/CompanyLedgerTab';
 import { CompanyHistoryTab } from './components/CompanyHistoryTab';
 import { CompanyOperatorsTab } from './components/CompanyOperatorsTab';
+import { DeviationWidget } from './components/DeviationWidget';
+import { BenchmarkRadarWidget } from './components/BenchmarkRadarWidget';
 import toast from 'react-hot-toast';
 
 export function CompanyDetailPage() {
@@ -68,6 +70,12 @@ export function CompanyDetailPage() {
 
       {/* Asistente de Configuración Inicial (IA) */}
       <AiSuggesterSection companyName={company?.name ?? ''} />
+
+      {/* Monitor de Desvíos */}
+      {id && <DeviationWidget companyId={id} />}
+
+      {/* Radar Competitivo */}
+      {id && <BenchmarkRadarWidget companyId={id} />}
 
       {/* Tabs */}
       <div className="mb-6 flex border-b border-zinc-200 overflow-x-auto">

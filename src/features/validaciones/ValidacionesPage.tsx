@@ -8,6 +8,7 @@ import {
   Building2,
   FileText,
   TrendingUp,
+  BookOpen,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardBody } from "@/components/ui/Card";
@@ -21,8 +22,13 @@ import {
 } from "./validaciones-hooks";
 import { ReviewValidationModal } from "./components/ReviewValidationModal";
 import { CompanyValidationsSection } from "./components/CompanyValidationsSection";
+import { VaultProposalsSection } from "./components/VaultProposalsSection";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function ValidacionesPage() {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === "ADMIN";
+  const [activeTab, setActiveTab] = useState<"data" | "vault">("data");
   const [page, setPage] = useState(1);
   const { data, isLoading } = usePendingEntries(page);
   const { data: accuracy } = useAccuracyStats();
@@ -150,121 +156,160 @@ export function ValidacionesPage() {
         </div>
       </div>
 
-      {reviewing && (
-        <ReviewValidationModal
-          reviewing={reviewing}
-          note={note}
-          setNote={setNote}
-          correctedContent={correctedContent}
-          setCorrectedContent={setCorrectedContent}
-          correctedType={correctedType}
-          setCorrectedType={setCorrectedType}
-          correctedSection={correctedSection}
-          setCorrectedSection={setCorrectedSection}
-          setLightboxSrc={setLightboxSrc}
-          onCancel={() => setReviewing(null)}
-          onConfirm={() => handleReview(reviewing.action)}
-          isPending={review.isPending}
-        />
-      )}
+      {/* Tabs */}
+      <div className="mb-6 flex border-b border-zinc-200">
+        <button
+          onClick={() => setActiveTab("data")}
+          className={`flex items-center gap-2 border-b-2 px-6 py-4 text-sm font-medium transition-colors ${
+            activeTab === "data"
+              ? "border-granate text-granate"
+              : "border-transparent text-zinc-500 hover:text-zinc-700"
+          }`}
+        >
+          <FileText className="size-4" />
+          Validación de Costos
+          {data?.total ? (
+            <span className="rounded-full bg-granate/10 px-2 py-0.5 text-xs font-semibold text-granate">
+              {data.total}
+            </span>
+          ) : null}
+        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab("vault")}
+            className={`flex items-center gap-2 border-b-2 px-6 py-4 text-sm font-medium transition-colors ${
+              activeTab === "vault"
+                ? "border-amber-600 text-amber-700"
+                : "border-transparent text-zinc-500 hover:text-zinc-700"
+            }`}
+          >
+            <BookOpen className="size-4" />
+            Aprendizaje (Plantillas IA)
+          </button>
+        )}
+      </div>
 
-      {isLoading ? (
-        <div className="py-16 text-center text-[13px] font-semibold text-ink-soft">
-          Cargando…
-        </div>
-      ) : !data?.items.length ? (
-        <Card>
-          <CardBody className="py-16 text-center">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl border border-line bg-white text-granate shadow-sm">
-              <ClipboardCheck className="size-6" />
-            </div>
-            <p className="text-[13px] font-bold text-ink">Todo al día</p>
-            <p className="mt-1 text-[11px] text-ink-soft">
-              No hay datos pendientes de validación.
-            </p>
-          </CardBody>
-        </Card>
+      {activeTab === "vault" && isAdmin ? (
+        <VaultProposalsSection />
       ) : (
         <>
-          <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
-            <span className="rounded-full border border-action/15 bg-action/10 px-3.5 py-1.5 text-[12px] font-bold text-action shadow-sm">
-              {data.total} pendientes
-            </span>
-            <span className="text-[12px] font-semibold text-ink-soft">
-              en {byCompany.size}{" "}
-              {byCompany.size === 1 ? "empresa" : "empresas"}
-            </span>
-            {confidentCount > 0 && (
-              <Button
-                size="sm"
-                onClick={handleBulkApprove}
-                loading={bulkApprove.isPending}
-                className="w-full sm:ml-auto sm:w-auto bg-green-600 hover:bg-green-700"
-              >
-                <CheckCircle2 className="size-3.5" /> Aprobar {confidentCount}{" "}
-                de confianza alta
-              </Button>
-            )}
-          </div>
-          {bulkMsg && (
-            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[12.5px] font-semibold text-green-800 shadow-sm">
-              <CheckCircle2 className="size-4 shrink-0" />
-              {bulkMsg}
-            </div>
+          {reviewing && (
+            <ReviewValidationModal
+              reviewing={reviewing}
+              note={note}
+              setNote={setNote}
+              correctedContent={correctedContent}
+              setCorrectedContent={setCorrectedContent}
+              correctedType={correctedType}
+              setCorrectedType={setCorrectedType}
+              correctedSection={correctedSection}
+              setCorrectedSection={setCorrectedSection}
+              setLightboxSrc={setLightboxSrc}
+              onCancel={() => setReviewing(null)}
+              onConfirm={() => handleReview(reviewing.action)}
+              isPending={review.isPending}
+            />
           )}
 
-          <div className="space-y-4">
-            {[...byCompany.entries()].map(
-              ([companyId, { name, industry, entries }]) => (
-                <CompanyValidationsSection
-                  key={companyId}
-                  companyName={name}
-                  industry={industry}
-                  entries={entries}
-                  onApprove={(entry) =>
-                    setReviewing({ entry, action: "APPROVED" })
-                  }
-                  onReject={(entry) =>
-                    setReviewing({ entry, action: "REJECTED" })
-                  }
-                  onCorrect={(entry) => {
-                    setCorrectedContent(entry.rawContent);
-                    setCorrectedType(
-                      entry.classificationAudits?.[0]?.documentType ?? "",
-                    );
-                    setCorrectedSection(
-                      entry.classificationAudits?.[0]?.costSection ?? "",
-                    );
-                    setReviewing({ entry, action: "CORRECTED" });
-                  }}
-                  onZoom={setLightboxSrc}
-                />
-              ),
-            )}
-          </div>
-
-          {data.total > 20 && (
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <span className="text-[12px] font-semibold text-ink-soft">
-                Página {page} de {Math.ceil(data.total / 20)}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={page >= Math.ceil(data.total / 20)}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
+          {isLoading ? (
+            <div className="py-16 text-center text-[13px] font-semibold text-ink-soft">
+              Cargando…
             </div>
+          ) : !data?.items.length ? (
+            <Card>
+              <CardBody className="py-16 text-center">
+                <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl border border-line bg-white text-granate shadow-sm">
+                  <ClipboardCheck className="size-6" />
+                </div>
+                <p className="text-[13px] font-bold text-ink">Todo al día</p>
+                <p className="mt-1 text-[11px] text-ink-soft">
+                  No hay datos pendientes de validación.
+                </p>
+              </CardBody>
+            </Card>
+          ) : (
+            <>
+              <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+                <span className="rounded-full border border-action/15 bg-action/10 px-3.5 py-1.5 text-[12px] font-bold text-action shadow-sm">
+                  {data.total} pendientes
+                </span>
+                <span className="text-[12px] font-semibold text-ink-soft">
+                  en {byCompany.size}{" "}
+                  {byCompany.size === 1 ? "empresa" : "empresas"}
+                </span>
+                {confidentCount > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={handleBulkApprove}
+                    loading={bulkApprove.isPending}
+                    className="w-full sm:ml-auto sm:w-auto bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle2 className="size-3.5" /> Aprobar {confidentCount}{" "}
+                    de confianza alta
+                  </Button>
+                )}
+              </div>
+              {bulkMsg && (
+                <div className="mb-4 flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[12.5px] font-semibold text-green-800 shadow-sm">
+                  <CheckCircle2 className="size-4 shrink-0" />
+                  {bulkMsg}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {[...byCompany.entries()].map(
+                  ([companyId, { name, industry, entries }]) => (
+                    <CompanyValidationsSection
+                      key={companyId}
+                      companyName={name}
+                      industry={industry}
+                      entries={entries}
+                      onApprove={(entry) =>
+                        setReviewing({ entry, action: "APPROVED" })
+                      }
+                      onReject={(entry) =>
+                        setReviewing({ entry, action: "REJECTED" })
+                      }
+                      onCorrect={(entry) => {
+                        setCorrectedContent(entry.rawContent);
+                        setCorrectedType(
+                          entry.classificationAudits?.[0]?.documentType ?? "",
+                        );
+                        setCorrectedSection(
+                          entry.classificationAudits?.[0]?.costSection ?? "",
+                        );
+                        setReviewing({ entry, action: "CORRECTED" });
+                      }}
+                      onZoom={setLightboxSrc}
+                    />
+                  ),
+                )}
+              </div>
+
+              {data.total > 20 && (
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <span className="text-[12px] font-semibold text-ink-soft">
+                    Página {page} de {Math.ceil(data.total / 20)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={page >= Math.ceil(data.total / 20)}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

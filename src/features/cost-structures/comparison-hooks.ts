@@ -60,6 +60,14 @@ export interface Totals {
   grossMargin: Delta;
 }
 
+export interface MacroContrast {
+  indicatorCode: string;
+  indicatorLabel: string;
+  deltaPct: number;
+  monthsUsed: number;
+  snapshots: { value: number; effectiveDate: string }[];
+}
+
 export interface PeriodComparison {
   from: PeriodRef;
   to: PeriodRef;
@@ -75,6 +83,7 @@ export interface PeriodComparison {
   /** Las subas y las bajas se cancelaron: el total quedó igual, pero adentro se movió todo. */
   offsetting: boolean;
   warnings: string[];
+  macroContrast: MacroContrast | null;
 }
 
 /**

@@ -394,6 +394,36 @@ export function PeriodComparison({ structureId }: { structureId: string }) {
             </CardBody>
           </Card>
 
+          {c.macroContrast ? (
+            <Card className="border border-line">
+              <CardHeader
+                title="¿Mis costos subieron más que el país?"
+              />
+              <CardBody className="space-y-2">
+                <p className="text-sm text-ink-soft">
+                  {c.macroContrast.indicatorLabel} en el mismo período (
+                  {c.macroContrast.monthsUsed} {c.macroContrast.monthsUsed === 1 ? 'mes' : 'meses'}):{' '}
+                  <span className="font-semibold tabular">
+                    {c.macroContrast.deltaPct > 0 ? '+' : ''}
+                    {formatPercent(c.macroContrast.deltaPct)}
+                  </span>
+                </p>
+                <p className="text-xs text-ink-soft">
+                  Tu costo de materia prima (efecto precio) en el mismo período:{' '}
+                  <span className="font-semibold tabular">
+                    {c.materials.reduce((acc, m) => acc + m.priceEffect, 0) > 0 ? '+' : ''}
+                    {formatMoney(c.materials.reduce((acc, m) => acc + m.priceEffect, 0))}
+                  </span>
+                </p>
+              </CardBody>
+            </Card>
+          ) : (
+            <p className="text-xs text-ink-soft italic">
+              No hay contraste con inflación nacional disponible: hace falta que los dos períodos comparados estén
+              cerrados y que haya datos de IPC cargados para ese rango.
+            </p>
+          )}
+
           <Card>
             <CardHeader
               title="Materia prima: ¿precio o consumo?"

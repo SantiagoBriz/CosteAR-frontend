@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import {
   Plus,
@@ -24,6 +24,16 @@ import { cn } from "@/lib/utils";
 import { PERIODICITY_OPTIONS, type Periodicity } from "@/lib/types";
 import { useDictation } from "@/lib/use-dictation";
 import toast from 'react-hot-toast';
+const PREDEFINED_INDUSTRIES = [
+  'Gastronomía',
+  'Comercio Minorista (Retail)',
+  'Fábrica / Manufactura',
+  'Construcción',
+  'Servicios Profesionales',
+  'Logística y Transporte',
+  'Agropecuario',
+  'Otro'
+];
 
 const INDUSTRY_CLASSES: Record<string, string> = {
   Agropecuaria: "bg-amber-50 text-amber-700 border-amber-200/50",
@@ -273,14 +283,18 @@ export function CompaniesPage() {
 
 function NewCompanyForm({ onDone }: { onDone: () => void }) {
   const create = useCreateCompany();
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, setValue, watch } = useForm<{
     name: string;
     industry?: string;
+    customIndustry?: string;
     cuit?: string;
     description?: string;
     periodicity: Periodicity;
   }>({ defaultValues: { periodicity: "MONTHLY" } });
+
+  const selectedIndustry = watch("industry");
 
   const dictado = useDictation((chunk) => {
     const actual = watch("description") ?? "";
@@ -290,14 +304,16 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     try {
-      await create.mutateAsync({
+      const finalIndustry = values.industry === 'Otro' ? values.customIndustry : values.industry;
+      const company = await create.mutateAsync({
         name: values.name,
-        industry: values.industry || undefined,
+        industry: finalIndustry || undefined,
         cuit: values.cuit || undefined,
         description: values.description || undefined,
         periodicity: values.periodicity,
       });
-      onDone();
+      // Redirect to the target budget setup screen
+      navigate({ to: "/companies/$id/setup", params: { id: company.id } });
     } catch (e) {
       setError(apiErrorMessage(e));
     }
@@ -342,12 +358,24 @@ function NewCompanyForm({ onDone }: { onDone: () => void }) {
           </div>
           <div>
             <label className="block text-[12px] font-semibold text-ink mb-2 uppercase tracking-wide">
-              Rubro / Sector Industrial
+              Rubro / Sector Industrial *
             </label>
-            <Input
-              placeholder="Ej: Manufactura, Construcción, Gastronomía..."
-              {...register("industry")}
-            />
+            <select
+              {...register("industry", { required: true })}
+              className="w-full rounded-lg border border-line bg-white px-4 py-3 text-sm text-ink focus:border-granate focus:outline-none focus:ring-2 focus:ring-granate/10"
+            >
+              <option value="">Seleccioná un rubro</option>
+              {PREDEFINED_INDUSTRIES.map((ind) => (
+                <option key={ind} value={ind}>{ind}</option>
+              ))}
+            </select>
+            {selectedIndustry === 'Otro' && (
+              <Input
+                placeholder="Ingresá tu rubro..."
+                className="mt-2"
+                {...register("customIndustry", { required: true })}
+              />
+            )}
           </div>
           <div>
             <label className="block text-[12px] font-semibold text-ink mb-2 uppercase tracking-wide">
